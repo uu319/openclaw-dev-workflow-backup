@@ -13,5 +13,7 @@ Thumbs.db
 # Temporary onboarding file, deleted once the birth sequence completes
 BOOTSTRAP.md
 
-# Nested agent workspace with its own .git - back it up as a separate repo
-findmyshotsstudio/
+# Nested agent workspaces have their own .git - back them up as separate repos
+project-manager/
+developer/
+qa-engineer/
