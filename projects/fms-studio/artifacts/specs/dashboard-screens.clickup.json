@@ -1,0 +1,68 @@
+{
+  "[Feature] Dashboard: Organizer overview, albums, and drafts": {
+    "id": "z94kydab87",
+    "url": "https://app.clickup.com/t/z94kydab87",
+    "lane": "FEATURE",
+    "attachments": {
+      "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/f88284d6-7c45-40f8-a41c-ffc00dc7458a/9794-6008.png",
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/74eb0551-b317-401b-a31c-032fc96a4bde/9794-3220.png",
+      "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/eac141b0-2a9f-4529-a86f-3a21251cb973/9794-6547.png"
+    }
+  },
+  "[DB] Setup: Users Albums and Credits tables": {
+    "id": "z94kydab89",
+    "url": "https://app.clickup.com/t/z94kydab89",
+    "lane": "DB",
+    "attachments": {}
+  },
+  "[BE] Dashboard: Overview stats endpoint": {
+    "id": "z94kydab8a",
+    "url": "https://app.clickup.com/t/z94kydab8a",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[BE] Albums: List and filter endpoints": {
+    "id": "z94kydab8b",
+    "url": "https://app.clickup.com/t/z94kydab8b",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[FE] Shared: Dashboard layout and navigation": {
+    "id": "z94kydab8c",
+    "url": "https://app.clickup.com/t/z94kydab8c",
+    "lane": "FE",
+    "attachments": {
+      "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/7a352e2e-9189-4bc7-927f-e8b91011a64e/9794-6008.png"
+    }
+  },
+  "[FE] Dashboard: Overview screen and widgets": {
+    "id": "z94kydab8d",
+    "url": "https://app.clickup.com/t/z94kydab8d",
+    "lane": "FE",
+    "attachments": {
+      "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/3ca8c970-951b-4393-af68-4dcb688e78e2/9794-6008.png"
+    }
+  },
+  "[FE] Albums: My Albums grid and context menu": {
+    "id": "z94kydab8f",
+    "url": "https://app.clickup.com/t/z94kydab8f",
+    "lane": "FE",
+    "attachments": {
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/cc4851f5-7f37-47eb-ad95-3af926517e1c/9794-3220.png"
+    }
+  },
+  "[FE] Albums: My Drafts grid": {
+    "id": "z94kydab8g",
+    "url": "https://app.clickup.com/t/z94kydab8g",
+    "lane": "FE",
+    "attachments": {
+      "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/f6014955-cde5-4fd4-aaea-a13dd38b709e/9794-6547.png"
+    }
+  },
+  "[QA] Dashboard E2E flows": {
+    "id": "z94kydab8k",
+    "url": "https://app.clickup.com/t/z94kydab8k",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

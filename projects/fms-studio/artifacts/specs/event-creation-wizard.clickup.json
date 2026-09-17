@@ -1,0 +1,99 @@
+{
+  "[Feature] Event Creation: Wizard flow": {
+    "id": "z94kydab7t",
+    "url": "https://app.clickup.com/t/z94kydab7t",
+    "lane": "FEATURE",
+    "attachments": {
+      "9810-7244.png": "https://t7533817.p.clickup-attachments.com/t7533817/20a9dc22-753f-4381-8cad-f7eb7b48ef86/9810-7244.png",
+      "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/11ed6ab8-6b4d-40a8-a7d9-b4cc3d776a10/9836-3977.png",
+      "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/cc71db32-921b-481e-9cb0-ff2e5537c766/9873-3730.png",
+      "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/82eae59c-8739-42a2-a7fe-ecf46205250e/9836-5766.png",
+      "9836-6520.png": "https://t7533817.p.clickup-attachments.com/t7533817/2e6e36be-eba9-4f47-87e5-6f21a210e9b7/9836-6520.png",
+      "9836-6900.png": "https://t7533817.p.clickup-attachments.com/t7533817/41d70b86-39a2-452d-906b-c8a6e8391f56/9836-6900.png"
+    }
+  },
+  "[INT] Event Creation: Set up Playwright E2E runner": {
+    "id": "z94kydab7u",
+    "url": "https://app.clickup.com/t/z94kydab7u",
+    "lane": "INT",
+    "attachments": {}
+  },
+  "[DB] Event Creation: albums table for drafts and publish": {
+    "id": "z94kydab7v",
+    "url": "https://app.clickup.com/t/z94kydab7v",
+    "lane": "DB",
+    "attachments": {}
+  },
+  "[BE] Event Creation: POST /api/albums/draft": {
+    "id": "z94kydab7w",
+    "url": "https://app.clickup.com/t/z94kydab7w",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[BE] Event Creation: PATCH /api/albums/:id/draft": {
+    "id": "z94kydab7x",
+    "url": "https://app.clickup.com/t/z94kydab7x",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[BE] Event Creation: POST /api/albums/:id/publish": {
+    "id": "z94kydab7y",
+    "url": "https://app.clickup.com/t/z94kydab7y",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[FE] Event Creation: Step 1 UI and API wiring": {
+    "id": "z94kydab7z",
+    "url": "https://app.clickup.com/t/z94kydab7z",
+    "lane": "FE",
+    "attachments": {
+      "9810-7244.png": "https://t7533817.p.clickup-attachments.com/t7533817/054da872-75fe-48c3-9f68-13bf0ba589e3/9810-7244.png"
+    }
+  },
+  "[FE] Event Creation: Step 2 UI and API wiring": {
+    "id": "z94kydab80",
+    "url": "https://app.clickup.com/t/z94kydab80",
+    "lane": "FE",
+    "attachments": {
+      "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/33c5314d-b2b8-4623-b3e2-e05660a356ce/9836-3977.png"
+    }
+  },
+  "[FE] Event Creation: Step 2.1 Preview modal": {
+    "id": "z94kydab81",
+    "url": "https://app.clickup.com/t/z94kydab81",
+    "lane": "FE",
+    "attachments": {
+      "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/d663f8f0-7540-4837-ba80-d8cd89a952cf/9873-3730.png"
+    }
+  },
+  "[FE] Event Creation: Step 3 UI and API wiring": {
+    "id": "z94kydab82",
+    "url": "https://app.clickup.com/t/z94kydab82",
+    "lane": "FE",
+    "attachments": {
+      "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/a9487b76-2e8e-4cbe-a736-8577ef95c36f/9836-5766.png"
+    }
+  },
+  "[FE] Event Creation: Step 3.1 Password modal": {
+    "id": "z94kydab83",
+    "url": "https://app.clickup.com/t/z94kydab83",
+    "lane": "FE",
+    "attachments": {
+      "9836-6520.png": "https://t7533817.p.clickup-attachments.com/t7533817/466a4c28-2e77-45c2-a5ec-3df2794e8dd8/9836-6520.png"
+    }
+  },
+  "[FE] Event Creation: Step 4 UI and publish wiring": {
+    "id": "z94kydab84",
+    "url": "https://app.clickup.com/t/z94kydab84",
+    "lane": "FE",
+    "attachments": {
+      "9836-6900.png": "https://t7533817.p.clickup-attachments.com/t7533817/eca11597-60ea-40e4-bd48-0f7f612a6f86/9836-6900.png"
+    }
+  },
+  "[QA] Event Creation: E2E test for wizard flow": {
+    "id": "z94kydab85",
+    "url": "https://app.clickup.com/t/z94kydab85",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

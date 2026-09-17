@@ -1,0 +1,52 @@
+{
+  "[Feature] Dashboard: My Albums view": {
+    "id": "z94kydab8y",
+    "url": "https://app.clickup.com/t/z94kydab8y",
+    "lane": "FEATURE",
+    "attachments": {
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/fa16b66e-ac2f-482b-94cb-5645c42b6ef6/9794-3220.png"
+    }
+  },
+  "[DB] Albums: albums table and migration": {
+    "id": "z94kydab8z",
+    "url": "https://app.clickup.com/t/z94kydab8z",
+    "lane": "DB",
+    "attachments": {}
+  },
+  "[BE] Albums: GET /api/albums?owner=me returns the caller's albums": {
+    "id": "z94kydab90",
+    "url": "https://app.clickup.com/t/z94kydab90",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[FE] My Albums: grid layout header and search controls": {
+    "id": "z94kydab91",
+    "url": "https://app.clickup.com/t/z94kydab91",
+    "lane": "FE",
+    "attachments": {
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/c33fe2d0-3b4d-42d0-be49-1e0e65d3bf88/9794-3220.png"
+    }
+  },
+  "[FE] My Albums: album card component + context menu": {
+    "id": "z94kydab92",
+    "url": "https://app.clickup.com/t/z94kydab92",
+    "lane": "FE",
+    "attachments": {
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/70147766-2cfb-46b2-9715-9be45f0df28d/9794-3220.png"
+    }
+  },
+  "[FE] My Albums: wire grid and search to GET /api/albums": {
+    "id": "z94kydab93",
+    "url": "https://app.clickup.com/t/z94kydab93",
+    "lane": "FE",
+    "attachments": {
+      "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/4acc4fb4-1b88-44df-9c70-1f9a90ed6fe1/9794-3220.png"
+    }
+  },
+  "[QA] My Albums: E2E organizer views dashboard and searches albums": {
+    "id": "z94kydab94",
+    "url": "https://app.clickup.com/t/z94kydab94",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "[Feature] Organizer Flow: Landing Page With Account": {
+    "id": "z94kydab9e",
+    "url": "https://app.clickup.com/t/z94kydab9e",
+    "lane": "FEATURE",
+    "attachments": {
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/db75ef41-5b3c-43d7-b1bc-10ee9049f6ba/9782-3552.png"
+    }
+  },
+  "[FE] Landing Page: Navbar and Hero Section": {
+    "id": "z94kydab9f",
+    "url": "https://app.clickup.com/t/z94kydab9f",
+    "lane": "FE",
+    "attachments": {
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/52832331-28f4-4a6d-ad2b-c319561facec/9782-3552.png"
+    }
+  },
+  "[FE] Landing Page: Content Sections": {
+    "id": "z94kydab9g",
+    "url": "https://app.clickup.com/t/z94kydab9g",
+    "lane": "FE",
+    "attachments": {
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/b8523a20-2f6c-4ca1-b429-e41272f42b86/9782-3552.png"
+    }
+  },
+  "[FE] Landing Page: Pricing and Footer": {
+    "id": "z94kydab9h",
+    "url": "https://app.clickup.com/t/z94kydab9h",
+    "lane": "FE",
+    "attachments": {
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/07f2797b-686b-4a34-9c04-ed9620f6264e/9782-3552.png"
+    }
+  },
+  "[QA] Organizer Flow: Landing Page With Account: E2E test": {
+    "id": "z94kydab9j",
+    "url": "https://app.clickup.com/t/z94kydab9j",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

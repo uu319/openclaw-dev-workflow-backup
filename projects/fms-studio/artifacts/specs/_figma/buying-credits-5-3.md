@@ -1,0 +1,229 @@
+# Figma node summary
+Source: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9884-4390
+
+## Step 8 (node 9884:4390, FRAME)
+
+- frame "Step 8" 1728×966 bg=#ffffff
+  - frame "Frame 127129" 314×85 layout=VERTICAL
+    - frame "Frame 127085" 314×36 bg=#ffffff
+      - text "Search" (Host Grotesk 400 18.0px, #313131)
+      - instance "search" 19×19
+    - frame "Frame 127128" 234×36 layout=HORIZONTAL
+      - text "Filter by:" (Host Grotesk 400 18.0px, #313131)
+      - frame "Frame 127126" 154×36 bg=#ffffff
+        - text "All Albums" (Host Grotesk 400 18.0px, #313131)
+        - instance "chevron-down" 19×19
+  - frame "Label wrapper" 75×20 layout=HORIZONTAL
+    - text "Search" (Inter 500 14.0px, #414651)
+    - text "*" (Inter 500 14.0px, #7f56d9)
+    - instance "Help icon" 16×16
+      - instance "help-circle" 16×16
+        - shape "Icon" 13×13
+  - text "This is a hint text to help user." (Inter 400 14.0px, #535862)
+  - text "This is a hint text to help user." (Inter 400 14.0px, #535862)
+  - text "Good Morning, Dream Marathon Org!" (Host Grotesk 500 26.0px, #313131)
+  - frame "Frame 127083" 78×892 bg=#ffffff
+    - frame "Frame 127084" 24×189 layout=VERTICAL
+      - instance "album" 24×24
+      - instance "layout-dashboard" 24×24
+      - instance "square-pen" 24×24
+      - instance "settings" 24×24
+    - group "Group 901" 35×33
+      - shape "image 116" 35×33
+      - shape "image 117" 35×33
+  - frame "Frame 127082" 1728×93 bg=#ffffff
+    - shape "image 108" 50×47
+    - frame "Frame 127080" 1632×59 layout=HORIZONTAL
+      - group "Group 892" 236×37
+        - text "studio" (Host Grotesk 600 28.0px, #313131)
+      - frame "Frame 127079" 546×59 layout=HORIZONTAL
+        - text "Dashboard" (Host Grotesk 400 18.0px, #313131)
+        - frame "Frame 127035" 157×39 layout=HORIZONTAL
+          - text "420 Credits" (Host Grotesk 500 18.0px, #ff6100)
+        - frame "Frame 127036" 133×39 layout=HORIZONTAL bg=#ff6100
+          - text "Buy Credits" (Host Grotesk 400 18.0px, #ffffff)
+        - group "Group 900" 74×59
+          - shape "image 116" 59×57
+          - shape "image 117" 59×57
+          - instance "chevron-down" 18×18
+  - frame "Frame 127125" 1560×540 layout=VERTICAL
+    - frame "Frame 127124" 1560×252 layout=HORIZONTAL
+      - frame "Frame 127087" 252×252 bg=#f7f6f6
+        - frame "Frame 127122" 193×85 layout=VERTICAL
+          - instance "plus" 43×43
+          - text "Create New Album" (Host Grotesk 400 16.0px, #313131)
+      - frame "Frame 127089" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Nike Run 2026" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - instance "star-filled" 22×22
+      - frame "Frame 127092" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Liberty Run Marathon" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - frame "Frame 127091" 252×252
+          - frame "Frame 127117" 179×199 bg=#ffffff
+            - shape "image 120" 204×257
+          - frame "Frame 127115" 179×199 bg=#ffffff
+            - shape "image 118" 183×208
+          - frame "Frame 127116" 141×169 bg=#ffffff
+            - shape "image 119" 146×219
+          - text "Nike Run 2026" (Host Grotesk 400 16.0px, #313131)
+          - frame "Frame 127121" 218×16 layout=HORIZONTAL
+            - frame "Frame 127119" 2×13 layout=VERTICAL
+            - instance "share-2" 16×16
+        - instance "star" 22×22
+      - frame "Frame 127093" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Great Lakes Run 2025" (Host Grotesk 400 16.0px, #313131)
+        - instance "star" 22×22
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - frame "Frame 127091" 252×252
+          - frame "Frame 127117" 179×199 bg=#ffffff
+            - shape "image 120" 204×257
+          - frame "Frame 127115" 179×199 bg=#ffffff
+            - shape "image 118" 183×208
+          - frame "Frame 127116" 141×169 bg=#ffffff
+            - shape "image 119" 146×219
+          - text "Nike Run 2026" (Host Grotesk 400 16.0px, #313131)
+          - frame "Frame 127121" 218×16 layout=HORIZONTAL
+            - frame "Frame 127119" 2×13 layout=VERTICAL
+            - instance "share-2" 16×16
+      - frame "Frame 127090" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 209×314
+        - text "Blue Ridge 21KM Series 2025" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - instance "star" 22×22
+    - frame "Frame 127123" 1560×252 layout=HORIZONTAL
+      - frame "Frame 127094" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Decathlon 21km Marathon" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - instance "star" 22×22
+      - frame "Frame 127098" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 164×246
+        - text "Blue Ridge 21KM Series 2025" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - instance "star" 22×22
+      - frame "Frame 127096" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Liberty Run Marathon" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - frame "Frame 127091" 252×252
+          - frame "Frame 127117" 179×199 bg=#ffffff
+            - shape "image 120" 204×257
+          - frame "Frame 127115" 179×199 bg=#ffffff
+            - shape "image 118" 183×208
+          - frame "Frame 127116" 141×169 bg=#ffffff
+            - shape "image 119" 146×219
+          - text "Nike Run 2026" (Host Grotesk 400 16.0px, #313131)
+          - frame "Frame 127121" 218×16 layout=HORIZONTAL
+            - frame "Frame 127119" 2×13 layout=VERTICAL
+            - instance "share-2" 16×16
+        - instance "star" 22×22
+      - frame "Frame 127095" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "American Heritage Marathon" (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - instance "star" 22×22
+      - frame "Frame 127097" 252×252
+        - frame "Frame 127117" 179×199 bg=#ffffff
+          - shape "image 120" 204×257
+        - frame "Frame 127115" 179×199 bg=#ffffff
+          - shape "image 118" 183×208
+        - frame "Frame 127116" 141×169 bg=#ffffff
+          - shape "image 119" 146×219
+        - text "Great Lakes Run 2025" (Host Grotesk 400 16.0px, #313131)
+        - instance "star" 22×22
+        - frame "Frame 127121" 218×16 layout=HORIZONTAL
+          - frame "Frame 127119" 2×13 layout=VERTICAL
+          - instance "share-2" 16×16
+        - frame "Frame 127091" 252×252
+          - frame "Frame 127117" 179×199 bg=#ffffff
+            - shape "image 120" 204×257
+          - frame "Frame 127115" 179×199 bg=#ffffff
+            - shape "image 118" 183×208
+          - frame "Frame 127116" 141×169 bg=#ffffff
+            - shape "image 119" 146×219
+          - text "Nike Run 2026" (Host Grotesk 400 16.0px, #313131)
+          - frame "Frame 127121" 218×16 layout=HORIZONTAL
+            - frame "Frame 127119" 2×13 layout=VERTICAL
+            - instance "share-2" 16×16
+  - frame "Frame 127127" 248×36 layout=HORIZONTAL
+    - text "My Albums" (Host Grotesk 500 20.0px, #313131)
+    - frame "Frame 127115" 122×36 bg=#ff6100
+      - text "Top Up" (Host Grotesk 400 18.0px, #ffffff)
+      - instance "plus" 19×19
+  - frame "Frame 127143" 1728×966 bg=#313131
+  - frame "Buy Credits" 682×414 bg=#ffffff
+    - instance "x" 38×38
+    - frame "Frame 127528" 585×326 layout=VERTICAL
+      - instance "heroicons-outline/check-circle" 65×65
+      - frame "Frame 127527" 585×256 layout=VERTICAL
+        - frame "Frame 126442" 510×75 layout=VERTICAL
+          - text "Credits Added!" (Host Grotesk 400 36.0px, #313131)
+          - text "5,000 credits have been added to your account." (Host Grotesk 400 16.0px, #313131)
+        - frame "Frame 127504" 585×111 bg=#fafafa
+          - frame "Frame 127526" 139×77 layout=VERTICAL
+            - text "5,420" (Host Grotesk 700 40.0px, #ff6100)
+            - text "credits available" (Host Grotesk 400 18.0px, #313131)
+        - frame "Buy Now Button" 233×42 layout=HORIZONTAL bg=#ff6100
+          - text "Done" (Host Grotesk 400 18.0px, #ffffff)
+          - instance "chevron-down" 26×26
+            - shape "Icon" 13×6

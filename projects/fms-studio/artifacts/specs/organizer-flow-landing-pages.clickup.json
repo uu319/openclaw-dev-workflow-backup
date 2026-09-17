@@ -1,0 +1,41 @@
+{
+  "[Feature] Landing Page: Organizer Marketing & Pricing": {
+    "id": "z94kydab86",
+    "url": "https://app.clickup.com/t/z94kydab86",
+    "lane": "FEATURE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/dc19f600-1e47-4c1c-9c70-2f57fdd23058/9731-3297.png",
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/60bf0aed-0e50-492b-abb5-834abfe243cf/9782-3552.png"
+    }
+  },
+  "[FE] Landing Page: Header & Footer": {
+    "id": "z94kydab88",
+    "url": "https://app.clickup.com/t/z94kydab88",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/c4793bdf-1308-406c-8614-d4b95b3a4ce0/9731-3297.png",
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/261dfe4d-3323-4b0f-94fb-525381bac549/9782-3552.png"
+    }
+  },
+  "[FE] Landing Page: Content & Pricing Sections": {
+    "id": "z94kydab8e",
+    "url": "https://app.clickup.com/t/z94kydab8e",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/17e7ab7e-d28a-4a2a-b087-218c7470fd3e/9731-3297.png",
+      "9782-3552.png": "https://t7533817.p.clickup-attachments.com/t7533817/09b2a6b4-0b8e-42c4-a6da-5776f0d4aeac/9782-3552.png"
+    }
+  },
+  "[INT] Set up Playwright E2E runner": {
+    "id": "z94kydab8h",
+    "url": "https://app.clickup.com/t/z94kydab8h",
+    "lane": "INT",
+    "attachments": {}
+  },
+  "[QA] Landing Page: Organizer Marketing & Pricing": {
+    "id": "z94kydab8j",
+    "url": "https://app.clickup.com/t/z94kydab8j",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

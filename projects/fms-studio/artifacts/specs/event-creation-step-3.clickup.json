@@ -1,0 +1,38 @@
+{
+  "[Feature] Event Creation: Step 3 \u2014 Privacy and Access": {
+    "id": "z94kydabad",
+    "url": "https://app.clickup.com/t/z94kydabad",
+    "lane": "FEATURE",
+    "attachments": {
+      "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/bee9d837-c878-4bfc-9434-2d3b087b0d09/9836-5766.png"
+    }
+  },
+  "[FE] Step 3 Privacy: form layout and state selection": {
+    "id": "z94kydabae",
+    "url": "https://app.clickup.com/t/z94kydabae",
+    "lane": "FE",
+    "attachments": {
+      "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/ef3a39c0-c8d1-4d69-b3bc-f9146b5e761f/9836-5766.png"
+    }
+  },
+  "[BE] Step 3 Privacy: PATCH /api/events/:id/draft stores privacy setting": {
+    "id": "z94kydabaf",
+    "url": "https://app.clickup.com/t/z94kydabaf",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[FE] Step 3 Privacy: wire Next Step to PATCH /api/events/:id/draft": {
+    "id": "z94kydabag",
+    "url": "https://app.clickup.com/t/z94kydabag",
+    "lane": "FE",
+    "attachments": {
+      "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/f1e1f149-5401-46c5-b95d-0bb7a5a2f282/9836-5766.png"
+    }
+  },
+  "[QA] Step 3 Privacy: E2E organizer sets privacy level": {
+    "id": "z94kydabah",
+    "url": "https://app.clickup.com/t/z94kydabah",
+    "lane": "QA",
+    "attachments": {}
+  }
+}

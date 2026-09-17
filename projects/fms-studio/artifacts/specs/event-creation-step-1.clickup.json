@@ -1,0 +1,50 @@
+{
+  "[Feature] Event Creation: Step 1 \u2014 Basic Info": {
+    "id": "z94kydab9k",
+    "url": "https://app.clickup.com/t/z94kydab9k",
+    "lane": "FEATURE",
+    "attachments": {
+      "9810-7244.png": "https://t7533817.p.clickup-attachments.com/t7533817/663e78c8-40c9-45a9-a278-555f5a1ec5c1/9810-7244.png"
+    }
+  },
+  "[DB] Basic Info: events table + migration": {
+    "id": "z94kydab9m",
+    "url": "https://app.clickup.com/t/z94kydab9m",
+    "lane": "DB",
+    "attachments": {}
+  },
+  "[BE] Basic Info: POST /api/events/draft creates initial draft": {
+    "id": "z94kydab9n",
+    "url": "https://app.clickup.com/t/z94kydab9n",
+    "lane": "BE",
+    "attachments": {}
+  },
+  "[FE] Basic Info: form layout + validation states": {
+    "id": "z94kydab9p",
+    "url": "https://app.clickup.com/t/z94kydab9p",
+    "lane": "FE",
+    "attachments": {
+      "9810-7244.png": "https://t7533817.p.clickup-attachments.com/t7533817/c6b9d3ce-bfb9-4eac-8c2a-cbbd213884dc/9810-7244.png"
+    }
+  },
+  "[FE] Basic Info: wire Next Step to POST /api/events/draft": {
+    "id": "z94kydab9q",
+    "url": "https://app.clickup.com/t/z94kydab9q",
+    "lane": "FE",
+    "attachments": {
+      "9810-7244.png": "https://t7533817.p.clickup-attachments.com/t7533817/45333a25-2324-41d4-bccf-b80058dc73de/9810-7244.png"
+    }
+  },
+  "[INT] Setup Playwright E2E runner": {
+    "id": "z94kydab9r",
+    "url": "https://app.clickup.com/t/z94kydab9r",
+    "lane": "INT",
+    "attachments": {}
+  },
+  "[QA] Basic Info: E2E organizer fills basic info and navigates to step 2": {
+    "id": "z94kydab9t",
+    "url": "https://app.clickup.com/t/z94kydab9t",
+    "lane": "QA",
+    "attachments": {}
+  }
+}
