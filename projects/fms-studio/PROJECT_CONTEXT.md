@@ -23,13 +23,16 @@
 
 ## Tracker & Design
 - **Tracker Tool:** ClickUp
+- **Tracker MCP Prefix:** clickup_
 - **ClickUp List ID:** `1100770000001008`
-- **ClickUp List name:** List
 - **Figma file:** https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding
 - **Figma MCP server:** `figma-fms-studio` (tools `figma-fms-studio__get_figma_data`, `figma-fms-studio__download_figma_images`; uses only this project's Design key)
+- **GCP Environment:** Staging only (`fms-studio-staging`), region: `asia-southeast1`. No production environment exists yet.
 - **SecretRefs:**
   - Tracker: `CLICKUP_API_TOKEN_FMSSTUDIO` (exact name in the OpenClaw secret vault; no fallback)
   - Design: `FIGMA_API_KEY_FMSSTUDIO` (env-kind vault entry; loaded only by the `figma-fms-studio` MCP server via `projects/_tools/figma_mcp.py`)
+  - GCP Staging Vault: `GCP_SA_KEY_FMSSTUDIO_STAGING` (exact name in the OpenClaw secret vault)
+  - GCP Staging JSON: `/home/openclaw/.openclaw/workspace/credentials/gcp/fms-studio.json`
 
 ## Workflow Rules
 - **Statuses:** `to do`, `in progress`, `qa`, `for development`, `on hold`, `complete`, `cancelled`
