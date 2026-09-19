@@ -196,8 +196,9 @@ When Profile is `teammate` or `maintenance`:
 - Nobody on the team merges, closes other people's PRs, edits other people's branches, or moves other
   people's tickets. Status moves happen only on Van's tickets, only through `clickup_status.py`, only per the map.
 - Opening a PR from a task branch is routine (the review happens on it). Messages to other people wait for Van's
-  yes; silence is a NO. **Open question for Van:** on team repos, replies to human reviewers are posted by the
-  `PR_FEEDBACK` flow today without asking; decide whether they should wait for his yes (there is no Flow switch for it).
+  yes; silence is a NO. **Decided 2026-09-20 (Decision O):** on `teammate`/`maintenance` projects a reply to a human
+  reviewer is such a message: VanDev fixes and pushes the code without asking, writes the reply as a draft, and it is
+  posted only after Van approves the text. On `factory` (only Van reads those PRs) VanDev posts it itself.
 
 ---
 
@@ -399,6 +400,7 @@ orchestration skill skips `spec`, `tickets`, `internal-qa`. Then delete it (cont
 | J | Retention: runs 30 d, figma 30 d after archive, last 5 config backups, proposals weekly | first prune done; automation is Step 8 |
 | L | Spawn time limits: `runTimeoutSeconds` 3600 dev, 1800 others (orchestration skill) | applied 2026-09-20 |
 | M | Shared skills: only `worktree-lifecycle`; `beautiful-mermaid` moved to `~/Backups/removed-skills/`; skill-workshop proposals rejected (36 registry entries whose files were already deleted cannot be rejected without `openclaw doctor --fix`, which is forbidden; they are inert) | applied 2026-09-20 |
+| O | Team projects: replies to human PR comments are drafted by VanDev, posted only after Van's yes (code fixes still go out at once) | applied 2026-09-20 |
 | N | Ruleset requiring `openclaw/review`: **not now** (the stamp shows; main checks it before "ready") | Van, 2026-09-20 |
 | K | Review check at merge time: `openclaw/review` status + a ruleset that requires it (replaces the PR-create gate) | tooling done; token permission + ruleset are Van's |
 

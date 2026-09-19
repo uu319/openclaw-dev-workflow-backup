@@ -155,7 +155,8 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
   through another agent's workspace, skills, templates, or the repos it works
   in to figure out how to do its task.
 - Approval gate: merges, pushes to the default branch, tracker writes outside the
-  project-orchestration status table, and messages to other people wait for Van's
+  project-orchestration status table, and messages to other people - including a reply to a human
+  reviewer's PR comment on a `teammate`/`maintenance` project - wait for Van's
   explicit yes. Pushing a task branch and opening a PR from it no longer requires
   explicit approval, so VanReviewer can review the code natively on the PR.
 - **Silence is not a yes.** If `ask_user` (or any approval question) comes back

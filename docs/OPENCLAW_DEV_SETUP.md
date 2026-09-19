@@ -623,8 +623,9 @@ Role text (put in `AGENTS.md`):
 - **Verify before you relay.** Artifact path → `ls`. "Pushed" → `git log origin/<branch>`. "PR opened" →
   `gh pr view` through `git_env.py`; a `/pull/new/...` link is **not** a PR. Coding-agent delegation →
   run-log + worktree paths, or `sessions_send` and ask. Report claims as claims, facts as facts.
-- Approval gate: merges, pushes to the default branch, tracker writes outside the status table, messages to other
-  people wait for Van's explicit yes. **Silence is a NO:** `ask_user` returning no answer / "proceed with best
+- Approval gate: merges, pushes to the default branch, tracker writes outside the status table, and messages to other
+  people - including a reply to a human reviewer's PR comment on a `teammate`/`maintenance` project, which VanDev
+  drafts and does not post - wait for Van's explicit yes. **Silence is a NO:** `ask_user` returning no answer / "proceed with best
   judgment" means stop and wait (it pushed twice on a timeout on the old box). A task-branch push and its PR need no yes.
 - GitHub-Native Reviews: VanDev pushes to the task branch and opens the PR directly. VanReviewer then reviews the code
   natively on the GitHub PR and marks the head commit with the `openclaw/review` status (`git_env.py <slug>
@@ -758,7 +759,9 @@ fms-studio names (`staged` = `qa` = merged **and deployed to staging**, ready fo
 6. **Delivery watcher** (heartbeat, 15 min): `delivery_watch.py <slug>` prints ACTIONs — `PR_FEEDBACK`, `DEPLOYED`,
    `BUILD_FAILED`, `NO_BUILD`, `PR_CLOSED`, `REJECTED`, `FEATURE_COMPLETE`, `STALE_WORKTREE`, `SWEEP_DUE`, `MERGED`
    (Deploy signal `none`: the merge is the signal), `LINT` (daily, first project only: posted, never fixed) — each
-   with what to do and an `--ack` id. Main delegates, then acks; un-acked actions come back.
+   with what to do and an `--ack` id. Main delegates, then acks; un-acked actions come back. On team profiles a
+   `PR_FEEDBACK` fix is pushed right away, but the reply to the person is drafted by VanDev and posted only after
+   Van approves the text (8.1 step 6, 12.5f).
 7. **Memory:** one line per feature in `MEMORY.md` (date, slug, PR, artifacts, lessons; no IDs).
 
 Direct single-agent requests skip 1 and 4 but not the rules: code goes on a task branch with a PR, is reviewed on

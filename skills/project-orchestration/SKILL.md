@@ -65,7 +65,9 @@ Van is one developer on a human team that shares the repo and the board. Then:
   The PR body carries the ticket URL. Before opening the PR, VanDev merges `origin/<pr_base>` into the
   branch in its worktree if it is behind; never force-push a branch others may have checked out.
 - Never merge, close or edit other people's PRs or branches, and never move other people's tickets.
-- Human review comments are answered within one heartbeat (`PR_FEEDBACK`); every agent comment starts with 🤖.
+- Human review comments are answered within one heartbeat (`PR_FEEDBACK`), but **a reply to a person is a message to
+  a person: Van approves its text first**. VanDev fixes and pushes the code without waiting; it writes the reply as a
+  draft and posts it only after Van says yes. Every agent comment starts with 🤖.
 
 ## When not to use this
 
@@ -212,10 +214,14 @@ for each project. It only reads GitHub, Cloud Build and ClickUp and prints ACTIO
 each with what to do and an `--ack <id>` command. Carry out each action, then ack it.
 An action you could not finish stays un-acked and comes back next heartbeat.
 
-- `PR_FEEDBACK`: new human comments/reviews on an open PR. `sessions_send` (or spawn)
-  VanDev with the feedback; VanDev fixes it in its own worktree, pushes to the same branch
-  and replies on the PR starting with "🤖 VanDev:"; then VanReviewer reviews the new head
-  (step 3, `--review-status`). Fixes to an already approved PR need no new approval question.
+- `PR_FEEDBACK`: new comments/reviews on an open PR. `sessions_send` (or spawn) VanDev with the feedback;
+  VanDev fixes it in its own worktree and pushes to the same branch; then VanReviewer reviews the new head
+  (step 3, `--review-status`). The code fix needs no approval question.
+  The **reply on the PR** depends on the project's Flow profile:
+  - `factory` (only Van reads these PRs): VanDev posts it itself, starting with "🤖 VanDev:".
+  - `teammate` / `maintenance` (other people read it): VanDev returns the draft text instead. Relay it to Van
+    verbatim and ask for a yes; silence is a NO. On yes, `sessions_send` VanDev "approved, post this reply".
+    Ack the action only once the reply is posted or Van says not to send one.
 - `DEPLOYED`: spawn VanPM with the listed tickets → `staged`; post one line in the channel:
   what is on staging, ready for testing.
 - `BUILD_FAILED`: one line to Van with build id and log link; VanPM files a bug ticket
