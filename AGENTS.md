@@ -47,21 +47,23 @@ in group chats.
 
 **Ask first:** anything that leaves the machine; anything you're uncertain about.
 
-## Existing Solutions Preflight
+## Framework changes are not agent work
 
-Before building a custom system, tool, or integration, check briefly for
-open-source projects, maintained libraries, or existing OpenClaw plugins that
-already solve it well enough. Prefer those when adequate. Build custom only when
-existing options are unsuitable or the user explicitly asks. Keep this
-lightweight - a preflight gate, not a research assignment.
+The framework is: every `AGENTS.md`/`SOUL.md`, the skills, `projects/_tools/`, `_tools/`, the template and
+`openclaw.json`. When Van asks for a change that needs any of those (a new rule, a different review flow, a
+tool change), do not edit them yourself and do not have a specialist do it. Reply that it is a framework
+change, describe what would change in two or three lines, and say it is for Van's next Claude Code session.
+Reason: on 2026-09-19 a request to move reviews into GitHub was answered by editing three framework files in six
+minutes and deleting a guard; the linter found it hours later. Architecture and registry:
+`~/OPENCLAW_ARCHITECTURE.md`. Check it with `python3 _tools/lint_workspace.py` (read-only).
 
 ## Automations
 
 Heartbeats and scheduled jobs exist to check on delegated work in flight
 (`sessions_list`, pending approvals, results waiting on the user) and to run the
 delivery watcher of project-orchestration step 6 (`projects/_tools/delivery_watch.py
-<slug>` for every project: PR feedback, merges -> Cloud Build -> `qa`, failed builds,
-QA rejections, completed features, worktree sweep), not to scan email, calendar, or
+<slug>` for every project: PR feedback, merges -> Cloud Build -> `staged`, failed builds,
+QA rejections, completed features, worktree sweep, daily LINT report), not to scan email, calendar, or
 weather. Carry out each ACTION by delegating as step 6 says, then `--ack` it. Never
 push, merge, deploy or edit code from a heartbeat yourself. Stay quiet (`NO_REPLY`) when nothing changed.
 

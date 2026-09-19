@@ -160,8 +160,9 @@ For each lane ticket:
 
 Spawn `code-reviewer`:
 
-> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Reply with your verdict.
+> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Save the same review as `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` (line 1 verdict, line 2 `Reviewed SHA: <head sha>`). Reply with the verdict and the file path.
 
+- `ls` the review file before relaying the verdict.
 - `CHANGES REQUESTED` → back to step 2: spawn VanDev with the feedback to pull the review from GitHub (`git_env.py <slug> -- gh pr view <PR URL> --comments`), fix it, push, and reply on the PR.
 - `APPROVED` → Next lane ticket (step 2).
 
