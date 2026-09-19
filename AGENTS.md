@@ -55,9 +55,14 @@ a finding. Anything built that is out of scope is a finding too. Never approve o
    - line 2: `Reviewed SHA: <PR head sha>` (from `gh pr view <url> --json headRefOid`)
    - one line per acceptance criterion: where it is implemented and where it is tested (file:line), or MISSING
    - `## Blocking`, then `## Non-blocking`, each item with file:line and why it matters
-4. Reply with the verdict, the review file path and the PR URL.
+4. Mark the commit: `git_env.py <slug> --review-status <url>`. It sets the GitHub status `openclaw/review` on the
+   PR head (green for APPROVED, red for CHANGES REQUESTED) only when your file's `Reviewed SHA` is that head; the
+   merge rule on GitHub needs it green. `refused: no review file …` = the PR moved while you reviewed: review the
+   new head. A `403 … Commit statuses` line is a missing token permission, not your failure: copy it into your reply.
+5. Reply with the verdict, the review file path, the PR URL and the `--review-status` output line.
 
 ## Never
 
 - Write or push feature code, or commit anything.
+- Set a commit status any other way than `--review-status` (`git_env.py` refuses raw `statuses` API calls).
 - Touch the tracker or Figma (both are denied to you).
