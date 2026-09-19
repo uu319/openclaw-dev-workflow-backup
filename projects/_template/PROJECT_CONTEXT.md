@@ -46,7 +46,7 @@
   - Reach GCP only through `projects/_tools/gcloud_env.py <slug> -- <command>`; there is no
     ambient gcloud default and `gcloud` run bare will not be pointed at this project.
   - GitHub Token: `GITHUB_TOKEN_<SLUGUPPER>` (env-kind vault entry; fine-grained PAT scoped to this
-    repo only: Contents + Pull requests read/write)
+    repo only: Contents + Pull requests + Commit statuses read/write, no Administration)
   - Reach the GitHub API only through `projects/_tools/git_env.py <slug> -- gh <args>`; bare `gh`
     has no login on this box.
 

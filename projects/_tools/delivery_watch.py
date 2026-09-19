@@ -12,7 +12,7 @@ Usage:
 
 The flow it drives (statuses are the project's; see the project-orchestration skill):
   PR open + new GitHub comment/review  -> PR_FEEDBACK   (VanDev fixes, internal review, push, reply)
-  PR merged                            -> wait for Cloud Build on the default branch
+  PR merged                            -> wait for Cloud Build on the Flow PR base
   every build of the first commit that contains the merge commit succeeded
                                        -> DEPLOYED      (VanPM: linked tickets -> `qa`)
   a build containing it failed         -> BUILD_FAILED  (report + bug ticket, normal flow)

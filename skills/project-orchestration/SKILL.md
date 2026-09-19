@@ -82,7 +82,7 @@ These rules still apply to it:
 `qa` means **merged and deployed to staging, ready for external QA**. It does not
 mean "our VanQA ran": VanReviewer and VanQA are internal checks that happen while
 the ticket is `in progress`. External QA (a person or agent outside this team)
-sets `complete` or `rejected`; agents never set `complete`.
+sets `complete` or `rejected`; agents never set `complete` (one exception: `[SPIKE]` tickets, below).
 
 | When | Who notices | Ticket | Status |
 |---|---|---|---|
@@ -210,9 +210,9 @@ each with what to do and an `--ack <id>` command. Carry out each action, then ac
 An action you could not finish stays un-acked and comes back next heartbeat.
 
 - `PR_FEEDBACK`: new human comments/reviews on an open PR. `sessions_send` (or spawn)
-  VanDev with the feedback; VanDev fixes it in its own worktree, VanReviewer reviews the
-  new commit, VanDev pushes to the same branch and replies on the PR starting with
-  "🤖 VanDev:". Fixes to an already approved PR need no new approval question.
+  VanDev with the feedback; VanDev fixes it in its own worktree, pushes to the same branch
+  and replies on the PR starting with "🤖 VanDev:"; then VanReviewer reviews the new head
+  (step 3, `--review-status`). Fixes to an already approved PR need no new approval question.
 - `DEPLOYED`: spawn VanPM with the listed tickets → `staged`; post one line in the channel:
   what is on staging, ready for testing.
 - `BUILD_FAILED`: one line to Van with build id and log link; VanPM files a bug ticket
@@ -237,7 +237,7 @@ An action you could not finish stays un-acked and comes back next heartbeat.
 - `LINT` (daily, first project only): post the listed lines in one message; never fix files from a heartbeat.
 - `SWEEP_DUE`: run `worktree.py <slug> sweep`; relay any KEPT / UNMANAGED / PRIMARY line.
 
-Nobody in the team merges, deploys, retries builds or sets `complete`.
+Nobody in the team merges, deploys, retries builds or sets `complete` (except `[SPIKE]`, see Ticket statuses).
 
 ## 7. Memory
 

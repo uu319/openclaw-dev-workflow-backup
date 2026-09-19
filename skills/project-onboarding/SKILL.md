@@ -49,14 +49,15 @@ openclaw secrets store set CLICKUP_API_TOKEN_<SLUGUPPER> --kind env --value-file
 openclaw secrets store set FIGMA_API_KEY_<SLUGUPPER> --kind env --value-file -
 openclaw secrets store set GITHUB_TOKEN_<SLUGUPPER> --kind env --value-file -
 # only if GCP is set: the name you put in PROJECT_CONTEXT's GCP Key Vault field
-openclaw secrets store set GCP_SA_KEY_<SLUGUPPER> --kind env --value-file - < key.json
+openclaw secrets store set GCP_SA_KEY_<SLUGUPPER>_<ENV> --kind env --value-file - < key.json
 ```
 
 The user runs these in **their own SSH terminal**, not through a chat `!` prefix:
 `--value-file -` reads a pasted value from stdin, which a chat shell does not
 provide (it silently stores an empty value). The GitHub token is a fine-grained
 PAT: resource owner = the org, only this repo, Contents + Pull requests
-read/write. If the org requires approval, an org owner must approve it before
+read/write, Commit statuses read/write (VanReviewer's `openclaw/review` status),
+no Administration. If the org requires approval, an org owner must approve it before
 `git_env.py <slug> --check` passes.
 
 `--kind env` is required: without it names ending in `_API_KEY`/`_TOKEN` are
@@ -87,7 +88,7 @@ after the user confirms (`git clone <url> /home/openclaw/projects/<slug>`).
 
 ## 3b. Trust the workbench in the coding tool (approval gate: edits a tool config)
 
-VanDev delegates builds to `agy`, which refuses untrusted directories. After the
+VanDev delegates code writing to `agy`, which refuses untrusted directories. After the
 user approves, add **both** `/home/openclaw/projects/<slug>` and its worktree root
 `/home/openclaw/projects/.worktrees/<slug>` to `trustedWorkspaces` in
 `/home/openclaw/.gemini/antigravity-cli/settings.json` (read the JSON, append if
@@ -123,8 +124,9 @@ openclaw mcp probe figma-<slug>
 
 The probe must list `figma-<slug>__get_figma_data`. The launcher reads the
 Design key named in PROJECT_CONTEXT.md, so a failed probe usually means that
-file is invalid or the key is missing or stored as kind `secret`. The main, QA
-and reviewer agents already deny `figma-*__*`, so nothing else changes per project.
+file is invalid or the key is missing or stored as kind `secret`. QA and reviewer
+already deny `figma-*` and `tracker-*`; **main's deny list stays empty** (anything denied
+on main is denied to every agent it spawns), so nothing else changes per project.
 
 ## 4c. Register the project's tracker MCP server (user runs these)
 
@@ -172,7 +174,7 @@ user says it is the wrong list, fix the ID in the file and re-run step 6.
 
 - Check the code tooling for the new slug: `python3 /home/openclaw/.openclaw/workspace/projects/_tools/worktree.py <slug> list`
   (must run without error) and, if GitHub is set, `python3 .../_tools/git_env.py <slug> --check`.
-- Append to `MEMORY.md`: `<date> onboarded <slug>: context at <path>, Tracker list '<name>' (<id>), secrets CLICKUP_API_TOKEN_<SLUGUPPER> / FIGMA_API_KEY_<SLUGUPPER> / GITHUB_TOKEN_<SLUGUPPER>`.
+- Append to `MEMORY.md`: `<date> onboarded <slug>: context at <path>, Tracker list '<name>', secrets CLICKUP_API_TOKEN_<SLUGUPPER> / FIGMA_API_KEY_<SLUGUPPER> / GITHUB_TOKEN_<SLUGUPPER>`.
 - Reply with the context path, the validated list name, the secret names, the Figma MCP server name, the worktree root,
   and the Flow in one line (profile, stages, PR base, deploy signal).
 

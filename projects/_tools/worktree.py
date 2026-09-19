@@ -10,7 +10,7 @@ Usage:
   worktree.py <slug> path <branch>
 
 Lifecycle (see the shared `worktree-lifecycle` skill for the why):
-  create  git fetch --prune, then a NEW branch from origin/<Default branch>, or - if
+  create  git fetch --prune, then a NEW branch from origin/<Flow PR base> (default: Default branch), or - if
           origin/<branch> already exists (review fixes, QA, code review) - a checkout of
           that remote branch. Verifies HEAD equals the start SHA and prints a preparation
           receipt. Copies gitignored files listed in the repo's .worktreeinclude, if any.
