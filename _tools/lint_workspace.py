@@ -46,6 +46,8 @@ ALLOWED = [
 for a in AGENTS:
     ALLOWED += [f"{a}/AGENTS.md", f"{a}/SOUL.md", f"{a}/USER.md", f"{a}/IDENTITY.md", f"{a}/DREAMS.md",
                 f"{a}/memory/**", f"{a}/media/**", f"{a}/.git/**", f"{a}/.gitignore"]
+SHARED_SKILLS_DIR = os.path.expanduser("~/.openclaw/skills")
+SHARED_SKILLS = ["worktree-lifecycle"]   # shared by all agents; each one is its own git repo
 ALLOWED += ["project-manager/skills/feature-breakdown/**", "developer/skills/agy-coding/**",
             "developer/skills/coding-delegation/**", "code-reviewer/skills/code-review/**",
             "qa-engineer/skills/qa-verification/**"]
@@ -114,9 +116,14 @@ def check_framework_files():
             fix("framework", f"skill not in the manifest: {rel}", "delete it, or add it to the manifest with an owner")
     # git hygiene: the framework = the main workspace repo + one repo per agent workspace (each has its
     # own .git; the main .gitignore excludes them). An uncommitted change in any of them is a FIX.
-    for rel in ["."] + AGENTS:
+    # The shared skills dir (~/.openclaw/skills, visible to every agent) holds only SHARED_SKILLS; each is its own repo.
+    for d in sorted(glob.glob(os.path.join(SHARED_SKILLS_DIR, "*"))):
+        if os.path.basename(d) not in SHARED_SKILLS:
+            fix("framework", f"shared skill not in the manifest: {d} (loads for every agent)",
+                "Van decides: add it to SHARED_SKILLS with an owner, or move it out of ~/.openclaw/skills")
+    for rel in ["."] + AGENTS + [os.path.relpath(os.path.join(SHARED_SKILLS_DIR, n), WS) for n in SHARED_SKILLS]:
         repo = os.path.normpath(os.path.join(WS, rel))
-        name = "main" if rel == "." else rel
+        name = "main" if rel == "." else (f"shared skill {os.path.basename(repo)}" if rel.startswith("..") else rel)
         if not os.path.isdir(os.path.join(repo, ".git")):
             fix("framework", f"{name} workspace is not a git repo", f"cd {repo} && git init && git add -A && git commit -m baseline")
             continue

@@ -70,8 +70,9 @@ A request that is only one agent's job ("fix the tickets", "refine this spec",
 "fix the login bug", "review this PR", "test the password step") is not this
 workflow. Spawn that agent directly, as the Team roster in `AGENTS.md` says.
 These rules still apply to it:
-- Code VanDev changes gets a VanReviewer review (step 3) before any PR, and a PR
-  only after Van's yes (step 5). Deploy fixes and "small" fixes included.
+- Code VanDev changes goes on a task branch with a PR (step 2) and gets a VanReviewer
+  review on that PR (step 3) before you tell Van it is ready; merging stays Van's
+  (step 5). Deploy fixes and "small" fixes included.
 - If the work has a tracker ticket, VanPM claims it (step 2) and the delivery
   watcher (step 6) moves it once the change is on staging: the PR body must carry its ClickUp
   URL. Any ticket work goes to VanPM, never VanDev.
@@ -160,9 +161,13 @@ For each lane ticket:
 
 Spawn `code-reviewer`:
 
-> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Save the same review as `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` (line 1 verdict, line 2 `Reviewed SHA: <head sha>`). Reply with the verdict and the file path.
+> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Save the same review as `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` (line 1 verdict, line 2 `Reviewed SHA: <head sha>`), then run `git_env.py <slug> --review-status <PR URL>`. Reply with the verdict, the file path and that command's output line.
 
 - `ls` the review file before relaying the verdict.
+- The review's result on GitHub is the commit status `openclaw/review` on the PR head (green = APPROVED,
+  red = CHANGES REQUESTED). Any push after the review is a new commit without it, so every fix is reviewed
+  again (this includes `PR_FEEDBACK` fixes). If VanReviewer's line says `403 … Commit statuses`, tell Van once:
+  the project token needs the permission "Commit statuses: Read and write".
 - `CHANGES REQUESTED` → back to step 2: spawn VanDev with the feedback to pull the review from GitHub (`git_env.py <slug> -- gh pr view <PR URL> --comments`), fix it, push, and reply on the PR.
 - `APPROVED` → Next lane ticket (step 2).
 
@@ -186,9 +191,11 @@ This is our internal pre-merge check; it changes no ticket status. Spawn `qa-eng
 Ask the user, with the PR URL and QA results:
 "Feature `<feature-slug>` passed GitHub PR review and QA. Everything is ready on the PR. Merging is yours."
 
-- Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid`:
-  the head SHA must equal the QA'd SHA. Relay the PR link and say: "Merging is
-  yours; tickets close when the merge is detected."
+- Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid,statusCheckRollup`:
+  the head SHA must equal the QA'd SHA, and `statusCheckRollup` must have `openclaw/review` = SUCCESS.
+  Missing or red → the head was not reviewed: back to step 3, do not send the ready message. (An empty
+  `statusCheckRollup` can also mean the token cannot read statuses; say so instead of calling it reviewed.)
+  Relay the PR link and say: "Merging is yours; tickets close when the merge is detected."
 
 Nobody in the team merges. Van merges on GitHub.
 

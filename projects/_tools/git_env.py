@@ -7,6 +7,10 @@ Usage:
            git_env.py fms-studio -- gh pr view 42
            git_env.py fms-studio -- git push origin HEAD
   git_env.py <slug> --check            # verify the token works for this project's repo
+  git_env.py <slug> --review-status <pr> [--dry]
+                                       # VanReviewer, after saving its review file: sets the commit status
+                                       # `openclaw/review` on the PR head (success = APPROVED, failure =
+                                       # CHANGES REQUESTED) only if a review file names that exact head SHA
 
 Sibling of gcloud_env.py and figma_mcp.py: same rule, same shape. The project's
 PROJECT_CONTEXT.md is the single source of truth. This reads it, takes the vault entry named
@@ -85,12 +89,17 @@ def build_env(fields, tok):
 
 
 # ---------------------------------------------------------------- workflow guard
-# The one enforced gate (prompts alone did not hold: 2026-09-19 main opened PRs #33/#34 unreviewed).
+# Enforced here, not in prompts (2026-09-19: main opened PRs #33/#34 unreviewed; later the same day an
+# agent deleted a prompt-only review rule). What this file enforces:
 # - `gh pr merge` / the merge API: refused. Merging is Van's.
-# - `gh pr create`: refused unless <Internal Artifacts>/reviews/*.md has a file whose first line is
-#   APPROVED and which says `Reviewed SHA: <sha>` for the commit the PR head points at.
-# - OPENCLAW_HOTFIX=1 skips the review check (Van said "hotfix"); it is logged to reviews/HOTFIX.log
-#   and VanReviewer must review right after.
+# - `gh pr create`: only into the Flow PR base, only for a branch that exists on origin.
+# - Commit statuses: written only by `--review-status` (below), never by a raw `gh api .../statuses/...`.
+# The review itself happens on the open PR (VanReviewer, GitHub-native). Its result is the commit status
+# REVIEW_CONTEXT on the PR head SHA; a GitHub ruleset that requires that status is what blocks a merge of
+# unreviewed or changed-after-review code. A new push = a new SHA without the status = review again.
+
+REVIEW_CONTEXT = "openclaw/review"
+
 
 def _sha_of(ref, cwd):
     r = subprocess.run(["git", "rev-parse", "--verify", "--quiet", ref + "^{commit}"], cwd=cwd,
@@ -98,20 +107,68 @@ def _sha_of(ref, cwd):
     return r.stdout.strip() or None
 
 
-def _approved_shas(reviews_dir):
+def review_for(reviews_dir, head_sha):
+    """Newest review file in reviews_dir whose `Reviewed SHA:` is head_sha -> (verdict, path), else (None, None).
+    verdict is 'APPROVED' or 'CHANGES REQUESTED' from line 1; any other line 1 is ignored."""
     import glob, re
-    out = {}
+    best = None
     for f in glob.glob(os.path.join(reviews_dir, "*.md")):
         try:
             text = open(f).read()
         except OSError:
             continue
         lines = text.strip().splitlines()
-        if not lines or "APPROVED" not in lines[0].upper() or "CHANGES" in lines[0].upper():
+        if not lines:
             continue
-        for m in re.finditer(r"Reviewed SHA:\s*`?([0-9a-f]{7,40})", text):
-            out[m.group(1)] = f
-    return out
+        first = lines[0].strip().strip("*#` ").upper()
+        if first.startswith("CHANGES REQUESTED"):
+            verdict = "CHANGES REQUESTED"
+        elif first.startswith("APPROVED"):
+            verdict = "APPROVED"
+        else:
+            continue
+        shas = re.findall(r"Reviewed SHA:\s*`?([0-9a-f]{7,40})", text)
+        if not any(head_sha.startswith(s) for s in shas):
+            continue
+        mtime = os.path.getmtime(f)
+        if best is None or mtime > best[0]:
+            best = (mtime, verdict, f)
+    return (best[1], best[2]) if best else (None, None)
+
+
+def review_status(fields, env, pr, dry=False):
+    """Mirror the saved review of the PR's CURRENT head commit into the commit status REVIEW_CONTEXT."""
+    import json
+    r = subprocess.run(["gh", "pr", "view", pr, "--json", "headRefOid,url,state"], env=env,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if r.returncode != 0:
+        die(f"could not read PR {pr}: {r.stderr.strip()[:300]}")
+    info = json.loads(r.stdout)
+    if info.get("state") != "OPEN":
+        die(f"PR {info.get('url')} is {info.get('state')}; statuses are only set on open PRs.")
+    head = info["headRefOid"]
+    reviews = os.path.join(fields["artifacts_dir"], "reviews")
+    verdict, path = review_for(reviews, head)
+    if not verdict:
+        die(f"refused: no review file in {reviews} says `Reviewed SHA: {head}` with APPROVED or CHANGES REQUESTED "
+            f"on line 1. The PR head moved or the review was not saved: review this commit first.")
+    state = "success" if verdict == "APPROVED" else "failure"
+    desc = f"{verdict} by VanReviewer ({os.path.basename(path)})"[:140]
+    call = ["gh", "api", "-X", "POST", f"repos/{fields['github_repo']}/statuses/{head}",
+            "-f", f"state={state}", "-f", f"context={REVIEW_CONTEXT}",
+            "-f", f"description={desc}", "-f", f"target_url={info['url']}"]
+    if dry:
+        print(f"DRY {REVIEW_CONTEXT}={state} on {head[:12]} ({info['url']}) from {path}")
+        return
+    r = subprocess.run(call, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if r.returncode != 0:
+        err = (r.stdout + r.stderr).strip()
+        if "not accessible" in err or "403" in err:
+            die(f"GitHub refused the status (403): the token {fields.get('git_secret')} lacks the fine-grained "
+                f"permission 'Commit statuses: Read and write'. The review on GitHub still counts; tell the "
+                f"orchestrator this line so Van can add the permission.")
+        die(f"setting the status failed: {err[:300]}")
+    print(f"OK {REVIEW_CONTEXT}={state} on {head[:12]} ({info['url']}) from {path}")
 
 
 def guard(rest, fields, env):
@@ -121,6 +178,9 @@ def guard(rest, fields, env):
     args = rest[1:]
     if args[:2] == ["pr", "merge"] or any(re.search(r"pulls/\d+/merge\b", a) for a in args):
         die("refused: merging a PR is Van's job, never an agent's (project-orchestration step 5).")
+    if args[:1] == ["api"] and any(re.search(r"(^|/)statuses(/|$)", a) for a in args[1:]):
+        die(f"refused: commit statuses are written only by `git_env.py <slug> --review-status <pr>`. "
+            f"To read them: `git_env.py <slug> -- gh pr view <pr> --json statusCheckRollup`.")
     if args[:2] != ["pr", "create"]:
         return
     base = None
@@ -149,8 +209,8 @@ def guard(rest, fields, env):
     sha = _sha_of(f"origin/{head}", cwd)
     if not sha:
         die(f"refused: origin/{head} does not exist. Push the reviewed branch first.")
-    # Local review check removed: VanReviewer now reviews PRs natively on GitHub.
-    print(f"PR creation allowed for {head} @ {sha[:12]}: native GitHub reviews enabled.", file=sys.stderr)
+    print(f"PR creation allowed for {head} @ {sha[:12]} into {want}. Review happens on the PR; "
+          f"its result is the `{REVIEW_CONTEXT}` status.", file=sys.stderr)
 
 
 def main():
@@ -162,6 +222,11 @@ def main():
     ctx, fields = load_fields(slug)
     env = build_env(fields, read_token(ctx, fields))
 
+    if rest and rest[0] == "--review-status":
+        if len(rest) < 2 or rest[1].startswith("-"):
+            die("usage: git_env.py <slug> --review-status <pr number or URL> [--dry]")
+        review_status(fields, env, rest[1], dry="--dry" in rest[2:])
+        return
     if rest and rest[0] == "--check":
         rest = ["gh", "repo", "view", fields["github_repo"], "--json", "nameWithOwner,viewerPermission"]
     elif rest and rest[0] == "--":

@@ -167,8 +167,10 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
 - Tracker writes go to VanPM only. Never ask VanDev, VanQA, or VanReviewer to
   create a ticket, change a status, or "make sure a ticket exists"; spawn VanPM.
 - GitHub-Native Reviews: VanDev pushes to the task branch and opens the PR directly.
-  VanReviewer then reviews the code natively on the GitHub PR using `gh pr review`.
-  The delivery watcher handles pulling feedback for VanDev to fix.
+  VanReviewer then reviews the code natively on the GitHub PR using `gh pr review` and marks the head
+  commit with the `openclaw/review` status (`git_env.py <slug> --review-status`). A PR is "ready" only when
+  that status is green on its current head (project-orchestration step 5). The delivery watcher handles
+  pulling feedback for VanDev to fix.
 - Tickets move for all work, not only the workflow: when a single-agent code
   request has a tracker ticket, spawn VanPM to set it `in progress` when VanDev
   starts; the delivery watcher (project-orchestration step 6) moves it to `qa` once
@@ -220,7 +222,7 @@ shown. Keep it exact; the check parses it.
 - **Spawn with:** project slug + absolute path to `/home/openclaw/.openclaw/workspace/projects/<slug>/PROJECT_CONTEXT.md`.
 
 #### `developer` - VanDev
-- **Owns:** writing, changing, fixing, refactoring, or debugging code; project setup; build and test failures; pushes and PRs once Van approves.
+- **Owns:** writing, changing, fixing, refactoring, or debugging code; project setup; build and test failures; pushing task branches and opening PRs (merges are Van's).
 - **Spawn with:** project slug + absolute path to `/home/openclaw/.openclaw/workspace/projects/<slug>/PROJECT_CONTEXT.md`.
 
 #### `code-reviewer` - VanReviewer
