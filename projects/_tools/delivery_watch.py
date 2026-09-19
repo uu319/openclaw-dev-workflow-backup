@@ -15,7 +15,10 @@ The flow it drives (statuses are the project's; see the project-orchestration sk
   PR merged                            -> wait for Cloud Build on the Flow PR base
   every build of the first commit that contains the merge commit succeeded
                                        -> DEPLOYED      (VanPM: linked tickets -> `qa`)
-  a build containing it failed         -> BUILD_FAILED  (report + bug ticket, normal flow)
+  the PR's OWN merge commit is red     -> BUILD_FAILED  (report + bug ticket, normal flow)
+                                          Only the newest red is raised (staging is red once), and only
+                                          against the PR that introduced it - never every ancestor PR.
+                                          A red commit with no PR on this base is reported on its own.
   merged, no build after 45 min        -> NO_BUILD
   PR closed without merge              -> PR_CLOSED
   ticket moved to `rejected` by QA     -> REJECTED      (VanDev picks it up again)
@@ -27,6 +30,10 @@ Per-project Flow (PROJECT_CONTEXT `## Flow`, parsed by validate_context.py):
   - `delivery-watch` not in Stages     -> only SWEEP_DUE / STALE_WORKTREE / LINT are reported
   - Deploy signal `none`               -> a merged PR gives MERGED (tickets -> `staged` if the board has it, else `done`)
   - statuses are the board's own names through the Status map; PRs are watched on the Flow PR base
+
+Only PRs authored by the project token's own account are acted on (branch prefixes are the
+fallback if that lookup fails). Anyone else's PR is watched for a red build on the base and
+still moves our tickets when its body links them, but is never pushed to or replied to.
 
 Linking a PR to tickets: ClickUp task URLs (app.clickup.com/t/<id>) in the PR body, plus every
 ticket of `specs/<feature-slug>.md` when the branch is `<prefix>/<feature-slug>[--<suffix>]`.
@@ -195,22 +202,47 @@ def commits_from_builds(ctx, builds):
         if cur is None or (b.get("createTime") or "") > (cur.get("createTime") or ""):
             by[c][trig] = b
             
-    expected = set(t.strip() for t in ctx.f.get("deploy_triggers", "").split(",") if t.strip())
-    
+    expected = set(ctx.f.get("deploy_triggers") or [])
+
     out = {}
     for c, trigs in by.items():
         bs = list(trigs.values())
         sts = {b["status"] for b in bs}
-        
-        if sts & RUNNING:
-            st = "running"
-        elif expected and not expected.issubset(set(trigs.keys())):
+        missing = sorted(expected - set(trigs.keys()))
+        # A trigger we expect but have not seen usually means it is still queued, so we
+        # wait. But "wait" must not be forever: a trigger that never fires (path filter,
+        # disabled trigger, or the build falling out of the `limit` window) would pin the
+        # commit on "running" and silently stop every ticket move. After NO_BUILD_AFTER_MIN
+        # we judge the commit on the builds that did run and say which trigger is missing.
+        last = parse_t(max((b.get("createTime") or "") for b in bs))
+        waiting = missing and last and now() - last <= datetime.timedelta(minutes=NO_BUILD_AFTER_MIN)
+
+        if sts & RUNNING or waiting:
             st = "running"
         else:
             st = "ok" if sts <= DONE else "failed"
-            
-        out[c] = {"status": st, "builds": bs, "at": min(b.get("createTime") or "" for b in bs)}
+
+        out[c] = {"status": st, "builds": bs, "missing": [] if waiting else missing,
+                  "at": min(b.get("createTime") or "" for b in bs)}
     return out
+
+
+def is_ours(pr, prefixes, me):
+    """A PR this team's agents may act on.
+
+    Without this, every open PR on the base branch - including a human teammate's -
+    produced PR_FEEDBACK, which spawns VanDev onto their branch to push commits
+    (2026-09-19). Someone else's PR is still watched for a red build on the base, and
+    still moves our tickets when it carries them; it is just never acted on directly.
+
+    The account the project token belongs to is the real signal. Branch naming is only
+    the fallback for when that lookup failed: our own PRs are not always named to the
+    convention (`fix-chokidar-deps`), so naming alone would skip work that is ours.
+    """
+    if me:
+        return (pr.get("author") or {}).get("login") == me
+    head = pr.get("headRefName", "")
+    return not prefixes or any(head.startswith(p) for p in prefixes)
 
 
 def bdesc(b):
@@ -315,13 +347,44 @@ def main():
     except RuntimeError as e:
         errors.append(str(e)); commits = {}
 
+    me = None
+    if watching:
+        try:
+            me = (ctx.gh("api", "user") or {}).get("login") or None
+        except RuntimeError as e:
+            errors.append(f"gh api user: {e}")
+
+    def build_failed(c, d, where, ids):
+        bad = [b for b in d["builds"] if b["status"] not in DONE]
+        why = "; ".join(bdesc(b) for b in bad)
+        if d.get("missing"):
+            why += f"; never ran: {', '.join(d['missing'])}"
+        act(f"build-{c[:12]}", "BUILD_FAILED",
+            f"{where}: staging build of {c[:10]} failed: {why}",
+            f"Tell Van in one line with the build id and log link. If `{ctx.specs}/staging-build-{c[:10]}.md` does not "
+            f"exist yet, spawn VanPM (it only writes the spec and pushes tickets; it never spawns agents): file "
+            f"the bug ticket there. Then YOU spawn VanDev (project-orchestration step 2, no worktree/cwd) to fix it "
+            f"on `bug/staging-build-{c[:10]}`, then VanReviewer, then ask Van for the PR. The original tickets stay "
+            f"`in progress` and move to `qa` by themselves once a later build containing them succeeds. Ack only "
+            f"after VanDev has started on the fix.", tickets=ids)
+
+    # Merge commits of every PR on this base, so a red commit that belongs to one of them
+    # is reported against that PR and a red commit that belongs to nobody (a direct push,
+    # or another team merging outside this base) is still reported rather than lost.
+    pr_merges = {(p.get("mergeCommit") or {}).get("oid") for p in prs if p.get("mergeCommit")}
+    reds = []       # (commit, build info, where, ticket ids) - resolved to one action below
+
     for pr in prs:
         n, head = pr["number"], pr.get("headRefName", "")
         if (pr.get("author") or {}).get("login", "").endswith("[bot]") or head.startswith("dependabot/"):
             continue
         ids, spec = tickets_for_pr(ctx, pr, marks)
         where = f"PR #{n} `{head}` {pr['url']}"
+        ours = is_ours(pr, ctx.prefixes, me)
         if pr["state"] == "OPEN":
+            if not ours:
+                notes.append(f"{where}: open PR by {(pr.get('author') or {}).get('login')}; not ours, left alone")
+                continue
             try:
                 v = ctx.gh("pr", "view", str(n), "--json", "comments,reviews") or {}
                 inline = ctx.gh("api", f"repos/{ctx.f['github_repo']}/pulls/{n}/comments") or []
@@ -350,7 +413,7 @@ def main():
                     feedback_ids=[x[0] for x in new])
             continue
         if pr["state"] == "CLOSED":
-            if parse_t(pr.get("closedAt")) and parse_t(pr["closedAt"]) >= since:
+            if ours and parse_t(pr.get("closedAt")) and parse_t(pr["closedAt"]) >= since:
                 act(f"closed-pr{n}", "PR_CLOSED", f"{where} was closed without merging",
                     "Tell Van and ask: drop it (VanPM -> `cancelled`) or redo it (VanPM -> `in progress`).",
                     tickets=sorted(ids))
@@ -386,25 +449,27 @@ def main():
                     "one line in the channel: what is ready for testing on staging. Ack after VanPM confirms.",
                     tickets=[{"id": i, "spec": s and f"{ctx.specs}/{s}.md", "title": t, "status": st} for i, s, t, st in moves],
                     command=status_cmd)
-            elif not ids:
+            elif not ids and ours:
                 act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}); no ClickUp ticket is linked",
                     "Tell Van in one line (no ticket to move). Ack.")
+            elif not ours:
+                notes.append(f"{where}: on staging (not ours; no action)")
             else:
                 notes.append(f"{where}: on staging; its tickets are already qa/complete")
             continue
         failed = [(c, d) for c, d in cands if d["status"] == "failed"]
         running = [(c, d) for c, d in cands if d["status"] == "running"]
-        if failed and not running:
-            c, d = failed[-1]
-            bad = [b for b in d["builds"] if b["status"] not in DONE]
-            act(f"build-{c[:12]}", "BUILD_FAILED",
-                f"{where} merged, but the staging build of {c[:10]} failed: " + "; ".join(bdesc(b) for b in bad),
-                f"Tell Van in one line with the build id and log link. If `{ctx.specs}/staging-build-{c[:10]}.md` does not "
-                f"exist yet, spawn VanPM (it only writes the spec and pushes tickets; it never spawns agents): file "
-                f"the bug ticket there. Then YOU spawn VanDev (project-orchestration step 2, no worktree/cwd) to fix it "
-                f"on `bug/staging-build-{c[:10]}`, then VanReviewer, then ask Van for the PR. The original tickets stay "
-                f"`in progress` and move to `qa` by themselves once a later build containing them succeeds. Ack only "
-                f"after VanDev has started on the fix.", tickets=sorted(ids))
+        # Blame only the commit that INTRODUCED the failure - this PR's own merge commit.
+        # Every earlier PR is an ancestor of it too, and blaming all of them turned one
+        # person's red build into one bug ticket carrying five unrelated tasks' tickets
+        # (2026-09-19). Those PRs just wait; the `ok` branch above deploys them by itself
+        # as soon as any later build containing them is green.
+        own = next((x for x in failed if x[0] == msha), None)
+        if own:
+            reds.append((own[0], own[1], where, sorted(ids)))
+        elif failed and not running:
+            notes.append(f"{where}: merged and green is pending; staging is red at {failed[-1][0][:10]}, "
+                         f"a later commit that is not this PR. Its tickets move on the next green build.")
         elif running or failed:
             notes.append(f"{where}: staging build running for {(running or failed)[-1][0][:10]}")
         elif now() - merged_at > datetime.timedelta(minutes=NO_BUILD_AFTER_MIN):
@@ -412,6 +477,26 @@ def main():
                 f"`{ctx.branch}` contains it yet", "Tell Van in one line (triggers may be off). Ack.")
         else:
             notes.append(f"{where}: merged, waiting for Cloud Build")
+
+    # ---- staging is red on a commit no PR on this base accounts for (direct push, other team)
+    greens = [c for c, d in commits.items() if d["status"] == "ok"]
+    for c, d in sorted(((c, d) for c, d in commits.items()
+                        if d["status"] == "failed" and c not in pr_merges
+                        and (parse_t(d["at"]) or now()) >= since), key=lambda x: x[1]["at"]):
+        if any(ctx.is_ancestor(c, g) for g in greens):
+            continue        # a later build containing it is green, so staging is no longer red on it
+        reds.append((c, d, f"commit {c[:10]} on `{ctx.branch}` (pushed with no PR on this base)", []))
+
+    # Staging is one environment, so it is red once. Several un-green commits in a row are
+    # one outage (usually a fix attempt that did not take), and raising a BUILD_FAILED for
+    # each would file several bug tickets and spawn several VanDevs at the same breakage.
+    # Act on the newest; the rest are history and become notes.
+    reds.sort(key=lambda x: x[1]["at"])
+    for i, (c, d, where, ids) in enumerate(reds):
+        if i == len(reds) - 1:
+            build_failed(c, d, where, ids)
+        else:
+            notes.append(f"{where}: build of {c[:10]} also failed, superseded by {reds[-1][0][:10]}")
 
     # ---- ClickUp: rejected by QA, features completed
     for tid, t in (tasks.items() if watching else []):

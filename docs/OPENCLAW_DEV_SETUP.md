@@ -1,6 +1,6 @@
 # OpenClaw Fresh Setup — Development Factory
 
-**Version:** 1.4 · **Written:** 2026-09-17 · **Revised:** 2026-09-19 night (1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
+**Version:** 1.5 · **Written:** 2026-09-17 · **Revised:** 2026-09-19 night (1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
 > **Architecture and self-fix runbook (2026-09-19):** `~/OPENCLAW_ARCHITECTURE.md` v2.3 defines the layers, the file manifest, the per-project Flow profile, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
 
 **Target OpenClaw version:** 2026.9.4 or later (every config key below was checked against
@@ -1281,6 +1281,44 @@ What changed, and why:
   reviews those too or Van keeps a bypass for himself in the ruleset. On team repos it is the team's decision.
 - The shared skill `~/.openclaw/skills/worktree-lifecycle` was in no git repo and still taught push-after-APPROVED and
   "PR after Van's yes". It is now its own repo and the linter checks it, plus flags any other shared skill.
+
+### 12.5f The delivery watcher's silent stall: backticks, and blame by ancestry (2026-09-19)
+
+Van: *"it is claiming that it is currently running cloud build for older or outdated commits, which actually
+[is] not true"*. It was reporting `staging build running for <commit>` for five merged PRs at once while
+Cloud Build had been idle for six hours, and no ticket had ever moved to `qa` on its own.
+
+- **A field parsed with its backticks still attached stopped the whole pipeline.** `deploy_triggers` was the
+  one `OPTIONAL` pattern that captured the raw line, so the expected trigger names came out as
+  `` ['`deploy-frontend-staging', 'deploy-backend-staging`'] ``. Those match no real trigger, so
+  `expected.issubset(...)` was never true and **every commit was classified `running` forever** — including
+  commits whose builds had all succeeded. `DEPLOYED` could never fire (no ticket moves), and `BUILD_FAILED`
+  sits behind `if failed and not running`, so failures could never fire either. The watcher printed
+  confident, wrong notes instead of erroring: it had exactly one poisoned value and no way to notice.
+  Introduced 17:20–18:00 the same day with the per-project Flow profile; it had worked that morning.
+  Fix: normalise the field like `branch_prefixes` (accept `` `a, b` ``, `` `a`, `b` `` and bare `a, b`,
+  drop an unfilled `<placeholder>`), and never let "a trigger we expect has not reported" mean *running*
+  for longer than `NO_BUILD_AFTER_MIN` — after that, judge the commit on the builds that did run and name
+  the trigger that never fired.
+- **"Which commits contain my merge?" is the right question for success and the wrong one for failure.**
+  Candidates are every built commit descended from the PR's merge commit, which is correct for `DEPLOYED`
+  (a later green build genuinely puts an earlier PR on staging, so stacked PRs and "a newer PR that includes
+  mine" already worked). Reused for failure it made every earlier PR guilty of a later commit's breakage:
+  one red build resolved to a single `BUILD_FAILED` carrying five unrelated tasks' tickets. Blame now lands
+  only on the PR whose own merge commit is red; the rest wait and deploy themselves on the next green.
+  A red commit that belongs to no PR on the base (a direct push, another team) is reported on its own
+  instead of being lost. Staging is one environment, so consecutive reds are one outage: act on the newest,
+  note the rest — otherwise a streak of failed fix attempts files a bug ticket and spawns a VanDev for each.
+- **The watcher acted on every human's PR on the base branch.** Only `*[bot]` and `dependabot/` were skipped,
+  so any teammate's open PR produced `PR_FEEDBACK` — which spawns VanDev to push commits to their branch.
+  Ownership is now the project token's own account (`gh api user`), with branch prefixes as the fallback when
+  that lookup fails. Identity, not branch naming: `fix-chokidar-deps` and `fix-frontend-deploy` are ours and
+  match no prefix, and a teammate can name a branch `feature/…` at any time. Someone else's PR is still
+  watched for a red build, and still moves our tickets when its body links them; it is just never acted on.
+- **Reading the tool's own output is not verification.** Everything above was invisible until the builds were
+  listed straight from Cloud Build and compared with what the watcher said about the same commits. Do that
+  before trusting a watcher's summary — `gcloud_env.py <slug> -- gcloud builds list --limit=20 --format=...`
+  against `delivery_watch.py <slug> --dry`, and `--dry --since <older>` to replay a path that never fires.
 
 ### 12.6 Operations cheat sheet
 ```bash

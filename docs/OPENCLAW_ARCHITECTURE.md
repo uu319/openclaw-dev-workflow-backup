@@ -1,7 +1,7 @@
 # OpenClaw Dev Factory — Architecture and Self-Fix Runbook
 
-**Version:** 2.3 · **Date:** 2026-09-19 (2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
-**Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.4) stays the fresh-install reference (host, config keys, every incident).
+**Version:** 2.4 · **Date:** 2026-09-19 (2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.5) stays the fresh-install reference (host, config keys, every incident).
 This document is shorter and answers a different question: **what is the architecture, why does the system
 keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
 
@@ -252,6 +252,15 @@ explicit, never inferred) and Deploy signal. Tools: coding agent in the worktree
 coding agent writes code, VanDev runs everything else itself; `git status` clean after `git add`; 3-poll
 rule; run log under `artifacts/runs/`. Fails as: watch-mode test targets (28 QA timeouts), `agy` used to
 run `git push`, a deploy workaround instead of a source fix.
+
+Three rules the watcher holds to, each one a 2026-09-19 incident (guide §12.5f):
+**success is by ancestry, blame is by authorship** — a PR is on staging when *any* later green build contains
+its merge commit (so stacked and superseded PRs deploy themselves), but a red build is only ever the fault of
+the PR whose own merge commit is red, and consecutive reds are one outage reported once;
+**act only on our own PRs** — ownership is the project token's account (`gh api user`), branch prefixes only
+as fallback, so a teammate's PR is watched but never pushed to;
+**no state waits forever** — "a trigger we expect has not reported yet" expires after `NO_BUILD_AFTER_MIN`,
+because a permanent `running` silently stops every ticket move and still reads as a healthy report.
 
 **5.7 Per-project tools and secrets.** Source: SecretRefs in the context file; values only in the vault
 (`env` kind). Tools: the four launchers + two MCP registrations per project. Rules: names

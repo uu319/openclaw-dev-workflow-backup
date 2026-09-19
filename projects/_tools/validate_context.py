@@ -194,6 +194,13 @@ def parse(path):
             errors.append(f"{k} must be UPPER_SNAKE: {fields[k]}")
     if "branch_prefixes" in fields:
         fields["branch_prefixes"] = re.findall(r"`([^`]+)`", fields["branch_prefixes"])
+    if "deploy_triggers" in fields:
+        # `a, b` and `a`, `b` and bare a, b all mean the same list. Backticks left in
+        # here become trigger names that match nothing, which wedges the watcher on
+        # "still building" forever (2026-09-19), so split them out and drop placeholders.
+        raw = fields["deploy_triggers"]
+        fields["deploy_triggers"] = [] if PLACEHOLDER.search(raw) else [
+            t for part in _ticks(raw) for t in (x.strip() for x in part.split(",")) if t]
     if "statuses" in fields:
         fields["statuses"] = [s.strip(" `") for s in fields["statuses"].split(",") if s.strip(" `")]
     # Stack section must exist and not be entirely placeholders
