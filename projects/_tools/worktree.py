@@ -439,7 +439,37 @@ def cmd_sweep(p):
     if dirty or cur != p.default_branch:
         report.append(f"PRIMARY {p.primary} is on '{cur}' with {len(dirty.splitlines())} changed file(s); "
                       f"agents must not edit it - tell Van")
+    report += retention(p)
     print("\n".join(report) if report else "sweep: nothing to do")
+
+
+RETAIN_DAYS = 30   # Decision J (2026-09-19): run logs, and screenshots of archived features
+
+
+def retention(p):
+    """Delete agent run logs older than RETAIN_DAYS, and specs/_figma/<feature>/ folders whose spec has been in
+    specs/_done/ for longer than RETAIN_DAYS. Nothing else. Loose files in specs/_figma/ are left alone."""
+    out, cutoff = [], datetime.datetime.now().timestamp() - RETAIN_DAYS * 86400
+    runs = os.path.join(p.artifacts, "runs")
+    old = [f for f in glob_files(runs, ".log") if os.path.getmtime(f) < cutoff]
+    for f in old:
+        os.remove(f)
+    if old:
+        out.append(f"RETAIN removed {len(old)} run log(s) older than {RETAIN_DAYS} days from {runs}")
+    figma, done = os.path.join(p.artifacts, "specs", "_figma"), os.path.join(p.artifacts, "specs", "_done")
+    if os.path.isdir(figma):
+        for d in sorted(os.listdir(figma)):
+            folder, spec = os.path.join(figma, d), os.path.join(done, d + ".md")
+            if os.path.isdir(folder) and os.path.isfile(spec) and os.path.getmtime(spec) < cutoff:
+                shutil.rmtree(folder)
+                out.append(f"RETAIN removed screenshots {folder} (feature archived over {RETAIN_DAYS} days ago)")
+    return out
+
+
+def glob_files(folder, suffix):
+    if not os.path.isdir(folder):
+        return []
+    return [os.path.join(folder, f) for f in os.listdir(folder) if f.endswith(suffix) and os.path.isfile(os.path.join(folder, f))]
 
 
 def cmd_list(p):
