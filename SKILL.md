@@ -26,16 +26,17 @@ agent workspaces, never a project's code repo.
 | Start of every coding task | VanDev | `worktree.py <slug> sweep` |
 | Before any code is written | VanDev | `worktree.py <slug> create <branch> --agent developer --task "<one line>"` |
 | Code gets written | agy / Claude Code | launched with `workdir:` = the printed worktree path |
-| Review says CHANGES REQUESTED | VanDev | fix in the same worktree (it is still there), commit, new patch |
-| Review APPROVED that SHA | VanDev | `git -C <worktree> push -u origin <branch>` (never the default branch), then `finish <branch>` |
-| QA run / code review | VanQA, VanReviewer | `create <branch> --agent qa-engineer` (or `code-reviewer`) -> work -> `finish <branch>` |
-| Next lane ticket / QA fixes | VanDev | `create <branch>` again: it checks out `origin/<branch>` |
-| PR (after Van's yes) | VanDev | `create <branch>`, `git_env.py <slug> -- gh pr create --base <Default branch>`, then `finish <branch> --pr <url>` |
+| Lane committed (`git status` empty) | VanDev | `git -C <worktree> push -u origin <branch>` (never the default branch); first lane: `git_env.py <slug> -- gh pr create --base <Flow PR base>`; then `finish <branch> --pr <url>` |
+| Code review | VanReviewer | on the open PR (`gh pr diff`); `create <branch> --agent code-reviewer` -> read -> `finish <branch>` only when it needs the files |
+| Review says CHANGES REQUESTED / PR feedback | VanDev | `create <branch>` again (checks out `origin/<branch>`), fix, commit, push to the same branch, `finish <branch>` |
+| QA run | VanQA | `create <branch> --agent qa-engineer` -> work -> `finish <branch>` |
+| Next lane ticket / QA fixes | VanDev | `create <branch>` again: it checks out `origin/<branch>`; the push updates the same PR |
 
 A branch lives in **one** worktree at a time. `create` refuses when another agent
-still holds it: that agent must push and `finish` first. That is why a task branch
-is pushed as soon as its review is APPROVED (pushing a task branch deploys nothing;
-PRs and merges are what need Van).
+still holds it: that agent must push and `finish` first. That is why VanDev pushes the
+task branch and opens the PR as soon as a lane is committed: the review happens on the PR
+(pushing a task branch deploys nothing; merging is Van's). Every push after a review is a
+new commit without the `openclaw/review` status, so it needs a new review before merge.
 
 `finish` is not optional: skipping it leaves the folder and, worse, can leave uncommitted files
 out of the PR without anyone noticing. `create` prints the exact `finish` command to run.
