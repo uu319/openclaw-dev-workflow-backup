@@ -1,2 +1,0 @@
-[code-reviewer/sessions/code-reviewer/804808b0-f028-49c2-8ff3-3d576a6f91ca#L26] User: Maintenance only: call memory_search once with the query 'project workflow', then reply with just the number of results. Do not read, run, or change anything else.
-[code-reviewer/sessions/code-reviewer/804808b0-f028-49c2-8ff3-3d576a6f91ca#L31] Assistant: 6
