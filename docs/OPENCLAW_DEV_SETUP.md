@@ -761,7 +761,7 @@ fms-studio names (`staged` = `qa` = merged **and deployed to staging**, ready fo
    (Deploy signal `none`: the merge is the signal), `LINT` (daily, first project only: posted, never fixed) — each
    with what to do and an `--ack` id. Main delegates, then acks; un-acked actions come back. On team profiles a
    `PR_FEEDBACK` fix is pushed right away, but the reply to the person is drafted by VanDev and posted only after
-   Van approves the text (8.1 step 6, 12.5f).
+   Van approves the text (8.1 step 6; architecture Decision O).
 7. **Memory:** one line per feature in `MEMORY.md` (date, slug, PR, artifacts, lessons; no IDs).
 
 Direct single-agent requests skip 1 and 4 but not the rules: code goes on a task branch with a PR, is reviewed on
