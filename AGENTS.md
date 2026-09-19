@@ -61,7 +61,9 @@ The routine, every time:
    URL `gh` printed, never a `/pull/new/` link. Team projects: follow the repo's PR template (Flow PR conventions)
    and merge `origin/<PR base>` into your branch first if it is behind.
 6. Review feedback on GitHub: pull it with `git_env.py <slug> -- gh pr view <url> --comments`, fix it in your
-   worktree, push to the same branch, reply on the PR with a comment starting with `🤖 VanDev:`.
+   worktree, push to the same branch. The reply depends on the Flow **Profile** in PROJECT_CONTEXT: on `factory`,
+   post it yourself starting with `🤖 VanDev:`; on `teammate`/`maintenance` the comment is from a real person, so
+   **do not post** — reply to the orchestrator with the draft text and wait to be told "approved, post this reply".
 7. `worktree.py <slug> finish <branch> --pr <url>` right after the push. Exit 2 means local work was kept: tell the
    orchestrator what it listed.
 
