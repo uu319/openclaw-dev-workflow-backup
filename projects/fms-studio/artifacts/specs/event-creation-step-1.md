@@ -62,18 +62,23 @@ As a developer, I want the events table created, so that the API can persist eve
 
 ## In scope
 - Set up ORM (e.g., Prisma or TypeORM) since this is the first feature persisting data.
-- Create `events` table with columns: id, owner_id, title, description, location, category, start_date, end_date.
+- Create `events` table with columns: id, owner_id, title, description, location, category, start_date, end_date, status, created_at, updated_at.
+- `events` is the single table for events and albums: an album in the UI is an `events` row (drafts have `status = 'draft'`, published albums `status = 'published'`).
 
 ## Out of scope (do NOT build)
-- Columns for images, passwords, or publish status (will be added in later DB tickets).
+- Branding columns (added by `[DB] Look & Feel: add branding columns to events`)
+- `privacy` (added by `[DB] Step 3 Privacy: add privacy column to events`)
+- `password_hash` (added by `[DB] Set password: Add password_hash column`)
+- `is_starred`, `cover_urls` (added by `[DB] My Albums: add is_starred and cover_urls columns to events`)
 
 ## Acceptance criteria
 - Given the DB is empty, when the migration runs, then the `events` table is created with the required schema.
 - Given the ORM is set up, when the backend starts, then it can connect to the database successfully.
 - Given a valid insert command, when executed, then a row is saved in the `events` table.
+- Given a row inserted without a `status`, when it is read back, then `status` is `'draft'` and `created_at`/`updated_at` are set.
 
 ## Technical notes
-- Endpoint / schema: `events` table schema: id (UUID), owner_id (UUID), title (VARCHAR), description (VARCHAR 255), location (VARCHAR), category (VARCHAR), start_date (DATE), end_date (DATE).
+- Endpoint / schema: `events` table schema: id (UUID), owner_id (UUID), title (VARCHAR), description (VARCHAR 255), location (VARCHAR), category (VARCHAR), start_date (DATE), end_date (DATE), status (VARCHAR, `'draft' | 'published'`, NOT NULL, default `'draft'`), created_at (TIMESTAMP, default now), updated_at (TIMESTAMP, default now).
 - Mock or fixture for parallel work: none
 - Breakpoints (FE only): none
 
@@ -89,7 +94,7 @@ As a developer, I want the events table created, so that the API can persist eve
 - [ ] Unit tests for this lane added and green (`npx nx test backend`)
 - [ ] Lint and typecheck clean (`npx nx lint backend`, `npx tsc -p backend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/step-1-db` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -136,7 +141,7 @@ As a frontend application, I want an endpoint to submit the basic info form, so 
 - [ ] Unit tests for this lane added and green (`npx nx test backend`)
 - [ ] Lint and typecheck clean (`npx nx lint backend`, `npx tsc -p backend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/step-1-be` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -192,7 +197,7 @@ As an organizer, I want a clear form to enter event details, so that I know what
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/step-1-fe-layout` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -240,7 +245,7 @@ As an organizer, I want my form submission saved, so that I can proceed to Step 
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/step-1-fe-wiring` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -285,7 +290,7 @@ As an engineer, I want the E2E testing framework set up, so that QA can verify f
 - [ ] All acceptance criteria pass
 - [ ] Playwright configured
 - [ ] PR opened from `feature/setup-playwright` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -327,5 +332,5 @@ As QA, I want an automated test for Step 1, so that regressions are caught early
 ## Definition of done
 - [ ] All acceptance criteria pass
 - [ ] PR opened from `feature/step-1-qa` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

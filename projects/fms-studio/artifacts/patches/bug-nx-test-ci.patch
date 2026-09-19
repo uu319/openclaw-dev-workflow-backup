@@ -1,0 +1,14 @@
+diff --git a/nx.json b/nx.json
+index f96f86a..af6fd73 100644
+--- a/nx.json
++++ b/nx.json
+@@ -43,8 +43,7 @@
+       "plugin": "@nx/vitest",
+       "options": {
+         "testTargetName": "test",
+-        "ciTargetName": "test-ci",
+-        "testMode": "watch"
++        "testMode": "run"
+       }
+     },
+     {

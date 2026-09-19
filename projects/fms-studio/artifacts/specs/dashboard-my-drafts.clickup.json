@@ -5,15 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/2bf8c7c5-1899-402b-afe0-0490fcd48804/9794-6547.png"
-    }
-  },
-  "[FE] Dashboard: Layout and Navigation": {
-    "id": "z94kydab96",
-    "url": "https://app.clickup.com/t/z94kydab96",
-    "lane": "FE",
-    "attachments": {
-      "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/90403c66-b356-4dc1-8d70-5799fe46925c/9794-6547.png"
-    }
+    },
+    "desc_hash": "a6ed51f09352c366"
   },
   "[FE] Dashboard: My Drafts Section": {
     "id": "z94kydab97",
@@ -21,13 +14,15 @@
     "lane": "FE",
     "attachments": {
       "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/2d9773b8-be5f-460d-8cbd-3fd47f0feb52/9794-6547.png"
-    }
+    },
+    "desc_hash": "5e3a5008fe5133c8"
   },
   "[BE] Dashboard: GET /api/dashboard returns user and drafts": {
     "id": "z94kydab98",
     "url": "https://app.clickup.com/t/z94kydab98",
     "lane": "BE",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "e15d8d03f0354618"
   },
   "[FE] Dashboard: API Wiring": {
     "id": "z94kydab99",
@@ -35,12 +30,24 @@
     "lane": "FE",
     "attachments": {
       "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/f27a8797-a66a-419b-943e-c525015cea61/9794-6547.png"
-    }
+    },
+    "desc_hash": "007d0e986cb6c9f2"
   },
   "[QA] Dashboard: E2E View My Drafts": {
     "id": "z94kydab9a",
     "url": "https://app.clickup.com/t/z94kydab9a",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "fc3cc27e274d0a34"
+  },
+  "_cancelled": {
+    "[FE] Dashboard: Layout and Navigation": {
+      "id": "z94kydab96",
+      "url": "https://app.clickup.com/t/z94kydab96",
+      "lane": "FE",
+      "attachments": {
+        "9794-6547.png": "https://t7533817.p.clickup-attachments.com/t7533817/90403c66-b356-4dc1-8d70-5799fe46925c/9794-6547.png"
+      }
+    }
   }
 }

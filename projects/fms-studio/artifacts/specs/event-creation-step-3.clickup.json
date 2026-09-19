@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/bee9d837-c878-4bfc-9434-2d3b087b0d09/9836-5766.png"
-    }
+    },
+    "desc_hash": "4c1b01939e8a05cc"
   },
   "[FE] Step 3 Privacy: form layout and state selection": {
     "id": "z94kydabae",
@@ -13,13 +14,15 @@
     "lane": "FE",
     "attachments": {
       "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/ef3a39c0-c8d1-4d69-b3bc-f9146b5e761f/9836-5766.png"
-    }
+    },
+    "desc_hash": "fed517ab9e315203"
   },
   "[BE] Step 3 Privacy: PATCH /api/events/:id/draft stores privacy setting": {
     "id": "z94kydabaf",
     "url": "https://app.clickup.com/t/z94kydabaf",
     "lane": "BE",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "5b260ff502da6461"
   },
   "[FE] Step 3 Privacy: wire Next Step to PATCH /api/events/:id/draft": {
     "id": "z94kydabag",
@@ -27,12 +30,21 @@
     "lane": "FE",
     "attachments": {
       "9836-5766.png": "https://t7533817.p.clickup-attachments.com/t7533817/f1e1f149-5401-46c5-b95d-0bb7a5a2f282/9836-5766.png"
-    }
+    },
+    "desc_hash": "299cac2439835b79"
   },
   "[QA] Step 3 Privacy: E2E organizer sets privacy level": {
     "id": "z94kydabah",
     "url": "https://app.clickup.com/t/z94kydabah",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "69d5524beae3c4ee"
+  },
+  "[DB] Step 3 Privacy: add privacy column to events": {
+    "id": "z94kydanqw",
+    "url": "https://app.clickup.com/t/z94kydanqw",
+    "lane": "DB",
+    "attachments": {},
+    "desc_hash": "1f70630194373648"
   }
 }

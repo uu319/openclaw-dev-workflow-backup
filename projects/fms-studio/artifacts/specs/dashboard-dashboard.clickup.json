@@ -5,19 +5,22 @@
     "lane": "FEATURE",
     "attachments": {
       "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/b478d59b-f7b2-43a3-8412-2c1e03ff3e7c/9794-6008.png"
-    }
+    },
+    "desc_hash": "2103949e92aa2566"
   },
   "[DB] Dashboard: read models for metrics (if missing)": {
     "id": "z94kydab8p",
     "url": "https://app.clickup.com/t/z94kydab8p",
     "lane": "DB",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "bbc30881f97b3a56"
   },
   "[BE] Dashboard: GET /api/dashboard/overview returns aggregated metrics": {
     "id": "z94kydab8q",
     "url": "https://app.clickup.com/t/z94kydab8q",
     "lane": "BE",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "d5bfc4c95a91c907"
   },
   "[FE] Dashboard: layout + static components": {
     "id": "z94kydab8r",
@@ -25,7 +28,8 @@
     "lane": "FE",
     "attachments": {
       "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/8ff4e6ef-3174-478a-a25b-37621100b370/9794-6008.png"
-    }
+    },
+    "desc_hash": "cc85c36e28880feb"
   },
   "[FE] Dashboard: wire overview endpoint": {
     "id": "z94kydab8t",
@@ -33,12 +37,14 @@
     "lane": "FE",
     "attachments": {
       "9794-6008.png": "https://t7533817.p.clickup-attachments.com/t7533817/d9da23d7-e6a9-4904-9945-9b42cd996ea7/9794-6008.png"
-    }
+    },
+    "desc_hash": "b8b1e7e38a908a35"
   },
   "[QA] Dashboard: E2E organizer views dashboard metrics": {
     "id": "z94kydab8u",
     "url": "https://app.clickup.com/t/z94kydab8u",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "84cb1bac5e9e7704"
   }
 }

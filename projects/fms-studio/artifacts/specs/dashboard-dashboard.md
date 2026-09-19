@@ -28,7 +28,7 @@ As an organizer, I want a dashboard showing my credit usage and event performanc
 - User profile settings drop-down interactions
 - Implementing the "Buy Credits" / "Top Up" flow (separate feature)
 - Interactive tooltips on the chart
-- Responsive mobile menu interactions (if complex, stick to basic hiding/stacking per standard breakpoints)
+- Responsive mobile menu interactions (below 768px the sidebar is hidden; no hamburger menu in this ticket)
 - Real time live-updating
 
 ## Acceptance criteria
@@ -68,7 +68,7 @@ As a developer, I want queries or views to efficiently aggregate dashboard metri
 
 ## In scope
 - Ensure necessary DB indexes exist for counting albums, photos, and downloads per organizer.
-- (If using an ORM/query builder) Write the aggregation queries needed by the dashboard endpoint.
+- Write the aggregation queries needed by the dashboard endpoint with the project ORM (set up by `[DB] Basic Info: events table + migration`).
 
 ## Out of scope (do NOT build)
 - Creating the core tables (Albums, Photos, Events) - these should be handled by their respective feature tickets. This ticket is just for read-aggregation logic/indexes.
@@ -83,7 +83,7 @@ As a developer, I want queries or views to efficiently aggregate dashboard metri
 - Mock or fixture for parallel work: N/A
 
 ## Depends on / blocks
-- Depends on: [DB] Setup ORM + events table (from previous project init)
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
 - Blocks: [BE] Dashboard: GET /api/dashboard/overview returns aggregated metrics
 
 ## Test notes (how QA verifies)
@@ -94,7 +94,7 @@ As a developer, I want queries or views to efficiently aggregate dashboard metri
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/dashboard-db` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -140,7 +140,7 @@ As the dashboard UI, I want an endpoint that returns all required metrics in one
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/dashboard-api` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -160,7 +160,7 @@ Parent: [Feature] Dashboard: Organizer Dashboard · Figma: https://www.figma.com
 As an organizer, I want to see the dashboard layout with all visual elements, so that I have a clear overview of my data.
 
 ## In scope
-- Global layout shell (Top nav, Left sidebar).
+- Global layout shell (Top nav, Left sidebar), shared by every dashboard page including My Albums and My Drafts.
 - Overview page content area (`/dashboard`).
 - Credit Balance widget.
 - 4 Stat widgets.
@@ -174,6 +174,9 @@ As an organizer, I want to see the dashboard layout with all visual elements, so
 
 ## Acceptance criteria
 - Given the dashboard page, when rendered, then the top nav shows "Dashboard", a "420 Credits" pill, and a solid orange "Buy Credits" button.
+- Given the dashboard page, when rendered, then the top nav also shows the logo and the user avatar, and the left sidebar shows four icon links (album, layout-dashboard, square-pen, settings) with an avatar at the bottom.
+- Given the "Dashboard" link in the top nav, when clicked, then the browser is on `/dashboard`.
+- Given any page that uses this shell (Overview, My Albums, My Drafts), when it renders, then it uses this one shared top nav and sidebar component.
 - Given the dashboard page, when rendered, then the "Credit Balance" card displays a large number "4,320", text "credits left", and a "Top Up +" button.
 - Given the dashboard page, when rendered, then four stat cards are visible with labels "Albums Total", "Photos Uploaded", "Attendee Downloads", and "Match Rate".
 - Given the dashboard page, when rendered, then the "Most Downloaded Marathon" widget displays an image and text "Liberty Run Marathon 2026".
@@ -195,7 +198,7 @@ As an organizer, I want to see the dashboard layout with all visual elements, so
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/dashboard-layout` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -242,7 +245,7 @@ As an organizer, I want my dashboard to show my actual data, so I can see my rea
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/dashboard-wiring` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -285,5 +288,5 @@ As a QA engineer, I want an automated test for the dashboard, so that we prevent
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/dashboard-qa` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

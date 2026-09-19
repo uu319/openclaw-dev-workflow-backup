@@ -1,0 +1,34 @@
+diff --git a/.cloudbuild/cloudbuild-backend-staging.yaml b/.cloudbuild/cloudbuild-backend-staging.yaml
+index 9e5cbd4..ff875fb 100644
+--- a/.cloudbuild/cloudbuild-backend-staging.yaml
++++ b/.cloudbuild/cloudbuild-backend-staging.yaml
+@@ -2,6 +2,12 @@ steps:
+   - name: 'node:24'
+     entrypoint: 'npm'
+     args: ['ci']
++  - name: 'node:24'
++    entrypoint: 'npx'
++    args: ['nx', 'lint', 'backend']
++  - name: 'node:24'
++    entrypoint: 'npx'
++    args: ['nx', 'test', 'backend']
+   - name: 'node:24'
+     entrypoint: 'npx'
+     args: ['nx', 'run', 'backend:build']
+diff --git a/.cloudbuild/cloudbuild-frontend-staging.yaml b/.cloudbuild/cloudbuild-frontend-staging.yaml
+index 01b5d02..dd3fc21 100644
+--- a/.cloudbuild/cloudbuild-frontend-staging.yaml
++++ b/.cloudbuild/cloudbuild-frontend-staging.yaml
+@@ -2,6 +2,12 @@ steps:
+   - name: 'node:24'
+     entrypoint: 'npm'
+     args: ['ci']
++  - name: 'node:24'
++    entrypoint: 'npx'
++    args: ['nx', 'lint', 'frontend']
++  - name: 'node:24'
++    entrypoint: 'npx'
++    args: ['nx', 'test', 'frontend']
+   - name: 'node:24'
+     entrypoint: 'npx'
+     args: ['nx', 'run', 'frontend:build']

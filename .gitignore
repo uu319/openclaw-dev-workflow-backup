@@ -17,3 +17,14 @@ BOOTSTRAP.md
 project-manager/
 developer/
 qa-engineer/
+memory/
+**/memory/
+DREAMS.md
+**/DREAMS.md
+media/
+**/media/
+credentials/
+__pycache__/
+**/artifacts/runs/
+**/artifacts/delivery_state.json
+**/worktrees.jsonl.lock

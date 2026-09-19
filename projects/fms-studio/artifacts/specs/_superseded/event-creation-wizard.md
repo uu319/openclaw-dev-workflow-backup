@@ -1,29 +1,4 @@
-import os
-
-specs_dir = "/home/openclaw/.openclaw/workspace/projects/fms-studio/artifacts/specs"
-os.makedirs(specs_dir, exist_ok=True)
-
-spec_path = f"{specs_dir}/event-creation-wizard.md"
-
-figma_links = [
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9810-7244",
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-3977",
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9873-3730",
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-5766",
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520",
-    "https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6900"
-]
-
-screenshots = [
-    "specs/_figma/event-creation/9810-7244.png",
-    "specs/_figma/event-creation/9836-3977.png",
-    "specs/_figma/event-creation/9873-3730.png",
-    "specs/_figma/event-creation/9836-5766.png",
-    "specs/_figma/event-creation/9836-6520.png",
-    "specs/_figma/event-creation/9836-6900.png"
-]
-
-content = f"""# Spec: Event Creation Wizard (Steps 1 to 4)
+# Spec: Event Creation Wizard (Steps 1 to 4)
 
 Source: Figma Event Creation screens. Written 2026-09-16 by VanPM.
 
@@ -31,11 +6,11 @@ Source: Figma Event Creation screens. Written 2026-09-16 by VanPM.
 title: [Feature] Event Creation: Wizard flow
 lane: FEATURE
 priority: high
-figma: {','.join(figma_links)}
-screenshots: {','.join(screenshots)}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9810-7244,https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-3977,https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9873-3730,https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-5766,https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520,https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6900
+screenshots: specs/_figma/event-creation/9810-7244.png,specs/_figma/event-creation/9836-3977.png,specs/_figma/event-creation/9873-3730.png,specs/_figma/event-creation/9836-5766.png,specs/_figma/event-creation/9836-6520.png,specs/_figma/event-creation/9836-6900.png
 
 ## Context
-Parent: this is the parent · Figma: {figma_links[0]} · Lane: FEATURE
+Parent: this is the parent · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9810-7244 · Lane: FEATURE
 
 ## User story
 As an organizer, I want a step-by-step wizard to create an album, so that I can configure its details, look, and privacy before publishing.
@@ -116,7 +91,7 @@ As a QA engineer, I want an E2E testing framework, so that automated tests can v
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -294,11 +269,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: high
 estimate_hours: 6
 parallel: true
-figma: {figma_links[0]}
-screenshots: {screenshots[0]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9810-7244
+screenshots: specs/_figma/event-creation/9810-7244.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[0]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9810-7244 · Lane: FE
 
 ## User story
 As an organizer, I want to enter basic info and proceed to the next step.
@@ -339,11 +314,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: high
 estimate_hours: 6
 depends_on: [FE] Event Creation: Step 1 UI and API wiring, [BE] Event Creation: PATCH /api/albums/:id/draft
-figma: {figma_links[1]}
-screenshots: {screenshots[1]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-3977
+screenshots: specs/_figma/event-creation/9836-3977.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[1]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-3977 · Lane: FE
 
 ## User story
 As an organizer, I want to pick my album's font and color and save it.
@@ -383,11 +358,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: normal
 estimate_hours: 5
 parallel: true
-figma: {figma_links[2]}
-screenshots: {screenshots[2]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9873-3730
+screenshots: specs/_figma/event-creation/9873-3730.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[2]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9873-3730 · Lane: FE
 
 ## User story
 As an organizer, I want to preview my album design.
@@ -427,11 +402,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: high
 estimate_hours: 5
 depends_on: [FE] Event Creation: Step 2 UI and API wiring, [BE] Event Creation: PATCH /api/albums/:id/draft
-figma: {figma_links[3]}
-screenshots: {screenshots[3]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-5766
+screenshots: specs/_figma/event-creation/9836-5766.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[3]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-5766 · Lane: FE
 
 ## User story
 As an organizer, I want to set privacy settings.
@@ -471,11 +446,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: high
 estimate_hours: 5
 depends_on: [FE] Event Creation: Step 3 UI and API wiring, [BE] Event Creation: PATCH /api/albums/:id/draft
-figma: {figma_links[4]}
-screenshots: {screenshots[4]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520
+screenshots: specs/_figma/event-creation/9836-6520.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[4]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520 · Lane: FE
 
 ## User story
 As an organizer, I want to set a password for my album.
@@ -515,11 +490,11 @@ parent: [Feature] Event Creation: Wizard flow
 priority: high
 estimate_hours: 5
 depends_on: [FE] Event Creation: Step 3.1 Password modal, [BE] Event Creation: POST /api/albums/:id/publish
-figma: {figma_links[5]}
-screenshots: {screenshots[5]}
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6900
+screenshots: specs/_figma/event-creation/9836-6900.png
 
 ## Context
-Parent: [Feature] Event Creation: Wizard flow · Figma: {figma_links[5]} · Lane: FE
+Parent: [Feature] Event Creation: Wizard flow · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6900 · Lane: FE
 
 ## User story
 As an organizer, I want to review my settings and publish the album.
@@ -591,7 +566,3 @@ As a QA engineer, I want to test the entire wizard flow.
 - [ ] All acceptance criteria pass
 - [ ] PR merged
 ---end
-"""
-
-with open(spec_path, "w") as f:
-    f.write(content)

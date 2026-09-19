@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""Architecture linter for the OpenClaw dev factory. READ-ONLY: prints OK / FIX lines, changes nothing.
+
+Usage:
+  lint_workspace.py            # human report, exit 1 if anything needs fixing
+  lint_workspace.py --json     # machine-readable
+
+What it checks (the MANIFEST below is the architecture; anything not in it is clutter):
+  1. Framework files: every path under ~/.openclaw/workspace matches an allowed pattern.
+  2. Required files exist (agent bootstrap files, shared tools, skills, template).
+  3. Per project: PROJECT_CONTEXT.md validates, artifacts layout is the standard one, no stray files.
+  4. Code roots: ~/projects holds only <slug> checkouts + .worktrees/<slug>/; primary checkouts are clean
+     and on the default branch; no OpenClaw managed worktrees of the settings repo.
+  5. openclaw.json desired state: main deny [], loop detection on, heartbeat isolated, no specialist bots,
+     specialist deny lists, MCP servers per project, only the intended skills enabled.
+  6. Host: /tmp size, gateway TMPDIR/PATH, gcloud + gh on the gateway PATH, backup sprawl.
+Standard library only. Run it from the orchestrator (read-only shell) or by hand.
+"""
+import fnmatch, glob, importlib.util, json, os, re, subprocess, sys
+
+HOME = "/home/openclaw"
+OC = f"{HOME}/.openclaw"
+WS = f"{OC}/workspace"
+CODE = f"{HOME}/projects"
+AGENTS = ["project-manager", "developer", "qa-engineer", "code-reviewer"]
+SHARED_TOOLS = ["clickup_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_env.py", "git_env.py",
+                "spec_index.py", "validate_context.py", "worktree.py"]
+PM_SCRIPTS = ["clickup_push.py", "clickup_scan.py", "clickup_status.py"]
+
+# ---- MANIFEST: allowed paths, relative to the workspace. Globs; ** matches any depth. ----
+ALLOWED = [
+    "AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md", "TOOLS.md", ".gitignore",
+    "DREAMS.md",                       # written by OpenClaw's dreaming feature (see Decision G)
+    "memory/**", ".clawhub/**", "media/**", ".git/**",
+    "_tools/validate_team.py", "_tools/lint_workspace.py",
+    "skills/project-onboarding/**", "skills/project-orchestration/**",
+    "credentials/gcp/*.json",
+    "projects/_template/**",
+    *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
+    "projects/*/PROJECT_CONTEXT.md",
+    "projects/*/artifacts/specs/**", "projects/*/artifacts/patches/**", "projects/*/artifacts/reviews/**",
+    "projects/*/artifacts/qa/**", "projects/*/artifacts/runs/**",
+    "projects/*/artifacts/worktrees.jsonl", "projects/*/artifacts/worktrees.jsonl.lock",
+    "projects/*/artifacts/prs.md", "projects/*/artifacts/delivery_state.json",
+]
+for a in AGENTS:
+    ALLOWED += [f"{a}/AGENTS.md", f"{a}/SOUL.md", f"{a}/USER.md", f"{a}/IDENTITY.md", f"{a}/DREAMS.md",
+                f"{a}/memory/**", f"{a}/media/**", f"{a}/.git/**", f"{a}/.gitignore"]
+ALLOWED += ["project-manager/skills/feature-breakdown/**", "developer/skills/agy-coding/**",
+            "developer/skills/coding-delegation/**", "code-reviewer/skills/code-review/**",
+            "qa-engineer/skills/qa-verification/**"]
+REQUIRED = ["AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md",
+            "_tools/validate_team.py", "skills/project-onboarding/SKILL.md", "skills/project-orchestration/SKILL.md",
+            "projects/_template/PROJECT_CONTEXT.md", "projects/_template/specs/_planned-data.md",
+            *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
+            *[f"{a}/AGENTS.md" for a in AGENTS],
+            *[f"project-manager/skills/feature-breakdown/scripts/{s}" for s in PM_SCRIPTS]]
+ARTIFACT_DIRS = ["specs", "specs/_done", "specs/_superseded", "patches", "reviews", "qa", "runs"]
+
+R = []  # (status, area, message, fix)
+
+
+def ok(area, msg, how=""): R.append(("OK", area, msg, ""))
+def fix(area, msg, how=""): R.append(("FIX", area, msg, how))
+
+
+def allowed(rel):
+    parts = rel.split("/")
+    for pat in ALLOWED:
+        if fnmatch.fnmatch(rel, pat):
+            return True
+        if pat.endswith("/**"):
+            base = pat[:-3]
+            if fnmatch.fnmatch(rel, base) or any(fnmatch.fnmatch("/".join(parts[:i]), base) for i in range(1, len(parts))):
+                return True
+    return False
+
+
+def run(cmd, cwd=None):
+    try:
+        r = subprocess.run(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
+        return r.returncode, r.stdout.strip()
+    except Exception as e:
+        return 1, str(e)
+
+
+def check_framework_files():
+    strays, pyc = [], []
+    for root, dirs, files in os.walk(WS):
+        rel_root = os.path.relpath(root, WS)
+        if rel_root.split("/")[0] in (".git",) or "/.git" in rel_root or rel_root.endswith(".git"):
+            dirs[:] = []
+            continue
+        for f in files:
+            rel = os.path.normpath(os.path.join(rel_root, f)) if rel_root != "." else f
+            if "__pycache__" in rel:
+                pyc.append(rel); continue
+            if not allowed(rel):
+                strays.append(rel)
+    for req in REQUIRED:
+        if not os.path.exists(f"{WS}/{req}"):
+            fix("framework", f"required file missing: {req}", "restore from git / backups or the guide")
+    if strays:
+        fix("framework", f"{len(strays)} file(s) outside the manifest:\n      " + "\n      ".join(sorted(strays)),
+            "move into place (artifacts/, a skill, _tools) or delete; nothing lives outside the manifest")
+    else:
+        ok("framework", "every workspace file matches the manifest")
+    if pyc:
+        fix("framework", f"{len(pyc)} __pycache__ file(s) (python bytecode; regenerated on every run)",
+            "add __pycache__/ to .gitignore and delete: find ~/.openclaw/workspace -name __pycache__ -type d")
+    for skill in glob.glob(f"{WS}/skills/*") + glob.glob(f"{WS}/*/skills/*"):
+        rel = os.path.relpath(skill, WS)
+        if not allowed(rel + "/SKILL.md"):
+            fix("framework", f"skill not in the manifest: {rel}", "delete it, or add it to the manifest with an owner")
+    # git hygiene: the framework repo is the clutter detector
+    if os.path.isdir(f"{WS}/.git"):
+        rc, out = run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=WS)
+        lines = [l for l in out.splitlines() if l and not re.search(r"(^|/)(memory|media|__pycache__)/", l)]
+        if lines:
+            fix("framework", f"framework repo has {len(lines)} uncommitted/untracked path(s) (first 15):\n      "
+                + "\n      ".join(lines[:15]), "cd ~/.openclaw/workspace && git add -A && git commit -m 'framework: <what changed>'")
+        else:
+            ok("framework", "framework repo is clean (git status empty)")
+        rc, out = run(["git", "remote", "-v"], cwd=WS)
+        if out.strip():
+            fix("framework", f"settings repo has a remote:\n      {out}", "git -C ~/.openclaw/workspace remote remove <name>; the settings repo never pushes anywhere")
+    else:
+        fix("framework", "workspace is not a git repo", "cd ~/.openclaw/workspace && git init && git add -A && git commit -m 'framework baseline'")
+
+
+def load_validator():
+    spec = importlib.util.spec_from_file_location("vc", f"{WS}/projects/_tools/validate_context.py")
+    vc = importlib.util.module_from_spec(spec); spec.loader.exec_module(vc)
+    return vc
+
+
+def projects():
+    return sorted(d for d in os.listdir(f"{WS}/projects") if not d.startswith("_") and os.path.isdir(f"{WS}/projects/{d}"))
+
+
+def check_projects():
+    vc = load_validator()
+    slugs = projects()
+    if not slugs:
+        ok("projects", "no projects onboarded"); return {}
+    ctxs = {}
+    for slug in slugs:
+        ctx = f"{WS}/projects/{slug}/PROJECT_CONTEXT.md"
+        if not os.path.isfile(ctx):
+            fix(f"project:{slug}", "PROJECT_CONTEXT.md missing", "run the project-onboarding skill"); continue
+        fields, errors = vc.parse(ctx)
+        ctxs[slug] = fields
+        if errors:
+            fix(f"project:{slug}", "PROJECT_CONTEXT.md invalid: " + "; ".join(errors), "fix the file, not the tooling")
+        else:
+            ok(f"project:{slug}", "PROJECT_CONTEXT.md VALID")
+        art = f"{WS}/projects/{slug}/artifacts"
+        missing = [d for d in ARTIFACT_DIRS if not os.path.isdir(f"{art}/{d}")]
+        if missing:
+            fix(f"project:{slug}", f"artifact dirs missing: {missing}", f"mkdir -p {art}/{{{','.join(missing)}}}")
+        if not os.path.isfile(f"{art}/specs/_planned-data.md"):
+            fix(f"project:{slug}", "specs/_planned-data.md missing", "copy from projects/_template/specs/ (onboarding step 3)")
+        loose = [f for f in os.listdir(f"{WS}/projects/{slug}") if f not in ("PROJECT_CONTEXT.md", "artifacts")]
+        if loose:
+            fix(f"project:{slug}", f"stray files in the project dir: {loose}", "delete; only PROJECT_CONTEXT.md and artifacts/ live here")
+    return ctxs
+
+
+def check_code_roots(ctxs):
+    if not os.path.isdir(CODE):
+        fix("code", f"{CODE} missing", "mkdir -p ~/projects"); return
+    slugs = set(ctxs)
+    for entry in sorted(os.listdir(CODE)):
+        p = f"{CODE}/{entry}"
+        if entry == ".worktrees":
+            for wslug in os.listdir(p):
+                if wslug not in slugs:
+                    fix("code", f".worktrees/{wslug} belongs to no onboarded project", "delete after checking nothing is unpushed")
+            continue
+        if entry not in slugs:
+            fix("code", f"~/projects/{entry} is not an onboarded project's Code (CWD)", "delete (old agy worktrees, logs, prompts) or onboard it")
+    for slug, f in ctxs.items():
+        cwd = f.get("code_cwd", "")
+        if not os.path.isdir(f"{cwd}/.git"):
+            fix(f"code:{slug}", f"Code (CWD) {cwd} is not a git checkout", "clone it (onboarding step 3)"); continue
+        rc, st = run(["git", "status", "--porcelain"], cwd=cwd)
+        rc2, br = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd)
+        want = f.get("default_branch")
+        if st:
+            fix(f"code:{slug}", f"primary checkout is dirty ({len(st.splitlines())} paths); agents must never edit it",
+                "hand to VanDev: move the work to a worktree branch or discard it")
+        elif want and br != want:
+            fix(f"code:{slug}", f"primary checkout is on `{br}`, expected `{want}`", f"git -C {cwd} checkout {want} && git pull --ff-only")
+        else:
+            ok(f"code:{slug}", f"primary checkout clean on `{br}`")
+    managed = f"{OC}/worktrees"
+    if os.path.isdir(managed):
+        n = sum(len(glob.glob(f"{d}/*")) for d in glob.glob(f"{managed}/*") if os.path.isdir(d))
+        if n:
+            fix("code", f"{n} OpenClaw managed worktree dir(s) under ~/.openclaw/worktrees (settings-repo copies, never code)",
+                "openclaw worktrees list; openclaw worktrees remove <id> for each; then openclaw worktrees gc")
+        else:
+            ok("code", "no OpenClaw managed worktrees")
+
+
+def check_config(ctxs):
+    try:
+        c = json.load(open(f"{OC}/openclaw.json"))
+    except Exception as e:
+        fix("config", f"cannot read openclaw.json: {e}"); return
+    ent = c.get("agents", {}).get("entries", {})
+    main = ent.get("main", {})
+    deny = main.get("tools", {}).get("deny", [])
+    (ok if deny == [] else fix)("config", f"main tools.deny = {deny}" + ("" if deny == [] else " (inherited by every spawned session)"),
+                                "" if deny == [] else "patch: {agents:{entries:{main:{tools:{deny:[]}}}}}")
+    want_allow = set(AGENTS)
+    have = set(main.get("subagents", {}).get("allowAgents", []))
+    (ok if have == want_allow else fix)("config", f"main.subagents.allowAgents = {sorted(have)}", "" if have == want_allow else f"set to {sorted(want_allow)}")
+    for a in AGENTS:
+        sub = ent.get(a, {}).get("subagents", {}).get("allowAgents", None)
+        if sub not in ([], None):
+            fix("config", f"{a} may spawn agents ({sub}); specialists spawn nothing", f"set agents.entries.{a}.subagents.allowAgents = []")
+    ld = c.get("tools", {}).get("loopDetection", {}).get("enabled")
+    (ok if ld is True else fix)("config", f"tools.loopDetection.enabled = {ld}", "" if ld else "patch: {tools:{loopDetection:{enabled:true}}}")
+    hb = c.get("agents", {}).get("defaults", {}).get("heartbeat", {})
+    (ok if hb.get("isolatedSession") else fix)("config", f"heartbeat.isolatedSession = {hb.get('isolatedSession')}", "" if hb.get("isolatedSession") else "patch: {agents:{defaults:{heartbeat:{isolatedSession:true}}}}")
+    for b in c.get("bindings", []):
+        if b.get("agentId") != "main":
+            fix("config", f"binding routes a channel to `{b.get('agentId')}`: {b}", "remove; only main is bound to chat")
+    for acc, v in c.get("channels", {}).get("discord", {}).get("accounts", {}).items():
+        if acc != "main" and v.get("enabled", True):
+            fix("config", f"discord account `{acc}` is enabled (specialist bot)", f"patch: {{channels:{{discord:{{accounts:{{{acc}:{{enabled:false}}}}}}}}}}")
+    dev_deny = ent.get("developer", {}).get("tools", {}).get("deny", [])
+    (ok if "tracker-*" in dev_deny else fix)("config", f"developer deny = {dev_deny}", "" if "tracker-*" in dev_deny else "add tracker-*")
+    pm_deny = ent.get("project-manager", {}).get("tools", {}).get("deny", [])
+    need = {"tracker-*__clickup_update_task", "tracker-*__clickup_create_task"}
+    (ok if need <= set(pm_deny) else fix)("config", f"project-manager deny = {pm_deny}", "" if need <= set(pm_deny) else "add the two tracker write tools (writes go through scripts)")
+    for a in ("qa-engineer", "code-reviewer"):
+        d = set(ent.get(a, {}).get("tools", {}).get("deny", []))
+        (ok if {"figma-*", "tracker-*"} <= d else fix)("config", f"{a} deny = {sorted(d)}", "" if {"figma-*", "tracker-*"} <= d else "add figma-* and tracker-*")
+    servers = set(c.get("mcp", {}).get("servers", {}).keys())
+    for slug, f in ctxs.items():
+        want = {f"tracker-{slug}"} | ({f"figma-{slug}"} if f.get("figma_mcp_server") else set())
+        missing = want - servers
+        (ok if not missing else fix)("config", f"MCP servers for {slug}: {sorted(want & servers)}", "" if not missing else f"openclaw mcp set {sorted(missing)} (onboarding 4b/4c)")
+    orphan = [s for s in servers if not any(s.endswith(f"-{slug}") for slug in ctxs)]
+    if orphan:
+        fix("config", f"MCP servers for no onboarded project: {orphan}", "openclaw mcp remove <name>")
+    enabled = [k for k, v in c.get("skills", {}).get("entries", {}).items() if v.get("enabled")]
+    extra = set(enabled) - {"coding-agent"}
+    (ok if not extra else fix)("config", f"enabled bundled skills = {enabled}", "" if not extra else "disable everything but coding-agent")
+    ws = c.get("skills", {}).get("workshop", {})
+    if ws.get("approvalPolicy") != "pending" or ws.get("autonomous", {}).get("mode") != "propose":
+        fix("config", f"skills.workshop = {ws}", "set autonomous.mode=propose, approvalPolicy=pending")
+    fb = c.get("agents", {}).get("defaults", {}).get("model", {}).get("fallbacks", [])
+    (ok if len(fb) >= 2 else fix)("config", f"model fallbacks = {fb}", "" if len(fb) >= 2 else "need >= 2 fallbacks on a different provider")
+
+
+def check_host():
+    rc, out = run(["df", "-h", "/tmp"])
+    line = out.splitlines()[-1] if out else ""
+    if line.startswith("tmpfs"):
+        size = line.split()[1]
+        (ok if size.rstrip("MG").replace(".", "").isdigit() and size.endswith("M") else fix)("host", f"/tmp is tmpfs sized {size}", "" if size.endswith("M") else "shrink to 512M (guide 3.3) as root")
+    else:
+        ok("host", "/tmp is on disk")
+    rc, pid = run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "openclaw-gateway.service"])
+    if pid.strip().isdigit() and pid.strip() != "0":
+        try:
+            env = open(f"/proc/{pid.strip()}/environ", "rb").read().decode(errors="replace").split("\0")
+            kv = dict(e.split("=", 1) for e in env if "=" in e)
+            tmp = kv.get("TMPDIR", "")
+            (ok if tmp.startswith(f"{HOME}/.cache") else fix)("host", f"gateway TMPDIR = {tmp or '(unset -> /tmp)'}", "" if tmp.startswith(f"{HOME}/.cache") else "systemd drop-in tmpdir.conf (guide 4.2)")
+            path = kv.get("PATH", "")
+            (ok if f"{HOME}/.local/bin" in path else fix)("host", "gateway PATH contains ~/.local/bin", "" if f"{HOME}/.local/bin" in path else "gcloud/gh symlinks unreachable (guide 3.2)")
+        except Exception as e:
+            fix("host", f"cannot read gateway environ: {e}")
+    else:
+        fix("host", "gateway not running (MainPID 0)", "systemctl --user start openclaw-gateway.service")
+    for b in ("gcloud", "gh"):
+        (ok if os.path.exists(f"{HOME}/.local/bin/{b}") else fix)("host", f"~/.local/bin/{b} present", "" if os.path.exists(f"{HOME}/.local/bin/{b}") else f"symlink {b} into ~/.local/bin (guide 3.2)")
+    baks = glob.glob(f"{OC}/openclaw.json.bak*") + glob.glob(f"{OC}/openclaw.json.clobbered*") + glob.glob(f"{OC}/openclaw.tmp.json")
+    if baks:
+        fix("host", f"{len(baks)} loose openclaw.json.bak*/clobbered/tmp copies next to the live config", "keep openclaw.json.last-good only; move the rest to ~/.openclaw/backups/config-history/")
+    n = len(glob.glob(f"{OC}/backups/*"))
+    (ok if n <= 10 else fix)("host", f"{n} entries in ~/.openclaw/backups", "" if n <= 10 else "keep the last 5 config backups + one dated dir per incident; delete the rest (they are 30 MB+)")
+    props = glob.glob(f"{OC}/skill-workshop/proposals/*")
+    if props:
+        fix("host", f"{len(props)} pending skill-workshop proposal(s)", "review weekly: openclaw skills workshop list; delete the ones you will not adopt")
+
+
+def main():
+    as_json = "--json" in sys.argv
+    check_framework_files()
+    ctxs = check_projects()
+    check_code_roots(ctxs)
+    check_config(ctxs)
+    check_host()
+    fixes = [r for r in R if r[0] == "FIX"]
+    if as_json:
+        print(json.dumps([dict(status=s, area=a, message=m, fix=f) for s, a, m, f in R], indent=1))
+    else:
+        for s, a, m, f in R:
+            print(f"{s:3} [{a}] {m}" + (f"\n      -> {f}" if f else ""))
+        print(f"\n{len(R) - len(fixes)} OK, {len(fixes)} FIX")
+    sys.exit(1 if fixes else 0)
+
+
+if __name__ == "__main__":
+    main()

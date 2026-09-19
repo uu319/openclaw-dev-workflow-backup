@@ -93,7 +93,7 @@ As an organizer who just purchased credits, I want a clear confirmation modal sh
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket

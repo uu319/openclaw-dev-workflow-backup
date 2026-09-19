@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9836-6900.png": "https://t7533817.p.clickup-attachments.com/t7533817/0d7610f9-5b25-4ea7-82ac-2362f6b450eb/9836-6900.png"
-    }
+    },
+    "desc_hash": "ead3ca2f34873a39"
   },
   "[FE] Review & Create: layout and data mapping": {
     "id": "z94kydabam",
@@ -13,7 +14,8 @@
     "lane": "FE",
     "attachments": {
       "9836-6900.png": "https://t7533817.p.clickup-attachments.com/t7533817/1b6b3fb2-182d-4e49-9652-50e2faa3b59f/9836-6900.png"
-    }
+    },
+    "desc_hash": "c432ea5dfd881463"
   },
   "[FE] Review & Create: wire Create to API": {
     "id": "z94kydaban",
@@ -21,12 +23,21 @@
     "lane": "FE",
     "attachments": {
       "9836-6900.png": "https://t7533817.p.clickup-attachments.com/t7533817/eb01ac9d-3bdc-4a1f-a9aa-e69700071384/9836-6900.png"
-    }
+    },
+    "desc_hash": "b1cbfd8461b423b6"
   },
   "[QA] Review & Create: E2E organizer reviews and finalizes event": {
     "id": "z94kydabap",
     "url": "https://app.clickup.com/t/z94kydabap",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "39c9025214c0174a"
+  },
+  "[BE] Review & Create: POST /api/events/:id/publish": {
+    "id": "z94kydanqx",
+    "url": "https://app.clickup.com/t/z94kydanqx",
+    "lane": "BE",
+    "attachments": {},
+    "desc_hash": "a14050ba1c291e29"
   }
 }

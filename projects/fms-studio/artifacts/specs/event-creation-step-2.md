@@ -98,7 +98,7 @@ As an organizer, I want to select my font and colors, so that I can personalize 
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -148,7 +148,50 @@ As an organizer, I want to upload a cover image, so my album has a recognizable 
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
+---end
+
+---ticket
+title: [DB] Look & Feel: add branding columns to events
+lane: DB
+parent: [Feature] Event Creation: Step 2 — Look & Feel
+estimate_hours: 2
+
+## Context
+Parent: [Feature] Event Creation: Step 2 — Look & Feel · Figma: none · Lane: DB
+
+## User story
+As a developer, I want columns for the branding choices, so that the draft API can save them.
+
+## In scope
+- One migration adding to `events`: `cover_image_id` (UUID, nullable), `font` (VARCHAR, nullable), `theme_color` (CHAR(7), nullable, hex such as `#FF6100`).
+
+## Out of scope (do NOT build)
+- Image upload or storage
+- Any column not listed above
+- ORM setup (done by `[DB] Basic Info: events table + migration`)
+
+## Acceptance criteria
+- Given the Step 1 `events` migration has run, when this migration runs, then `events` has `cover_image_id`, `font` and `theme_color`, all nullable.
+- Given existing `events` rows, when this migration runs, then those rows keep their data and the new columns are NULL.
+- Given this migration has run, when it is rolled back, then the three columns are removed and no other column changes.
+
+## Technical notes
+- Endpoint / schema: `events.cover_image_id UUID NULL`, `events.font VARCHAR NULL`, `events.theme_color CHAR(7) NULL`
+
+## Depends on / blocks
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
+- Blocks: [BE] Look & Feel: PATCH /api/events/:id/draft saves branding
+
+## Test notes (how QA verifies)
+- Run the migration up and down on a fresh database and inspect the `events` columns.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+- [ ] Migration runs up and down cleanly on a fresh database
+- [ ] Lint and typecheck clean (`npx nx lint backend`, `npx tsc -p backend/tsconfig.json --noEmit`)
+- [ ] PR reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -156,6 +199,7 @@ title: [BE] Look & Feel: PATCH /api/events/:id/draft saves branding
 lane: BE
 parent: [Feature] Event Creation: Step 2 — Look & Feel
 estimate_hours: 4
+depends_on: [DB] Look & Feel: add branding columns to events
 
 ## Context
 Parent: [Feature] Event Creation: Step 2 — Look & Feel · Figma: none · Lane: BE
@@ -168,7 +212,7 @@ As an organizer, I want my branding choices saved, so they apply to my event.
 - Validate font enum/string and themeColor hex code
 
 ## Out of scope (do NOT build)
-- File upload handling endpoint (assume standard asset upload exists or is a separate ticket)
+- File upload handling endpoint (the FE cover upload ticket supplies `coverImageId`; storage is a separate feature)
 
 ## Acceptance criteria
 - Given a valid draft ID, when `PATCH /api/events/:id/draft` is called with `{ font: "Hi Melody", themeColor: "#FF6100" }`, then the database updates the draft row and returns 200 OK with the updated object.
@@ -181,7 +225,7 @@ As an organizer, I want my branding choices saved, so they apply to my event.
 - Breakpoints (FE only): none
 
 ## Depends on / blocks
-- Depends on: none
+- Depends on: [DB] Look & Feel: add branding columns to events
 - Blocks: [FE] Look & Feel: wire to draft API
 
 ## Test notes (how QA verifies)
@@ -192,7 +236,7 @@ As an organizer, I want my branding choices saved, so they apply to my event.
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -240,7 +284,7 @@ As an organizer, I want my selections saved to the server when I proceed.
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -284,5 +328,5 @@ As a QA engineer, I want to ensure the branding step works end-to-end.
 - [ ] Unit tests for this lane added and green (`npx nx test <project>`)
 - [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

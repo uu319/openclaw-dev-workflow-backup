@@ -91,7 +91,7 @@ As an organizer, I want to see my event details exactly as guests will see them,
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -140,7 +140,7 @@ As an organizer, I want to preview how the photo grid and toolbar will look to g
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -186,7 +186,7 @@ As an organizer, I want the preview to show the actual data I have entered so fa
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -226,5 +226,5 @@ As a QA engineer, I want to verify that the event preview correctly reflects the
 ## Definition of done
 - [ ] All acceptance criteria pass
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

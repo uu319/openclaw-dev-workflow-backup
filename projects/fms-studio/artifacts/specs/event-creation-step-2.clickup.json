@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/d8452858-5caa-4a39-8763-d335e809a337/9836-3977.png"
-    }
+    },
+    "desc_hash": "85594087f053b319"
   },
   "[FE] Look & Feel: layout font and color selection": {
     "id": "z94kydab9w",
@@ -13,7 +14,8 @@
     "lane": "FE",
     "attachments": {
       "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/2d4be7dc-ef06-4e16-b86d-1c4233d1479c/9836-3977.png"
-    }
+    },
+    "desc_hash": "f17107b28ea7f6d1"
   },
   "[FE] Look & Feel: cover image upload component": {
     "id": "z94kydab9x",
@@ -21,13 +23,15 @@
     "lane": "FE",
     "attachments": {
       "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/82836cfc-4f6d-4a2d-89f4-4410e5f42bc3/9836-3977.png"
-    }
+    },
+    "desc_hash": "42a373dc6e4a0e14"
   },
   "[BE] Look & Feel: PATCH /api/events/:id/draft saves branding": {
     "id": "z94kydab9y",
     "url": "https://app.clickup.com/t/z94kydab9y",
     "lane": "BE",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "9211de42f0c19f82"
   },
   "[FE] Look & Feel: wire to draft API": {
     "id": "z94kydab9z",
@@ -35,12 +39,21 @@
     "lane": "FE",
     "attachments": {
       "9836-3977.png": "https://t7533817.p.clickup-attachments.com/t7533817/3edadd88-b4c1-4f8d-b027-43ae9e729035/9836-3977.png"
-    }
+    },
+    "desc_hash": "26931e8e4b50e100"
   },
   "[QA] Look & Feel: E2E organizer sets branding": {
     "id": "z94kydaba0",
     "url": "https://app.clickup.com/t/z94kydaba0",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "06270492ba157299"
+  },
+  "[DB] Look & Feel: add branding columns to events": {
+    "id": "z94kydanqu",
+    "url": "https://app.clickup.com/t/z94kydanqu",
+    "lane": "DB",
+    "attachments": {},
+    "desc_hash": "bd05a3cb2de83ea7"
   }
 }

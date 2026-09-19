@@ -29,14 +29,14 @@ As an organizer, I want to review all my event details in one place before final
 
 ## Acceptance criteria
 - Given the organizer is on step 4, when the screen loads, then the summary shows the draft values for Title, Description, Date, Location, Category, Font, Theme, and Privacy.
-- Given the album cover preview, when the user clicks 'View Preview', then a full-screen preview of the album cover is shown (or a dedicated preview modal opens).
-- Given the summary section, when the user clicks the 'Edit' button, then the wizard navigates back to Step 1 (or the relevant step) to allow changes.
-- Given the modal header, when the user clicks the 'x' close icon, then the wizard is dismissed (or prompts for confirmation to discard).
-- Given all details are correct, when the user clicks 'Create ->', then `POST /api/events` (or the finalize endpoint) is called with the draft data, and the user is redirected to the dashboard or success screen.
+- Given the album cover preview, when the user clicks 'View Preview', then the Event preview modal from Step 2.1 opens for this draft.
+- Given the summary section, when the user clicks the 'Edit' button, then the wizard navigates back to Step 1 with the draft values filled in.
+- Given the modal header, when the user clicks the 'x' close icon, then the wizard closes, the draft stays saved (every step already saved it), and the user lands on `/dashboard`.
+- Given all details are correct, when the user clicks 'Create ->', then `POST /api/events/:id/publish` is called, the event's `status` becomes `'published'`, and the user is redirected to `/dashboard`.
 
 ## Technical notes
 - Files/paths: frontend/src/app/events/new/step-4/ · backend/src/app/events/
-- Endpoint: Assuming a final POST or PATCH to finalize the draft.
+- Endpoint: `POST /api/events/:id/publish` (built by `[BE] Review & Create: POST /api/events/:id/publish`).
 
 ## Depends on / blocks
 - Depends on: Event Creation Steps 1, 2, 3
@@ -103,7 +103,55 @@ As an organizer, I want to see a clear summary of my album settings so I can ver
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
+---end
+
+---ticket
+title: [BE] Review & Create: POST /api/events/:id/publish
+lane: BE
+parent: [Feature] Event Creation: Step 4 — Review & Create
+priority: high
+estimate_hours: 3
+
+## Context
+Parent: [Feature] Event Creation: Step 4 — Review & Create · Figma: none · Lane: BE
+
+## User story
+As an organizer, I want 'Create' to publish my draft, so that my album goes live.
+
+## In scope
+- Endpoint `POST /api/events/:id/publish` for the caller's own draft
+- Sets `events.status` from `'draft'` to `'published'` and updates `updated_at`
+- Returns the updated event
+
+## Out of scope (do NOT build)
+- Checking fields other than `title` (Steps 1-3 validate their own fields)
+- Unpublishing or deleting
+- Enforcing privacy or password on album reads (separate feature)
+
+## Acceptance criteria
+- Given the caller owns a draft with a title, when `POST /api/events/:id/publish` is called, then it returns 200 with the event and `status: "published"`, and the row's `status` is `'published'`.
+- Given the id does not exist or belongs to another user, when the endpoint is called, then it returns 404 and no row changes.
+- Given the event is already published, when the endpoint is called, then it returns 409 and the row is unchanged.
+- Given the draft has no title, when the endpoint is called, then it returns 400 with a validation message and `status` stays `'draft'`.
+
+## Technical notes
+- Endpoint / schema: POST /api/events/:id/publish → 200 `{ id, title, status, updatedAt }` · 400 · 404 · 409
+- Uses the `status` column from `[DB] Basic Info: events table + migration` (Event Creation Step 1); no migration needed here.
+
+## Depends on / blocks
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
+- Blocks: [FE] Review & Create: wire Create to API
+
+## Test notes (how QA verifies)
+- Backend integration tests for the 200, 400, 404 and 409 cases.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+- [ ] Unit/integration tests added and green (`npx nx test backend`)
+- [ ] Lint and typecheck clean
+- [ ] PR reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -111,7 +159,7 @@ title: [FE] Review & Create: wire Create to API
 lane: FE
 parent: [Feature] Event Creation: Step 4 — Review & Create
 estimate_hours: 3
-depends_on: [FE] Review & Create: layout and data mapping
+depends_on: [FE] Review & Create: layout and data mapping, [BE] Review & Create: POST /api/events/:id/publish
 figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6900
 screenshots: specs/_figma/event-creation-step-4/9836-6900.png
 
@@ -122,24 +170,24 @@ Parent: [Feature] Event Creation: Step 4 — Review & Create · Figma: https://w
 As an organizer, I want the 'Create ->' button to actually save my event and make it ready.
 
 ## In scope
-- Wiring the 'Create ->' button to the final API call (e.g., `POST /api/events` or `POST /api/events/:id/finalize`)
+- Wiring the 'Create ->' button to `POST /api/events/:id/publish`
 - Loading state on the Create button while the request is pending
 - Error handling if the creation fails
-- Redirect on success
+- Redirect to `/dashboard` on success
 
 ## Out of scope (do NOT build)
 - Backend implementation
 
 ## Acceptance criteria
-- Given the step 4 screen, when the user clicks 'Create ->', then the button shows a loading state and the finalize API is called.
-- Given a successful API response, when the call completes, then the user is redirected to the dashboard or success page.
+- Given the step 4 screen, when the user clicks 'Create ->', then the button shows a loading state and `POST /api/events/:id/publish` is called.
+- Given a successful API response, when the call completes, then the user is redirected to `/dashboard`.
 - Given an API error (5xx/4xx), when the call fails, then an error message is displayed and the user remains on step 4.
 
 ## Technical notes
 - Ensure the API client is used correctly to finalize the draft.
 
 ## Depends on / blocks
-- Depends on: [FE] Review & Create: layout and data mapping
+- Depends on: [FE] Review & Create: layout and data mapping, [BE] Review & Create: POST /api/events/:id/publish
 
 ## Test notes (how QA verifies)
 - Verify network calls and loading states.

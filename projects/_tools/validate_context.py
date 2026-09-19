@@ -36,6 +36,14 @@ OPTIONAL = {
     "figma_mcp_server": r"\*\*Figma MCP server:\*\*\s*`([^`]+)`",
     "database": r"\*\*Database:\*\*\s*(.+)",
     "layout": r"\*\*Layout:\*\*\s*(.+)",
+    "gcp_project_id": r"\*\*GCP Project ID:\*\*\s*`?([^`\n]+?)`?\s*$",
+    "gcp_region": r"\*\*GCP Region:\*\*\s*`?([^`\n]+?)`?\s*$",
+    "gcp_key_secret": r"GCP Key Vault:\s*`([^`]+)`",
+    "gcp_key_json": r"GCP Key JSON:\s*`([^`<>]+)`",
+    "branch_prefixes": r"\*\*Branch Prefixes:\*\*\s*(.+)",
+    "default_branch": r"\*\*Default branch:\*\*\s*`([^`<>]+)`",
+    "github_repo": r"\*\*GitHub Repo:\*\*\s*`?([^`\n]+?)`?\s*$",
+    "git_secret": r"GitHub Token:\s*`([^`]+)`",
 }
 PLACEHOLDER = re.compile(r"<[^>]*>")
 
@@ -60,6 +68,8 @@ def parse(path):
     for k in ("tracker_secret", "design_secret"):
         if k in fields and not re.fullmatch(r"[A-Z0-9_]+", fields[k]):
             errors.append(f"{k} must be UPPER_SNAKE: {fields[k]}")
+    if "branch_prefixes" in fields:
+        fields["branch_prefixes"] = re.findall(r"`([^`]+)`", fields["branch_prefixes"])
     if "statuses" in fields:
         fields["statuses"] = [s.strip(" `") for s in fields["statuses"].split(",") if s.strip(" `")]
     # Stack section must exist and not be entirely placeholders
@@ -80,6 +90,47 @@ def parse(path):
     if has_figma and "slug" in fields and fields.get("figma_mcp_server") != f"figma-{fields['slug']}":
         errors.append(f"Figma file is set, so '**Figma MCP server:** `figma-{fields['slug']}`' is required "
                       f"(found: {fields.get('figma_mcp_server', 'missing')})")
+    # GCP is per project: no ambient gcloud default is allowed to stand in for these.
+    # If a project has a GCP environment it must name its own project id, its own vault
+    # entry and its own key file; agents reach them through _tools/gcloud_env.py <slug>.
+    has_gcp = fields.get("gcp_project_id", "none").lower().strip("<>") not in ("none", "")
+    if has_gcp:
+        for k, label in (("gcp_key_secret", "GCP Key Vault"), ("gcp_key_json", "GCP Key JSON")):
+            if not fields.get(k):
+                errors.append(f"GCP Project ID is set, so a '{label}:' SecretRef line is required")
+        if fields.get("gcp_key_secret") and not re.fullmatch(r"[A-Z0-9_]+", fields["gcp_key_secret"]):
+            errors.append(f"gcp_key_secret must be UPPER_SNAKE: {fields['gcp_key_secret']}")
+        if fields.get("gcp_key_secret") and slug_upper and not re.search(r"_" + slug_upper + r"(_|$)", fields["gcp_key_secret"]):
+            fields.setdefault("warnings", []).append(
+                f"gcp_key_secret '{fields['gcp_key_secret']}' does not contain _{slug_upper}; "
+                f"allowed only if the vault really uses this name")
+        expect = f"/home/openclaw/.openclaw/workspace/credentials/gcp/{fields.get('slug', '')}.json"
+        if fields.get("gcp_key_json") and fields["gcp_key_json"] != expect:
+            errors.append(f"GCP Key JSON must be the project's own key at {expect} "
+                          f"(found: {fields['gcp_key_json']})")
+        if fields.get("gcp_key_json") and not os.path.isfile(fields["gcp_key_json"]):
+            fields.setdefault("warnings", []).append(
+                f"GCP key file does not exist yet: {fields['gcp_key_json']}")
+    elif any(fields.get(k) for k in ("gcp_key_secret", "gcp_key_json", "gcp_region")):
+        errors.append("GCP SecretRefs/Region are set but '**GCP Project ID:**' is missing; "
+                      "agents cannot resolve which GCP project to act on")
+    # GitHub API access (gh, PRs) is per project: a repo-scoped fine-grained PAT named here,
+    # reached only through _tools/git_env.py <slug>. Git push itself may still use the SSH alias.
+    has_gh = fields.get("github_repo", "none").lower().strip("<>") not in ("none", "")
+    if has_gh:
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields["github_repo"]):
+            errors.append(f"GitHub Repo must be <owner>/<repo>: {fields['github_repo']}")
+        if not fields.get("git_secret"):
+            errors.append("GitHub Repo is set, so a 'GitHub Token:' SecretRef line is required")
+        elif not re.fullmatch(r"[A-Z0-9_]+", fields["git_secret"]):
+            errors.append(f"git_secret must be UPPER_SNAKE: {fields['git_secret']}")
+        elif slug_upper and not fields["git_secret"].endswith("_" + slug_upper):
+            fields.setdefault("warnings", []).append(
+                f"git_secret '{fields['git_secret']}' does not follow GITHUB_TOKEN_{slug_upper}; "
+                f"allowed only if the vault really uses this name")
+    elif fields.get("git_secret"):
+        errors.append("'GitHub Token:' SecretRef is set but '**GitHub Repo:**' is missing; "
+                      "gh cannot resolve which repository to act on")
     if "create_status" in fields and "statuses" in fields:
         if fields["create_status"].lower() not in [s.lower() for s in fields["statuses"]]:
             errors.append(f"create_status '{fields['create_status']}' is not in Statuses")

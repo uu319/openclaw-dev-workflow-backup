@@ -16,11 +16,53 @@ Read it first. `Code (CWD)` is where code lives; `Internal Artifacts` is where
 every spec/patch/review/qa file goes. Never guess a List ID, secret name, or
 path. Never call ClickUp, Figma, git push, or any external API yourself.
 
+## How every spawn looks
+
+`sessions_spawn` with `agentId` = the roster id, `context: "isolated"`,
+`visible: true`. **Never `worktree: true`, never `cwd`**: OpenClaw can only copy
+agent workspaces, never the code repo. Each specialist makes its own code
+checkout with the `worktree-lifecycle` skill. The message always starts with
+`Project <slug>. Context: <CTX>.` and names branches, never folder paths.
+
 ## When not to use this
 
 A request that is only one agent's job ("fix the tickets", "refine this spec",
 "fix the login bug", "review this PR", "test the password step") is not this
 workflow. Spawn that agent directly, as the Team roster in `AGENTS.md` says.
+These rules still apply to it:
+- Code VanDev changes gets a VanReviewer review (step 3) before any PR, and a PR
+  only after Van's yes (step 5). Deploy fixes and "small" fixes included.
+- If the work has a tracker ticket, VanPM claims it (step 2) and the delivery
+  watcher (step 6) moves it once the change is on staging: the PR body must carry its ClickUp
+  URL. Any ticket work goes to VanPM, never VanDev.
+
+## Ticket statuses
+
+`qa` means **merged and deployed to staging, ready for external QA**. It does not
+mean "our VanQA ran": VanReviewer and VanQA are internal checks that happen while
+the ticket is `in progress`. External QA (a person or agent outside this team)
+sets `complete` or `rejected`; agents never set `complete`.
+
+| When | Who notices | Ticket | Status |
+|---|---|---|---|
+| Tickets pushed (step 1) | VanPM | all | `to do` |
+| VanDev starts a lane ticket (step 2, `--claim`) | VanPM | that ticket (+ parent on the first claim) | `in progress` |
+| Internal review / VanQA / PR open / PR feedback | - | - | stays `in progress` |
+| PR merged and **every** Cloud Build of a commit containing it succeeded | delivery watcher `DEPLOYED` | tickets linked to the PR (+ parent once all its children are `qa`) | `qa` |
+| Build failed after merge | watcher `BUILD_FAILED` | original tickets stay `in progress`; new bug ticket `to do` | - |
+| External QA sends it back | watcher `REJECTED` | that ticket, claimed again | `rejected` → `in progress` |
+| External QA passes it | external QA | that ticket | `complete` |
+| Every ticket of a spec `complete` | watcher `FEATURE_COMPLETE` | spec archived, worktree/branch cleaned | - |
+| VanDev says the spec is wrong or blocked | VanPM | that ticket | `on hold` (back to `to do` after VanPM rewrote the spec and Van said "go") |
+| PR closed without merge | watcher `PR_CLOSED`, Van decides | the PR's tickets | `cancelled` or back to `in progress` |
+
+Only VanPM writes ticket statuses, always with
+`skills/feature-breakdown/scripts/clickup_status.py --context <CTX> --spec <spec> ...`.
+`[SPIKE]` tickets produce a findings note (`<Internal Artifacts>/specs/<feature-slug>--spike.md`)
+instead of code; VanPM sets them `complete` when the note exists (nothing deploys).
+
+A ticket with no `.clickup.json` marker was not created through VanPM: report
+it to Van instead of guessing.
 
 ## 0. Resolve the project
 
@@ -30,81 +72,160 @@ workflow. Spawn that agent directly, as the Team roster in `AGENTS.md` says.
 - If CTX is missing → run the `project-onboarding` skill first.
 - Run `python3 /home/openclaw/.openclaw/workspace/projects/_tools/validate_context.py CTX`.
   Not VALID → fix via onboarding; do not continue.
+- Run the delivery watcher once (step 6) and handle what it prints.
 
 ## 1. Spec (VanPM)
 
-`sessions_spawn` `project-manager`, context `isolated`, `cwd` = Code (CWD), message:
+Spawn `project-manager`:
 
-> Project `<slug>`. Use `feature-breakdown` on: <feature list + Figma links>.
+> Project `<slug>`. Context: `<CTX>`. Use `feature-breakdown` on: <feature list + Figma links>.
 > Write the spec to `<Internal Artifacts>/specs/<feature-slug>.md` and stop
 > for approval. Do not push tickets.
 
 `sessions_yield` until done. Relay VanPM's summary (parent, subtasks per lane,
-hours, open questions) to the user **verbatim**. Wait for "go".
-On "go": message VanPM "approved, push". VanPM replies with ticket links;
-relay them.
+hours, open questions) to the user **verbatim**. Wait for Van's explicit "go".
+No answer is not a go. On "go": `sessions_send` VanPM "approved, push". VanPM
+replies with ticket links; relay them.
 
-## 2. Build (VanDev) — one lane ticket at a time, in dependency order
+## 2. Build (VanDev), one lane ticket at a time, in dependency order
 
-For each subtask in the spec (`[DB]` → `[BE]` → `[FE]` → `[INT]`; parallel ones may run together):
+Branch: **one branch per feature**, `<branch prefix>/<feature-slug>`
+(`bug/<slug>` for a bug-only feature). Lane tickets of one feature run **one at
+a time** (`[DB]` → `[BE]` → `[FE]` → `[INT]`), never in parallel: they share the
+branch, and two workers must never share a folder.
 
-First, verify the ticket is available to be worked on by spawning `project-manager`, context `isolated`, `cwd` = Code (CWD), message:
+For each lane ticket:
 
-> Project `<slug>`. Check the status of ticket `<exact ticket title>` in the project's configured tracker. If someone else is working on it, or if it is already in progress/complete, report "SKIP". Otherwise, report "GO".
+1. Claim it. Spawn `project-manager`:
 
-`sessions_yield`. If VanPM reports "SKIP", skip this ticket and move to the next one. If "GO", proceed to spawn the developer:
+   > Project `<slug>`. Context: `<CTX>`. Claim ticket `<exact ticket title>` from
+   > `<Internal Artifacts>/specs/<feature-slug>.md` with `clickup_status.py --claim --only`.
+   > Reply with the script's GO or SKIP line. If this is the feature's first claim,
+   > also set the `[Feature]` parent to `in progress`.
 
-`sessions_spawn` `developer`, context `isolated`, `cwd` = Code (CWD), message:
+   SKIP → skip this ticket. GO → continue.
 
-> Project `<slug>`. Implement ticket `<exact ticket title>` from
-> `<Internal Artifacts>/specs/<feature-slug>.md`. Branch
-> `<branch prefix>/<feature-slug>`. Save the patch to
-> `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch`. Do not push
-> or open a PR.
+2. Spawn `developer`:
 
-`sessions_yield`. If VanDev reports the spec is wrong or impossible, go back to
-step 1 with its objection; do not "fix" the spec yourself.
+   > Project `<slug>`. Context: `<CTX>`. Implement ticket `<exact ticket title>` from
+   > `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>`
+   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit, then save
+   > `git diff <last approved SHA or origin/<Default branch>>...HEAD` to
+   > `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch` and reply
+   > with the commit SHA. Do not push or open a PR.
+
+   `sessions_yield`. VanDev says the spec is wrong or impossible → VanPM sets
+   the ticket `on hold`, go back to step 1 with the objection; never "fix" the
+   spec yourself. `ls` the patch before moving on.
 
 ## 3. Review (VanReviewer)
 
-`sessions_spawn` `code-reviewer`, `cwd` = Code (CWD):
+Spawn `code-reviewer`:
 
-> Project `<slug>`. Review `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch`
-> against ticket `<title>` in `<Internal Artifacts>/specs/<feature-slug>.md`.
-> Write `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md`.
+> Project `<slug>`. Context: `<CTX>`. Review commit `<SHA>` on branch `<branch>`:
+> patch `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch`, against ticket
+> `<title>` in `<Internal Artifacts>/specs/<feature-slug>.md`. Write
+> `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` with the verdict and
+> the reviewed SHA on its first two lines.
 
-Verdict `CHANGES REQUESTED` → back to step 2 with the review path. `APPROVED` → continue.
+- `CHANGES REQUESTED` → back to step 2 with the review path, using
+  `sessions_send` to the **same** VanDev session (its worktree still exists).
+  The ticket stays `in progress`.
+- `APPROVED` →
+  - `sessions_send` VanDev: "Review APPROVED at `<SHA>`. Check `git status`, push
+    `<branch>` (`git push -u origin <branch>`, never the default branch) and run
+    `finish <branch>`. No PR." A task branch push deploys nothing; this is what lets
+    QA and review fixes get their own worktree.
+  - The ticket stays `in progress` (it reaches `qa` only once it is on staging).
+  - Next lane ticket (step 2).
 
-## 4. Verify (VanQA) — once per feature, after all lane tickets are approved
+## 4. Verify (VanQA), once per feature, after all lane tickets are approved
 
-`sessions_spawn` `qa-engineer`, `cwd` = Code (CWD):
+This is our internal pre-merge check; it changes no ticket status. Spawn `qa-engineer`:
 
-> Project `<slug>`. Run the `[QA]` ticket for `<feature-slug>` from the spec.
-> Write `<Internal Artifacts>/qa/<feature-slug>.md`. Do not modify code.
+> Project `<slug>`. Context: `<CTX>`. Run the `[QA]` ticket for `<feature-slug>` from
+> `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>` (your own worktree:
+> `create <branch> --agent qa-engineer`, then `finish <branch>`). Use only the
+> test commands in PROJECT_CONTEXT. Write `<Internal Artifacts>/qa/<feature-slug>.md`
+> with the tested SHA. Do not modify code, commit or push.
 
-Defects → step 1: VanPM turns each defect into a `bug/` ticket via
-`feature-breakdown`, then step 2 for each.
+- Passed → step 5.
+- Defects → spawn VanPM: "add a `[FE]`/`[BE]`… bug ticket per defect **to the same
+  spec** `<feature-slug>.md`, under the same parent, and push it". Then step 2 for
+  each new ticket on the **same branch**, step 3, then step 4 again.
 
 ## 5. Approval gate (external side-effects start here)
 
-Ask the user, with the review and QA paths:
-"Feature `<feature-slug>` passed review and QA. Approve push + PR?"
-Only on yes: VanDev pushes the branch and opens the PR (spawn with that exact
-instruction). Then `sessions_spawn` `project-manager` with the message: "Project `<slug>`. Mark the tickets for `<feature-slug>` as COMPLETE in the project's configured tracker."
+Ask the user, with the review and QA paths and the SHA:
+"Feature `<feature-slug>` passed review and QA at `<SHA>`. Approve PR to `<Default branch>`?"
 
-## 6. Memory
+- Only an explicit yes counts. `ask_user` timing out, "no answer" or "proceed
+  with best judgment" means **stop and wait**; say what is waiting and do nothing.
+- On yes: spawn VanDev: "Open the PR for `<branch>` into `<Default branch>` with
+  `git_env.py <slug> -- gh pr create --base <Default branch>`, from its own
+  worktree (`create <branch>`), then `finish <branch> --pr <url>`. The PR body must
+  list the ClickUp URL of every ticket it delivers (`https://app.clickup.com/t/<id>`,
+  from the spec's `.clickup.json`): that is how the delivery watcher moves them to
+  `qa` after the deploy. Do not merge."
+- `git_env.py` refuses `gh pr create` unless `reviews/*.md` holds an APPROVED review
+  whose `Reviewed SHA:` is the branch head on origin, and refuses every merge. Never
+  work around it; if it refuses, the review is missing or stale.
+- Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid`:
+  the head SHA must equal the QA'd SHA. Relay the PR link and say: "Merging is
+  yours; tickets close when the merge is detected."
 
-Append to `/home/openclaw/.openclaw/workspace/MEMORY.md` under the project:
-date, feature-slug, PR link, artifact paths, anything learned. Never store
-secrets or IDs here; they live in CTX.
+Nobody in the team merges. Van merges on GitHub.
+
+## 6. After the PR: the delivery watcher (heartbeat, every 15 min)
+
+Van merges on GitHub. From then on nothing waits for a person: every heartbeat runs
+
+    python3 /home/openclaw/.openclaw/workspace/projects/_tools/delivery_watch.py <slug>
+
+for each project. It only reads GitHub, Cloud Build and ClickUp and prints ACTIONs,
+each with what to do and an `--ack <id>` command. Carry out each action, then ack it.
+An action you could not finish stays un-acked and comes back next heartbeat.
+
+- `PR_FEEDBACK`: new human comments/reviews on an open PR. `sessions_send` (or spawn)
+  VanDev with the feedback; VanDev fixes it in its own worktree, VanReviewer reviews the
+  new commit, VanDev pushes to the same branch and replies on the PR starting with
+  "🤖 VanDev:". Fixes to an already approved PR need no new approval question.
+- `DEPLOYED`: spawn VanPM with the listed tickets → `qa`; post one line in the channel:
+  what is on staging, ready for testing.
+- `BUILD_FAILED`: one line to Van with build id and log link; VanPM files a bug ticket
+  (the PR's spec, or a new `staging-build-<sha>` spec); then the normal flow for it. The
+  original tickets move to `qa` by themselves once a later build containing them succeeds.
+- `NO_BUILD` / `PR_CLOSED` / `STALE_WORKTREE`: tell Van; for `PR_CLOSED` ask drop or redo.
+- `REJECTED`: one line to Van; VanPM `--claim`s the ticket (→ `in progress`); VanDev fixes
+  it on `bug/<feature-slug>--<ticket id>` using QA's comments; normal flow; the PR body lists
+  the ticket URL, and the ticket returns to `qa` when the fix is on staging.
+- `FEATURE_COMPLETE`: spawn VanPM:
+
+  > Project `<slug>`. Context: `<CTX>`. Every ticket of `<feature-slug>` is complete. Archive the
+  > feature: move `specs/<feature-slug>.md` and its `.clickup.json` to `specs/_done/`, delete
+  > the rows its `[DB]` tickets own from `specs/_planned-data.md` (the Schema file now holds
+  > them; set **Schema file** in PROJECT_CONTEXT if this was the first `[DB]` ticket), and run
+  > `projects/_tools/spec_index.py <slug>`.
+
+  Then run `worktree.py <slug> sweep`, append the feature to MEMORY.md (step 7) and post
+  one line in the channel.
+- `SWEEP_DUE`: run `worktree.py <slug> sweep`; relay any KEPT / UNMANAGED / PRIMARY line.
+
+Nobody in the team merges, deploys, retries builds or sets `complete`.
+
+## 7. Memory
+
+Append to `/home/openclaw/.openclaw/workspace/MEMORY.md` under the project's one
+section: date, feature-slug, PR link, artifact paths, anything learned. Never
+store secrets or IDs here; they live in CTX.
 
 ## Rules that apply to every step
 
 - Artifacts are completion markers. Before spawning a step, check whether its
   artifact already exists; if so, read it and skip or resume.
-- Subagents get the `<slug>` and absolute paths in the message. They must not
-  discover them.
+- Subagents get the `<slug>`, `<CTX>` and absolute paths in the message. They
+  must not discover them.
 - If `sessions_spawn` fails with `agentId is not allowed`, check
-  `agents.defaults.subagents.allowAgents` in `~/.openclaw/openclaw.json` and ask
+  `agents.entries.main.subagents.allowAgents` in `~/.openclaw/openclaw.json` and ask
   before editing config.
 - Discord: bullets not tables; wrap multiple links in `<>`.

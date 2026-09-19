@@ -5,19 +5,15 @@
     "lane": "FEATURE",
     "attachments": {
       "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/fa16b66e-ac2f-482b-94cb-5645c42b6ef6/9794-3220.png"
-    }
-  },
-  "[DB] Albums: albums table and migration": {
-    "id": "z94kydab8z",
-    "url": "https://app.clickup.com/t/z94kydab8z",
-    "lane": "DB",
-    "attachments": {}
+    },
+    "desc_hash": "a6b6ee8224212e33"
   },
   "[BE] Albums: GET /api/albums?owner=me returns the caller's albums": {
     "id": "z94kydab90",
     "url": "https://app.clickup.com/t/z94kydab90",
     "lane": "BE",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "1af9f64697fddc81"
   },
   "[FE] My Albums: grid layout header and search controls": {
     "id": "z94kydab91",
@@ -25,7 +21,8 @@
     "lane": "FE",
     "attachments": {
       "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/c33fe2d0-3b4d-42d0-be49-1e0e65d3bf88/9794-3220.png"
-    }
+    },
+    "desc_hash": "106f2aec266f3b45"
   },
   "[FE] My Albums: album card component + context menu": {
     "id": "z94kydab92",
@@ -33,7 +30,8 @@
     "lane": "FE",
     "attachments": {
       "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/70147766-2cfb-46b2-9715-9be45f0df28d/9794-3220.png"
-    }
+    },
+    "desc_hash": "fe24685170029a4a"
   },
   "[FE] My Albums: wire grid and search to GET /api/albums": {
     "id": "z94kydab93",
@@ -41,12 +39,29 @@
     "lane": "FE",
     "attachments": {
       "9794-3220.png": "https://t7533817.p.clickup-attachments.com/t7533817/4acc4fb4-1b88-44df-9c70-1f9a90ed6fe1/9794-3220.png"
-    }
+    },
+    "desc_hash": "f359d36ddf9a960b"
   },
   "[QA] My Albums: E2E organizer views dashboard and searches albums": {
     "id": "z94kydab94",
     "url": "https://app.clickup.com/t/z94kydab94",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "6237f2dec4f0ac11"
+  },
+  "[DB] My Albums: add is_starred and cover_urls columns to events": {
+    "id": "z94kydanqy",
+    "url": "https://app.clickup.com/t/z94kydanqy",
+    "lane": "DB",
+    "attachments": {},
+    "desc_hash": "cb43b75af85c6071"
+  },
+  "_cancelled": {
+    "[DB] Albums: albums table and migration": {
+      "id": "z94kydab8z",
+      "url": "https://app.clickup.com/t/z94kydab8z",
+      "lane": "DB",
+      "attachments": {}
+    }
   }
 }

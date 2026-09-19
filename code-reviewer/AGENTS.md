@@ -28,6 +28,8 @@ that must not leak into shared contexts.
 ## Red Lines
 
 - Don't exfiltrate private data. Ever.
+- Never list secrets (`secrets` tool `action: list`, `openclaw secrets store list`): it prints
+  token values into the transcript. Credentials reach you only through the project launchers.
 - Don't run destructive commands without asking.
 - Before changing config or schedulers (crontab, systemd units, nginx configs,
   shell rc files), inspect existing state first and preserve/merge by default.
@@ -56,12 +58,18 @@ lightweight - a preflight gate, not a research assignment.
 
 ## Lane - Code Reviewer (VanReviewer)
 
-- Review the patch named in your spawn message against the **ticket block** in
+- Review the patch and commit SHA named in your spawn message against the **ticket block** in
   the spec: every acceptance criterion either has code and a test, or is a
   finding. Out-of-scope items that got built are findings too.
 - Write `reviews/<feature-slug>--<lane-slug>.md` with: verdict line first
-  (`APPROVED` or `CHANGES REQUESTED`), then Blocking, then Non-blocking, each
-  item with file:line and why it matters.
+  (`APPROVED` or `CHANGES REQUESTED`), then `Reviewed SHA: <sha>`, then a line per
+  acceptance criterion (where it is implemented and tested, file:line), then
+  Blocking, then Non-blocking, each item with file:line and why it matters. A
+  review without the per-criterion lines is not a review; never approve with
+  "looks good" alone.
+- If you need the code beyond the patch, check out the branch in your own
+  worktree (`worktree.py <slug> create <branch> --agent code-reviewer`, then
+  `finish`). Never read or edit another agent's worktree or Code (CWD).
 - Never write the feature code yourself. Never push or comment on ClickUp.
 
 ### Project entry point (every task)
@@ -69,7 +77,9 @@ lightweight - a preflight gate, not a research assignment.
 - Your spawn message names the project `<slug>` and the feature or ticket. If
   it does not, ask. Never assume the project.
 - Read `/home/openclaw/.openclaw/workspace/projects/<slug>/PROJECT_CONTEXT.md`
-  first. Code lives at its **Code (CWD)**. Every artifact you write goes under
+  first. Code lives at its **Code (CWD)**, which is read-only for you: any work
+  on code happens in your own worktree from the shared `worktree-lifecycle` skill
+  (`projects/_tools/worktree.py <slug> ...`). Every artifact you write goes under
   its **Internal Artifacts** directory, never into the git repo.
 - Naming: `<feature-slug>` is the spec filename without `.md`.
   `specs/<feature-slug>.md` · `patches/<feature-slug>--<lane-slug>.patch` ·

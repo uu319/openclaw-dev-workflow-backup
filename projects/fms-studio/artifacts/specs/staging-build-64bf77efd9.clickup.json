@@ -1,0 +1,55 @@
+{
+  "[Feature] DevOps: Staging builds pass": {
+    "id": "z94kydantf",
+    "url": "https://app.clickup.com/t/z94kydantf",
+    "lane": "FEATURE",
+    "attachments": {},
+    "desc_hash": "919411545384b129"
+  },
+  "[INT] Staging builds: add ESLint config to frontend": {
+    "id": "z94kydantg",
+    "url": "https://app.clickup.com/t/z94kydantg",
+    "lane": "INT",
+    "attachments": {},
+    "desc_hash": "ee302602bebfc50c"
+  },
+  "[INT] Staging builds: add ESLint config to backend": {
+    "id": "z94kydanth",
+    "url": "https://app.clickup.com/t/z94kydanth",
+    "lane": "INT",
+    "attachments": {},
+    "desc_hash": "85d227181eb6a316"
+  },
+  "[QA] Staging builds: verify deployment": {
+    "id": "z94kydantj",
+    "url": "https://app.clickup.com/t/z94kydantj",
+    "lane": "QA",
+    "attachments": {},
+    "desc_hash": "14ec5e0647604a6e"
+  },
+  "_cancelled": {
+    "[Feature] CI/CD: Staging Build Failure 64bf77efd9": {
+      "id": "z94kydant5",
+      "url": "https://app.clickup.com/t/z94kydant5",
+      "lane": "FEATURE",
+      "attachments": {
+        "0-2.png": "https://t7533817.p.clickup-attachments.com/t7533817/229ff979-5008-42b9-9c5c-5081c27466e4/0-2.png"
+      },
+      "desc_hash": "1048d06a0559d5a1"
+    },
+    "[INT] Fix staging build failure 64bf77efd9": {
+      "id": "z94kydant6",
+      "url": "https://app.clickup.com/t/z94kydant6",
+      "lane": "INT",
+      "attachments": {},
+      "desc_hash": "853d8d1fd52daf77"
+    },
+    "[QA] Verify staging build 64bf77efd9": {
+      "id": "z94kydant7",
+      "url": "https://app.clickup.com/t/z94kydant7",
+      "lane": "QA",
+      "attachments": {},
+      "desc_hash": "fc0d83c679b86da4"
+    }
+  }
+}

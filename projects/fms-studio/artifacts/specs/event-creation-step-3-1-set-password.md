@@ -29,12 +29,12 @@ As an organizer, I want to set a password on my event, so that only invited gues
 - Password strength meter beyond the length rule
 
 ## Acceptance criteria
-- Given the organizer is on the Set Password modal, when 'Save' is clicked with matching passwords ≥ 8 characters, then `PATCH /api/albums/:id/draft` is called with the password and the wizard navigates to Step 4.
+- Given the organizer is on the Set Password modal, when 'Save' is clicked with matching passwords ≥ 8 characters, then `PATCH /api/events/:id/draft` is called with the password and the wizard navigates to Step 4.
 - Given passwords do not match, when 'Save' is clicked, then 'Passwords do not match' shows and submission is blocked.
 - Given the modal renders, when 'I'll do this later.' is clicked, then the wizard navigates to Step 4 without calling the PATCH password endpoint.
 
 ## Technical notes
-- Endpoint / schema: PATCH /api/albums/:id/draft { password: string } -> 200
+- Endpoint / schema: PATCH /api/events/:id/draft { password: string } -> 200
 
 ## Depends on / blocks
 - Depends on: Event Creation Step 3
@@ -61,22 +61,22 @@ Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: none
 As a developer, I need to store the hashed password.
 
 ## In scope
-- Add `password_hash` column to `albums`.
+- Add `password_hash` column to `events` (an album is an `events` row; see `_planned-data.md`).
 - Migration script.
 
 ## Out of scope (do NOT build)
 - Plaintext password column.
 
 ## Acceptance criteria
-- Given the migration runs, when complete, then `password_hash` exists on the albums table.
-- Given the migration rollback runs, when complete, then `password_hash` is removed from the albums table.
+- Given the migration runs, when complete, then `password_hash` exists on the `events` table.
+- Given the migration rollback runs, when complete, then `password_hash` is removed from the `events` table.
 - Given the application starts, when the ORM synchronizes, then it successfully maps the `password_hash` column.
 
 ## Technical notes
-- Endpoint / schema: table `albums` (`password_hash` varchar nullable)
+- Endpoint / schema: table `events` (`password_hash` varchar nullable)
 
 ## Depends on / blocks
-- Depends on: none
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
 - Blocks: [BE] Set password: store hash
 
 ## Test notes (how QA verifies)
@@ -84,7 +84,7 @@ As a developer, I need to store the hashed password.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -102,7 +102,7 @@ Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: none
 As an organizer, I want my password hashed and stored securely.
 
 ## In scope
-- Update `PATCH /api/albums/:id/draft` to accept `password`.
+- Update `PATCH /api/events/:id/draft` to accept `password`.
 - Hash the password using bcrypt before saving to `password_hash`.
 
 ## Out of scope (do NOT build)
@@ -114,7 +114,7 @@ As an organizer, I want my password hashed and stored securely.
 - Given a valid request, when the database update fails, then the endpoint returns a 500 Internal Server Error.
 
 ## Technical notes
-- Endpoint / schema: PATCH /api/albums/:id/draft
+- Endpoint / schema: PATCH /api/events/:id/draft
 - INT note: bcrypt is a standard library addition, no separate INT ticket needed here.
 
 ## Depends on / blocks
@@ -126,7 +126,7 @@ As an organizer, I want my password hashed and stored securely.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -174,7 +174,7 @@ As an organizer, I want to enter and confirm my password in a modal.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -194,7 +194,7 @@ Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: http
 As an organizer, my password needs to be sent to the server.
 
 ## In scope
-- Wire modal `onSave` to `PATCH /api/albums/:id/draft`.
+- Wire modal `onSave` to `PATCH /api/events/:id/draft`.
 - Navigate to Step 4 on success.
 - Wire `onSkip` to navigate to Step 4 without calling the API.
 
@@ -207,7 +207,7 @@ As an organizer, my password needs to be sent to the server.
 - Given an invalid password, when 'Save' is clicked, then PATCH is not called and the user remains on the modal.
 
 ## Technical notes
-- Endpoint / schema: PATCH /api/albums/:id/draft
+- Endpoint / schema: PATCH /api/events/:id/draft
 
 ## Depends on / blocks
 - Depends on: [FE] Set password: modal layout + validation, [BE] Set password: store hash
@@ -218,7 +218,7 @@ As an organizer, my password needs to be sent to the server.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket

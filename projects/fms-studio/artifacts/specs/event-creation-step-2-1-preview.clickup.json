@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/d57f2df9-1f6c-4b5d-b0bb-b91d9f6e84b4/9873-3730.png"
-    }
+    },
+    "desc_hash": "a49687e05bb96b9f"
   },
   "[FE] Event preview: overlay and header layout": {
     "id": "z94kydaba2",
@@ -13,7 +14,8 @@
     "lane": "FE",
     "attachments": {
       "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/0e636158-5501-47d4-ac46-863f350b7bf6/9873-3730.png"
-    }
+    },
+    "desc_hash": "beb47c5cbcf35a18"
   },
   "[FE] Event preview: toolbar and photo grid layout": {
     "id": "z94kydaba3",
@@ -21,7 +23,8 @@
     "lane": "FE",
     "attachments": {
       "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/80be5a2a-9092-4b7d-bab1-2af9044daea1/9873-3730.png"
-    }
+    },
+    "desc_hash": "f337f77f0b61772a"
   },
   "[FE] Event preview: wire to event draft": {
     "id": "z94kydaba4",
@@ -29,12 +32,14 @@
     "lane": "FE",
     "attachments": {
       "9873-3730.png": "https://t7533817.p.clickup-attachments.com/t7533817/66854730-1cb7-450d-9848-a509737bde3c/9873-3730.png"
-    }
+    },
+    "desc_hash": "29a907d4fb386b56"
   },
   "[QA] Event preview: E2E organizer previews event draft": {
     "id": "z94kydaba5",
     "url": "https://app.clickup.com/t/z94kydaba5",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "f1123153b08b1339"
   }
 }

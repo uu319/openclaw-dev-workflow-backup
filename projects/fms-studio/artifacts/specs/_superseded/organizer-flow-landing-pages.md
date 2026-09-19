@@ -12,6 +12,8 @@ screenshots: specs/_figma/organizer-flow-landing-pages/9731-3297.png, specs/_fig
 ## Context
 Parent: this is the parent · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297, https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9782-3552 · Lane: FEATURE
 
+**Restoration Note:** The landing page was previously built but overwritten. This ticket has been reopened to restore the landing page layout, header, footer, and pricing sections.
+
 ## User story
 As an event organizer, I can read about the features and pricing of FindMyShots Studio so that I can decide to sign up or purchase credits.
 
@@ -61,6 +63,8 @@ screenshots: specs/_figma/organizer-flow-landing-pages/9731-3297.png, specs/_fig
 ## Context
 Parent: [Feature] Landing Page: Organizer Marketing & Pricing · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297, https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9782-3552 · Lane: FE
 
+**Restoration Note:** The previous header & footer implementation was overwritten and needs to be restored.
+
 ## User story
 As an organizer, I can navigate the site via the header and footer regardless of whether I am logged in.
 
@@ -99,7 +103,7 @@ As an organizer, I can navigate the site via the header and footer regardless of
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -114,6 +118,8 @@ screenshots: specs/_figma/organizer-flow-landing-pages/9731-3297.png, specs/_fig
 
 ## Context
 Parent: [Feature] Landing Page: Organizer Marketing & Pricing · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297, https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9782-3552 · Lane: FE
+
+**Restoration Note:** The previous content & pricing sections were overwritten and need to be restored.
 
 ## User story
 As a prospective user, I can read about the features and see pricing so I understand what I am paying for.
@@ -152,7 +158,7 @@ As a prospective user, I can read about the features and see pricing so I unders
 - [ ] All acceptance criteria pass
 - [ ] Unit tests added and green
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -196,7 +202,7 @@ As an engineer, I can run an E2E test suite so that I know the compiled applicat
 - [ ] All acceptance criteria pass
 - [ ] Playwright configured
 - [ ] PR reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -209,6 +215,8 @@ depends_on: [FE] Landing Page: Header & Footer, [FE] Landing Page: Content & Pri
 
 ## Context
 Parent: [Feature] Landing Page: Organizer Marketing & Pricing · Lane: QA
+
+**Restoration Note:** Re-run QA to verify the landing page restoration.
 
 ## User story
 As a QA engineer, I can verify the landing page functions as expected for all users.

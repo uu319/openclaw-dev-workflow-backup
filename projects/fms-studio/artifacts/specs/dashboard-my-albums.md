@@ -51,48 +51,47 @@ As an organizer, I want to see a dashboard of my created albums so that I can ma
 ---end
 
 ---ticket
-title: [DB] Albums: albums table and migration
+title: [DB] My Albums: add is_starred and cover_urls columns to events
 lane: DB
 parent: [Feature] Dashboard: My Albums view
 priority: high
-estimate_hours: 4
+estimate_hours: 2
 
 ## Context
 Parent: [Feature] Dashboard: My Albums view · Figma: none · Lane: DB
 
 ## User story
-As a developer, I want an albums table and an ORM set up so that we can persist album data for the dashboard.
+As a developer, I want the album card fields stored on `events`, so that My Albums can list them. An album in the UI is an `events` row (see `[DB] Basic Info: events table + migration`).
 
 ## In scope
-- Choose and set up a lightweight ORM (e.g., Prisma or Drizzle) since Stack says "Database: none yet"
-- Initial migration creating the `albums` table
-- Columns: `id` (uuid), `owner_id` (string), `title` (string), `covers` (jsonb/array of strings for the fanned image layout), `is_starred` (boolean, default false), `created_at` (timestamp)
+- One migration adding to `events`: `is_starred` (BOOLEAN, NOT NULL, default false) and `cover_urls` (TEXT[] / JSON array of URLs for the fanned card, NOT NULL, default empty).
 
 ## Out of scope (do NOT build)
-- API endpoints
-- Complex relations (e.g., photos table)
+- A separate `albums` table
+- ORM setup (done by `[DB] Basic Info: events table + migration`, Event Creation Step 1)
+- A photos table or relations
 
 ## Acceptance criteria
-- Given a fresh local database, when the migration script runs, then the `albums` table is created with all specified columns.
-- Given the ORM setup, when the developer imports the client, then they can run a typed query against the `albums` table.
-- Given the setup is complete, when inspecting the repository, then a clear npm/nx script exists to generate/apply migrations.
+- Given the Step 1 `events` migration has run, when this migration runs, then `events` has `is_starred` (default false) and `cover_urls` (default empty array).
+- Given existing `events` rows, when this migration runs, then each row has `is_starred = false` and `cover_urls = []`.
+- Given this migration has run, when it is rolled back, then both columns are removed and no other column changes.
 
 ## Technical notes
-- Endpoint / schema: `albums` table.
+- Endpoint / schema: `events.is_starred BOOLEAN NOT NULL DEFAULT false`, `events.cover_urls` array of text, NOT NULL, default empty
 
 ## Depends on / blocks
-- Depends on: none
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
 - Blocks: [BE] Albums: GET /api/albums?owner=me returns the caller's albums
 
 ## Test notes (how QA verifies)
-- Verify that running the migration command succeeds and the table schema matches requirements.
+- Run the migration up and down on a fresh database and inspect the `events` columns.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Unit tests for this lane added and green (`npx nx test <project>`)
-- [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
-- [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Migration runs up and down cleanly on a fresh database
+- [ ] Lint and typecheck clean
+- [ ] PR reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -101,7 +100,7 @@ lane: BE
 parent: [Feature] Dashboard: My Albums view
 priority: high
 estimate_hours: 4
-depends_on: [DB] Albums: albums table and migration
+depends_on: [DB] My Albums: add is_starred and cover_urls columns to events
 
 ## Context
 Parent: [Feature] Dashboard: My Albums view · Figma: none · Lane: BE
@@ -125,10 +124,11 @@ As a frontend application, I want to fetch the current user's albums so that I c
 - Given the album data, when returned, then each object matches the shape `{ id, title, coverUrls, isStarred, createdAt }`.
 
 ## Technical notes
+- Data source: `events` rows where `owner_id` is the caller and `status = 'published'` (drafts belong to My Drafts). `coverUrls` = `cover_urls`, `isStarred` = `is_starred`.
 - Endpoint / schema: GET /api/albums?owner=me → response `Array<{ id, title, coverUrls: string[], isStarred: boolean, createdAt: string }>`
 
 ## Depends on / blocks
-- Depends on: [DB] Albums: albums table and migration
+- Depends on: [DB] My Albums: add is_starred and cover_urls columns to events
 - Blocks: [FE] My Albums: wire grid and search to GET /api/albums
 
 ## Test notes (how QA verifies)
@@ -139,7 +139,7 @@ As a frontend application, I want to fetch the current user's albums so that I c
 - [ ] Unit tests for this lane added and green (`npx nx test backend`)
 - [ ] Lint and typecheck clean
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -193,7 +193,7 @@ As an organizer, I want to see the main layout of my dashboard so that I can ori
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -244,7 +244,7 @@ As an organizer, I want to see my individual albums as cards and access their ac
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -293,7 +293,7 @@ As an organizer, I want to see my actual album data and use the search bar to fi
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -334,5 +334,5 @@ As a QA engineer, I want an end-to-end test that verifies the dashboard displays
 ## Definition of done
 - [ ] All acceptance criteria pass
 - [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

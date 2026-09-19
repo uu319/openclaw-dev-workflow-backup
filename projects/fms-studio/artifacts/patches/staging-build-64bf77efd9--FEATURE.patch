@@ -1,0 +1,97 @@
+diff --git a/backend/eslint.config.mjs b/backend/eslint.config.mjs
+new file mode 100644
+index 0000000..7bffad0
+--- /dev/null
++++ b/backend/eslint.config.mjs
+@@ -0,0 +1,27 @@
++import { FlatCompat } from "@eslint/eslintrc";
++import js from "@eslint/js";
++import { dirname } from "path";
++import { fileURLToPath } from "url";
++import typescriptEslint from "typescript-eslint";
++
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = dirname(__filename);
++
++const compat = new FlatCompat({
++  baseDirectory: __dirname,
++});
++
++const eslintConfig = [
++  js.configs.recommended,
++  ...typescriptEslint.configs.recommended,
++  {
++    rules: {
++      "@typescript-eslint/no-explicit-any": "off",
++      "@typescript-eslint/no-unused-vars": "off",
++      "@typescript-eslint/no-require-imports": "off",
++      "no-undef": "off"
++    }
++  }
++];
++
++export default eslintConfig;
+diff --git a/backend/src/app/app.controller.spec.ts b/backend/src/app/app.controller.spec.ts
+index dfd987f..c6434f3 100644
+--- a/backend/src/app/app.controller.spec.ts
++++ b/backend/src/app/app.controller.spec.ts
+@@ -1,20 +1,10 @@
+-import { Test, TestingModule } from '@nestjs/testing';
+ import { AppController } from './app.controller';
+ import { AppService } from './app.service';
+ 
+ describe('AppController', () => {
+-  let app: TestingModule;
+-
+-  beforeAll(async () => {
+-    app = await Test.createTestingModule({
+-      controllers: [AppController],
+-      providers: [AppService],
+-    }).compile();
+-  });
+-
+   describe('getData', () => {
+     it('should return "Hello API"', () => {
+-      const appController = app.get<AppController>(AppController);
++      const appController = new AppController(new AppService());
+       expect(appController.getData()).toEqual({message: 'Hello API'});
+     });
+   });
+diff --git a/frontend/eslint.config.mjs b/frontend/eslint.config.mjs
+new file mode 100644
+index 0000000..2fa13a5
+--- /dev/null
++++ b/frontend/eslint.config.mjs
+@@ -0,0 +1,32 @@
++import { FlatCompat } from "@eslint/eslintrc";
++import js from "@eslint/js";
++import { dirname } from "path";
++import { fileURLToPath } from "url";
++import typescriptEslint from "typescript-eslint";
++import reactHooksPlugin from "eslint-plugin-react-hooks";
++import reactPlugin from "eslint-plugin-react";
++import importPlugin from "eslint-plugin-import";
++
++const __filename = fileURLToPath(import.meta.url);
++const __dirname = dirname(__filename);
++
++const compat = new FlatCompat({
++  baseDirectory: __dirname,
++});
++
++const eslintConfig = [
++  js.configs.recommended,
++  ...typescriptEslint.configs.recommended,
++  ...compat.extends("next/core-web-vitals"),
++  {
++    rules: {
++      "@typescript-eslint/no-explicit-any": "off",
++      "import/no-anonymous-default-export": "off",
++      "react/no-unescaped-entities": "off",
++      "@typescript-eslint/no-unused-vars": "off",
++      "no-undef": "off"
++    }
++  }
++];
++
++export default eslintConfig;

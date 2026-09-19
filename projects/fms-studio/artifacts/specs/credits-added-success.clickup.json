@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9884-4390.png": "https://t7533817.p.clickup-attachments.com/t7533817/4b2c4e7a-40a2-495e-9076-b7e97ffadb30/9884-4390.png"
-    }
+    },
+    "desc_hash": "b6fd8d7ce745b905"
   },
   "[FE] Credits Added Success: modal layout and dismissal": {
     "id": "z94kydab6u",
@@ -13,12 +14,14 @@
     "lane": "FE",
     "attachments": {
       "9884-4390.png": "https://t7533817.p.clickup-attachments.com/t7533817/05acbd9c-f913-4a91-9c93-1f84c8f47bce/9884-4390.png"
-    }
+    },
+    "desc_hash": "4acd86eb3b49730c"
   },
   "[QA] Credits Added Success: E2E user sees success modal and dismisses it": {
     "id": "z94kydab6v",
     "url": "https://app.clickup.com/t/z94kydab6v",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "bfa8ec40a0605a2c"
   }
 }

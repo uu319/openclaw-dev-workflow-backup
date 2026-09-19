@@ -44,7 +44,7 @@ As an organizer, I want a landing page that explains the FindMyShots Studio bene
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/organizer-flow-landing-page-with-account` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -94,7 +94,7 @@ As an organizer, I want to see a navigation bar and hero section, so that I unde
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/organizer-flow-landing-page-with-account` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -143,7 +143,7 @@ As an organizer, I want to read about the features and see app screenshots, so t
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/organizer-flow-landing-page-with-account` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -192,7 +192,7 @@ As an organizer, I want to see the pricing tiers and contact information, so tha
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/organizer-flow-landing-page-with-account` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -231,5 +231,5 @@ As QA, I want to verify the Landing Page renders completely and responsively.
 
 ## Definition of done
 - [ ] Scenario executed and passes
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

@@ -100,7 +100,51 @@ As an organizer, I want to clearly see and select the privacy options for my alb
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened from `feature/step-3-layout` and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
+---end
+
+---ticket
+title: [DB] Step 3 Privacy: add privacy column to events
+lane: DB
+parent: [Feature] Event Creation: Step 3 — Privacy and Access
+estimate_hours: 2
+
+## Context
+Parent: [Feature] Event Creation: Step 3 — Privacy and Access · Figma: none · Lane: DB
+
+## User story
+As a developer, I want a column for the privacy setting, so that the draft API can save it.
+
+## In scope
+- One migration adding `privacy` to `events`: VARCHAR, nullable, allowed values `'public' | 'hidden' | 'link-only' | 'restricted' | 'password'` (CHECK constraint).
+
+## Out of scope (do NOT build)
+- Enforcing privacy on album reads (separate feature)
+- Any column not listed above
+- ORM setup (done by `[DB] Basic Info: events table + migration`)
+
+## Acceptance criteria
+- Given the Step 1 `events` migration has run, when this migration runs, then `events` has a nullable `privacy` column.
+- Given existing `events` rows, when this migration runs, then those rows keep their data and `privacy` is NULL.
+- Given the migration has run, when a row is updated with `privacy = 'everyone'`, then the database rejects it.
+- Given this migration has run, when it is rolled back, then `privacy` is removed and no other column changes.
+
+## Technical notes
+- Endpoint / schema: `events.privacy VARCHAR NULL CHECK (privacy IN ('public','hidden','link-only','restricted','password'))`
+
+## Depends on / blocks
+- Depends on (other feature): [DB] Basic Info: events table + migration (Event Creation Step 1)
+- Blocks: [BE] Step 3 Privacy: PATCH /api/events/:id/draft stores privacy setting
+
+## Test notes (how QA verifies)
+- Run the migration up and down on a fresh database and inspect the `events` columns.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+- [ ] Migration runs up and down cleanly on a fresh database
+- [ ] Lint and typecheck clean (`npx nx lint backend`, `npx tsc -p backend/tsconfig.json --noEmit`)
+- [ ] PR reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -108,6 +152,7 @@ title: [BE] Step 3 Privacy: PATCH /api/events/:id/draft stores privacy setting
 lane: BE
 parent: [Feature] Event Creation: Step 3 — Privacy and Access
 estimate_hours: 4
+depends_on: [DB] Step 3 Privacy: add privacy column to events
 
 ## Context
 Parent: [Feature] Event Creation: Step 3 — Privacy and Access · Figma: none · Lane: BE
@@ -129,10 +174,10 @@ As an organizer, I want my selected privacy setting saved to my event draft, so 
 
 ## Technical notes
 - Endpoint / schema: PATCH /api/events/:id/draft { privacy: 'public' | 'hidden' | 'link-only' | 'restricted' | 'password' }
-- Requires adding `privacy` column/field to the Event/Draft schema if not present.
+- Column added by `[DB] Step 3 Privacy: add privacy column to events`.
 
 ## Depends on / blocks
-- Depends on: none
+- Depends on: [DB] Step 3 Privacy: add privacy column to events
 - Blocks: [FE] Step 3 Privacy: wire Next Step to PATCH /api/events/:id/draft
 
 ## Test notes (how QA verifies)
@@ -143,7 +188,7 @@ As an organizer, I want my selected privacy setting saved to my event draft, so 
 - [ ] Unit tests for this lane added and green (`npx nx test backend`)
 - [ ] Lint and typecheck clean (`npx nx lint backend`, `npx tsc -p backend/tsconfig.json --noEmit`)
 - [ ] PR opened and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -189,7 +234,7 @@ As an organizer, I want my privacy selection actually saved when I proceed, so t
 - [ ] Unit tests for this lane added and green (`npx nx test frontend`)
 - [ ] Lint and typecheck clean (`npx nx lint frontend`, `npx tsc -p frontend/tsconfig.json --noEmit`)
 - [ ] PR opened and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
@@ -230,5 +275,5 @@ As a QA engineer, I want an automated end-to-end test for Step 3, so that regres
 ## Definition of done
 - [ ] All acceptance criteria pass
 - [ ] PR opened and reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

@@ -5,6 +5,7 @@ NOT here; they live in each project's PROJECT_CONTEXT.md.
 
 ## Team conventions (2026-09-16)
 - Agents and workflows are registered in the Team roster section of `AGENTS.md`; after adding or removing one, run `_tools/validate_team.py`.
+- Main agent (VanOpenClaw) must NEVER push code, make codebase changes, or bypass the developer agent for fixes. ALWAYS spawn the appropriate specialist agent (`developer`) to handle codebase fixes and PRs.
 
 ## Software project conventions (2026-09-16)
 - Pipeline: `project-orchestration` skill. Onboarding: `project-onboarding` skill.
@@ -15,5 +16,8 @@ NOT here; they live in each project's PROJECT_CONTEXT.md.
 
 ### fms-studio
 - Context: `/home/openclaw/.openclaw/workspace/projects/fms-studio/PROJECT_CONTEXT.md`
-- Onboarded 2026-09-09 (context brought to template shape 2026-09-16). 11 legacy screen tickets in ClickUp are adopted as `[Feature]` parents via `existing_id`.
-- First spec written 2026-09-16: `artifacts/specs/event-creation-step-3-1-set-password.md` (not pushed yet).
+- Onboarded 2026-09-09 (context brought to template shape 2026-09-16). Legacy umbrella specs were superseded 2026-09-19 (`specs/_superseded/`).
+- **2026-09-17**: `organizer-flow-landing-page-no-account` built, reviewed, QA'd (PR #3 era). Its tickets were marked complete before any PR existed.
+- **2026-09-17 evening**: the fresh Nx scaffold (PR #15) replaced the frontend and **removed the landing page from `Development`**. Restore is PR #32 (`feature/restore-landing-pages`), open as of 2026-09-19; its tickets were reset to `to do`.
+- **2026-09-17/18**: ~28 PRs (#3-#31, deploy/lockfile/peer-dep fixes) went out with no review or QA. Commit `90e659b` on `Development` is a README line VanQA pushed "to trigger CI".
+- **2026-09-19 lessons** (setup audit): approval questions that time out are a NO; every push needs an APPROVED review with the SHA; task branch is pushed right after review so QA gets its own worktree; nobody but Van merges; `nx test-ci` does not work (see PROJECT_CONTEXT test commands).

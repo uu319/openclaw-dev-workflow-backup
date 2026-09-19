@@ -1,0 +1,38 @@
+{
+  "[Feature] CI/CD: Staging deployment pipeline to GCP App Engine": {
+    "id": "z94kydae67",
+    "url": "https://app.clickup.com/t/z94kydae67",
+    "lane": "FEATURE",
+    "desc_hash": "dfa99feba51f108a"
+  },
+  "[INT] CI/CD: Add app.yaml and build configs for Nx apps": {
+    "id": "z94kydae68",
+    "url": "https://app.clickup.com/t/z94kydae68",
+    "lane": "INT",
+    "desc_hash": "ee352ea14249268b"
+  },
+  "[INT] CI/CD: Configure Cloud Build pipeline for GitHub": {
+    "id": "z94kydae69",
+    "url": "https://app.clickup.com/t/z94kydae69",
+    "lane": "INT",
+    "desc_hash": "6ec09d2fcc6e54a4"
+  },
+  "[QA] CI/CD: E2E staging deployment verification": {
+    "id": "z94kydae6a",
+    "url": "https://app.clickup.com/t/z94kydae6a",
+    "lane": "QA",
+    "desc_hash": "bd1cdfff83500371"
+  },
+  "_rebuilt": {
+    "on": "2026-09-19",
+    "reason": "was hand-written without ticket ids",
+    "previous": {
+      "status": "complete",
+      "lanes_completed": [
+        "INT"
+      ],
+      "commit": "ed334201845976bcb7a47577cbce833c43871ba0",
+      "branch": "feature/staging-deployment"
+    }
+  }
+}

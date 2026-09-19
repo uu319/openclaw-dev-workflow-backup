@@ -5,7 +5,8 @@
     "lane": "FEATURE",
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3b8ffe39-1c0c-47a3-ac5b-afdbd4e11f57/9731-3297.png"
-    }
+    },
+    "desc_hash": "b5ceeb5489911a04"
   },
   "[FE] Landing Page: layout - navigation - and static content": {
     "id": "z94kydab9c",
@@ -13,12 +14,23 @@
     "lane": "FE",
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/6216f938-01d4-4a01-a32a-48f0e1decf51/9731-3297.png"
-    }
+    },
+    "desc_hash": "d18d728c994f50d7"
   },
   "[QA] Landing Page: E2E unauthenticated visitor views pricing and clicks signup": {
     "id": "z94kydab9d",
     "url": "https://app.clickup.com/t/z94kydab9d",
     "lane": "QA",
-    "attachments": {}
+    "attachments": {},
+    "desc_hash": "f9bb36f98ffa7712"
+  },
+  "[FE] Bug: Fix landing page copy and links": {
+    "id": "z94kydadcw",
+    "url": "https://app.clickup.com/t/z94kydadcw",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f613e6b4-875c-4be5-8f61-c46f97ba09b6/9731-3297.png"
+    },
+    "desc_hash": "7a3e3db6228364d6"
   }
 }

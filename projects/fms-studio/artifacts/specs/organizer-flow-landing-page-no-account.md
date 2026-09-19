@@ -6,11 +6,14 @@ Source: Figma node 9731-3297.
 title: [Feature] Organizer Flow: Landing Page No Account
 lane: FEATURE
 priority: normal
+status: to do
 figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 
 ## Context
 Parent: this is the parent · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FEATURE
+
+**Restoration Note:** The landing page was previously built but overwritten. This ticket has been reopened to restore the landing page layout, header, footer, and pricing sections.
 
 ## User story
 As an unauthenticated organizer, I want to learn about the Studio product, its features, and its pricing, so that I can decide whether to sign up and buy credits.
@@ -53,6 +56,7 @@ title: [FE] Landing Page: layout - navigation - and static content
 lane: FE
 parent: [Feature] Organizer Flow: Landing Page No Account
 priority: normal
+status: to do
 estimate_hours: 8
 parallel: true
 figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
@@ -60,6 +64,8 @@ screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 
 ## Context
 Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+
+**Restoration Note:** The previous content, navigation & pricing sections were overwritten by an Nx scaffold and need to be restored.
 
 ## User story
 As an unauthenticated organizer, I want to see the marketing landing page so I can learn about the product and view pricing.
@@ -104,18 +110,21 @@ As an unauthenticated organizer, I want to see the marketing landing page so I c
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR from `feature/landing-page-no-account` reviewed
-- [ ] Status moved to QA FOR DEVELOPMENT
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
 
 ---ticket
 title: [QA] Landing Page: E2E unauthenticated visitor views pricing and clicks signup
 lane: QA
 parent: [Feature] Organizer Flow: Landing Page No Account
+status: to do
 estimate_hours: 2
 depends_on: [FE] Landing Page: layout - navigation - and static content
 
 ## Context
 Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: none · Lane: QA
+
+**Restoration Note:** Re-run QA to verify the landing page restoration.
 
 ## User story
 As QA, I want to verify the unauthenticated landing page renders correctly and routes to signup.
@@ -143,4 +152,55 @@ As QA, I want to verify the unauthenticated landing page renders correctly and r
 
 ## Definition of done
 - [ ] All acceptance criteria pass
+---end
+
+---ticket
+title: [FE] Bug: Fix landing page copy and links
+lane: FE
+parent: [Feature] Organizer Flow: Landing Page No Account
+priority: high
+status: to do
+estimate_hours: 2
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
+
+## Context
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+
+**Restoration Note:** These fixes were lost when the landing page was overwritten by the Nx scaffold.
+
+## User story
+As an unauthenticated organizer, I want the landing page to have correct text and links so I can sign up and contact support.
+
+## In scope
+- Correct the page title.
+- Add the missing "Credit Packages" text to the Pricing section.
+- Change Pricing buttons label from "Buy now" to "Select Option" and add `href` to `/signup`.
+- Change Hero "Buy Credits" button anchor from `#pricing` to `/signup`.
+- Add `mailto:` to the Contact link.
+
+## Out of scope (do NOT build)
+- Any layout changes or new sections.
+
+## Acceptance criteria
+- Given the browser tab, when the page renders, then the page title contains "FindMyShots Studio".
+- Given the Pricing section, when it renders, then the "Credit Packages" text is visible.
+- Given the Pricing section, when a user clicks "Select Option", then they are navigated to `/signup`.
+- Given the Hero section, when a user clicks "Buy Credits", then they are navigated to `/signup`.
+- Given the custom pricing banner, when the user clicks "Contact Us", then it opens a `mailto:` link.
+
+## Technical notes
+- Branch prefix: `bug/landing-page-fixes`
+
+## Depends on / blocks
+- Depends on: none
+- Blocks: none
+
+## Test notes (how QA verifies)
+- E2E test `organizer-flow-landing-page-no-account` passes.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+- [ ] PR from `bug/landing-page-fixes` reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end
