@@ -1,0 +1,422 @@
+# OpenClaw Dev Factory — Architecture and Self-Fix Runbook
+
+**Version:** 2.3 · **Date:** 2026-09-19 (2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.4) stays the fresh-install reference (host, config keys, every incident).
+This document is shorter and answers a different question: **what is the architecture, why does the system
+keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
+
+---
+
+## 0. The problem this solves
+
+Van, 2026-09-19: *"the files eventually clutter, garbage files appear, different implementations appear, and the
+system eventually breaks because it has no proper architecture."*
+
+That is an accurate diagnosis. Evidence from this box, three weeks in:
+- 11 Python tools in 3 locations, plus 4 dead scripts (`fetch_figma.py`, `test.sh`, `write_specs*.py`, `update_mcp_skills.py`), 3 diagram files and an explainer in the agent workspace, 30 unreviewed skill-workshop proposals, 47 backup entries (31 MB), 5 loose `openclaw.json.bak*` copies.
+- Three tracker implementations existed at once (curl scripts, an MCP server, `clickup_push.py`), two Figma paths, two worktree mechanisms, two templates for `PROJECT_CONTEXT.md`, and a `TRACKER_`→`CLICKUP_` rename that only half happened.
+- Rules lived in six `AGENTS.md` files, four skills and a 1250-line guide, so every fix was a prompt edit that the next session did not see, and config settings crept back (`main.tools.deny` twice).
+- The framework directory is a git repo, but had 111 uncommitted paths: nobody could tell a deliberate file from garbage.
+
+The root cause is not any one of these. It is that **nothing defined which files may exist, who owns them, and
+when they die**, so every session added its own. The fix is an architecture with a manifest and a linter that
+reads the manifest, so "is this garbage?" is a command, not an opinion.
+
+**The goal**, in Van's words: a real developer-team assistant that acts on his behalf as a human developer, on
+projects he shares with other humans (same repo, same tickets), across **many projects with different setups**,
+without the system breaking. So: one framework, zero project knowledge in it; one file per project that
+declares how that project works; a linter that keeps both true.
+
+---
+
+## 1. The architecture on one page
+
+Five layers. Each has one owner, one location, one lifecycle, and a rule about who may write there.
+
+| Layer | What it is | Location | Written by | Lifecycle | In git? |
+|---|---|---|---|---|---|
+| **1. Host** | OS, Node, gcloud, gh, tmpfs fix, systemd unit + drop-in | `/`, `~/.config/systemd`, `~/.local` | Van (root) | Set up once; verified by the linter | No (documented in guide §3–4) |
+| **2. Platform** | `openclaw.json`, agent registrations, MCP registrations, secrets vault | `~/.openclaw/openclaw.json`, `~/.openclaw/state` | Van via `openclaw config patch` / `openclaw mcp set` / `openclaw secrets` | Desired state is encoded in the linter; drift = FIX | No (backed up by `openclaw backup`) |
+| **3. Framework** | Prompts, skills, shared tools, template. **Project-agnostic; contains no project name, ID or secret.** | `~/.openclaw/workspace` (+ 4 agent workspaces inside it) | Claude Code sessions with Van, committed to git | Every change is a commit; `git status` must be empty in all six repos | **Yes**: main workspace repo + one repo per agent workspace (each has its own `.git`; the main `.gitignore` excludes them) + `~/.openclaw/skills/worktree-lifecycle` |
+| **4. Project** | One context file + generated artifacts per project | `workspace/projects/<slug>/` and `~/projects/<slug>` (code) | Agents, through the framework tools only | Context file: onboarding + edits with validation. Artifacts: created by pipeline steps, archived by the watcher | Context yes; artifacts yes (history is useful); code has its own repo |
+| **5. Runtime** | Sessions, transcripts, worktrees, run logs, watcher state, temp | `~/.openclaw/agents/*/agent`, `~/projects/.worktrees`, `artifacts/runs`, `$TMPDIR` | OpenClaw and the tools | Created by a task, removed by `finish`/`sweep`/TTL; never hand-edited | No (`.gitignore`) |
+
+Three invariants make the layers hold:
+
+1. **Manifest or garbage.** `_tools/lint_workspace.py` holds the list of every path pattern that may exist in the
+   framework and project layers. A file outside it is a `FIX` line. No file is "temporary" without a lifecycle
+   in the table in §3.
+2. **One implementation per concern.** The registry in §2 names the single tool for each job. A second script
+   that does the same job is a bug, even if it works. An agent that needs a tool the registry lacks reports
+   it; it does not write one into the workspace.
+3. **Desired state is checkable.** Config, layout, host settings all have an expected value in the linter.
+   Changing the design = change the linter expectation and the guide in the same commit, then apply.
+
+Run the linter any time; it is read-only and exits 1 when something needs fixing:
+```bash
+python3 /home/openclaw/.openclaw/workspace/_tools/lint_workspace.py
+```
+The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project channel. Nothing auto-deletes.
+
+---
+
+## 2. Registry: one tool per concern
+
+| Concern | The one tool | Owner | Reads | Never |
+|---|---|---|---|---|
+| Project facts | `projects/<slug>/PROJECT_CONTEXT.md` + `projects/_tools/validate_context.py` | main (onboarding), VanPM (`## Stack`) | — | duplicated into USER.md, skills, scripts |
+| Figma access | `projects/_tools/figma_mcp.py` → MCP `figma-<slug>` | VanPM, VanDev | context + vault | REST calls, shared key |
+| Tracker read | `projects/_tools/clickup_mcp.py` → MCP `tracker-<slug>` (get only for VanPM) | VanPM | context + vault | discovery of lists by API |
+| Tracker write | `feature-breakdown/scripts/clickup_push.py`, `clickup_status.py` | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
+| Human-made tickets | `feature-breakdown/scripts/clickup_scan.py` | VanPM | tracker | creating a duplicate; adopt with `existing_id` |
+| Spec planning index | `projects/_tools/spec_index.py` → `specs/_index.md`, `specs/_planned-data.md` | VanPM | specs | hand edits of `_index.md` |
+| GitHub API | `projects/_tools/git_env.py <slug> -- gh …` | VanDev (main read-only) | context + vault | `gh auth login`, merges, a PR base other than the Flow PR base, raw commit-status writes |
+| Review result on GitHub | `git_env.py <slug> --review-status <pr>` → commit status `openclaw/review` on the PR head | VanReviewer | `reviews/*.md` (`Reviewed SHA` must equal the head) | any other status write; calling a PR ready while it is not green |
+| Git push | plain `git` over the project's SSH deploy-key alias | VanDev | — | default branch, force, primary checkout |
+| Cloud | `projects/_tools/gcloud_env.py <slug> -- …` | VanDev, VanQA | context + vault | bare `gcloud`, global config |
+| Code checkouts | `projects/_tools/worktree.py <slug> create/finish/sweep/list` | every specialist | context | OpenClaw `worktree: true`, `git worktree add` by hand, editing Code (CWD) |
+| Delivery (PR → build → ticket) | `projects/_tools/delivery_watch.py <slug>` from the heartbeat | main (isolated heartbeat) | GitHub, Cloud Build, tracker (read) | writing anything itself; agents setting `complete` (sole exception: VanPM closes a `[SPIKE]` ticket once its findings note exists) |
+| Team registry | `AGENTS.md` roster + `_tools/validate_team.py` | main | — | a second roster file |
+| Architecture | `_tools/lint_workspace.py` | anyone (read-only) | everything above | deleting |
+| Design docs | `docs/OPENCLAW_ARCHITECTURE.md`, `docs/OPENCLAW_DEV_SETUP.md` (`~/OPENCLAW_*.md` are symlinks) | Claude Code sessions with Van | — | a second copy; changing the design without them in the same commit |
+| Off-box copy (Decision I) | `_tools/framework_offbox.py push <private repo url>` → one branch per framework repo, `refs/offbox/<name>` | Van, from a real terminal | the six repos (full-history token scan first) | git remotes on framework repos; force pushes; pushing `~/Backups/openclaw-git` |
+| Code writing | coding agent (agy on Gemini, Decision B) in the worktree `create` printed | VanDev | — | git, gh, builds, tests, deploys (those are VanDev's own `exec`) |
+
+If a job is not in this table, the answer to "which script?" is **none yet**: add a row, then the tool, in one commit.
+
+---
+
+## 3. File layout and lifecycle
+
+Every path, who creates it, who removes it, when. Anything else the linter flags.
+
+```
+~/.openclaw/workspace/                        FRAMEWORK (git repo; project-agnostic)
+├── AGENTS.md SOUL.md USER.md IDENTITY.md      auto-loaded for main (≤ 20k chars each)
+├── MEMORY.md                                  main only: project index + lessons; never IDs/secrets
+├── DREAMS.md, memory/                         OpenClaw-generated; gitignored; Decision G
+├── _tools/validate_team.py, lint_workspace.py, framework_offbox.py
+├── docs/OPENCLAW_ARCHITECTURE.md, OPENCLAW_DEV_SETUP.md   this doc and the guide; ~/OPENCLAW_*.md are symlinks
+├── skills/project-onboarding/, project-orchestration/
+├── credentials/gcp/<slug>.json                0600; restored from the vault by gcloud_env.py; gitignored
+├── projects/_template/PROJECT_CONTEXT.md, specs/_planned-data.md      the ONLY templates
+├── projects/_tools/<8 shared tools>           see §2
+├── projects/<slug>/PROJECT_CONTEXT.md         PROJECT: created by onboarding, validated on every edit
+├── projects/<slug>/artifacts/
+│   ├── specs/<feature>.md + .clickup.json     VanPM; archived to specs/_done/ by FEATURE_COMPLETE, specs/_superseded/ when replaced
+│   ├── specs/_index.md, _planned-data.md      generated / VanPM-maintained
+│   ├── specs/_figma/<feature>/*.png           VanPM screenshots; archived with the spec
+│   ├── patches/<feature>--<lane>.patch        VanDev; kept (history)
+│   ├── reviews/<feature>--<lane>.md           VanReviewer; the saved review of a PR head (`--review-status` needs it)
+│   ├── qa/<feature>.md                        VanQA
+│   ├── runs/<feature>--<lane>--<utc>.log      RUNTIME: coding-agent logs; sweep deletes > 30 days
+│   ├── worktrees.jsonl (+ .lock), prs.md      worktree.py ledger + generated PR table
+│   └── delivery_state.json                    delivery_watch.py state
+├── project-manager/ developer/ qa-engineer/ code-reviewer/
+│   ├── AGENTS.md SOUL.md USER.md IDENTITY.md  auto-loaded for that agent
+│   ├── skills/<one skill dir each>            feature-breakdown / agy-coding / code-review (qa-engineer: none yet; manifest also allows coding-delegation, qa-verification)
+│   └── DREAMS.md, memory/, media/             OpenClaw-generated; gitignored
+~/.openclaw/skills/worktree-lifecycle/         shared skill, all agents; its own git repo. Anything else in ~/.openclaw/skills is a FIX
+~/projects/<slug>/                             CODE primary checkout: read-only for agents, on the default branch
+~/projects/.worktrees/<slug>/<branch>/         one per task; created by worktree.py create, removed by finish/sweep
+~/.openclaw/openclaw.json, .last-good          PLATFORM; every other openclaw.json.* copy → ~/.openclaw/backups/config-history/
+~/.openclaw/backups/<incident-date>/           one dated dir per incident, pruned to the last 5 config backups
+~/.openclaw/skill-workshop/proposals/          auto-generated; reviewed weekly, deleted if not adopted
+~/.cache/openclaw-tmp/                         TMPDIR for the gateway and shells; TTL cleanup
+```
+
+Rules that follow from the table:
+- Agents write **code** only inside a worktree and **files** only under `artifacts/`. A script an agent needs
+  once goes to `$TMPDIR`, never into the workspace. (`developer/test.sh`, `fms-studio/fetch_figma.py` are what
+  happens otherwise.)
+- Backups are made by `openclaw backup` (daily, `--exclude-secrets`) plus **one** dated directory per incident.
+  Ad-hoc `cp x x.bak` next to live files is forbidden; the linter counts them.
+- `.gitignore` in the framework repo: `memory/`, `**/memory/`, `DREAMS.md`, `**/DREAMS.md`, `media/`, `**/media/`,
+  `credentials/`, `__pycache__/`, `**/artifacts/runs/`, `**/artifacts/delivery_state.json`, `**/worktrees.jsonl.lock`.
+  Everything else is either committed or a FIX, with one exception: agent artifacts under `projects/*/artifacts/`
+  change on every run and agents never commit, so the linter counts them in an OK line and a Claude Code session
+  commits them. (Before 2026-09-19 night they made the daily lint a permanent FIX.)
+- No token-shaped string in any framework file, ignored files included (only `credentials/` holds key material).
+  The linter greps for them; 2026-09-19 night it found none after an agent-written `specs/_figma/fetch.py` with
+  the live Figma token (committed 2026-09-17) was removed. That token must be rotated.
+
+---
+
+## 4. Per-project model: data + flow profile
+
+Multiple projects must not share one flow. The framework therefore knows **no** flow constants; every step the
+orchestrator takes is switched by the project's `## Flow` section. Same tools, same agents, different pipeline.
+
+### 4.1 The `## Flow` section of `PROJECT_CONTEXT.md` (live since 2026-09-19)
+```markdown
+## Flow
+- **Profile:** `factory` | `teammate` | `maintenance` | `custom`
+- **Stages:** `spec, tickets, review, internal-qa, merge-gate, delivery-watch`   (subset, in this order)
+- **Ticket source:** `agent` | `human` | `both`
+- **Assignee filter:** `<tracker user id or email of Van>` | `any`
+- **Branch model:** `feature-branch` | `ticket-branch`
+- **PR base:** `<branch>`   (defaults to Default branch)
+- **Merge by:** `van` | `humans`   (agents never merge in either)
+- **Deploy signal:** `cloud-build` | `none`   (`github-actions` not supported yet)
+- **Status map:** `todo=to do, doing=in progress, staged=qa, rejected=rejected, done=complete, cancelled=cancelled, hold=on hold`
+- **Chat channel:** `discord:<channel id>`
+- **PR conventions:** `<path to the repo's PR template / CONTRIBUTING, or none>`
+```
+`validate_context.py` parses these. Every line is optional: Profile defaults to `factory`, Stages is required only
+for `custom`, `teammate`/`maintenance` need an Assignee filter, and the Status map must resolve `todo doing done
+cancelled` (plus `staged` when a Deploy signal is set), written out or inferred from **Statuses**. Scripts use the
+**canonical** names (`todo doing staged rejected done cancelled hold`) and translate through the map, so a project whose board says
+`Backlog / In Dev / Staging / QA Failed / Done` needs zero script changes.
+
+### 4.2 Three archetypes (and what changes)
+
+| | `factory` (fms-studio today) | `teammate` (Van is one dev on a human team) | `maintenance` (bug fixes only) |
+|---|---|---|---|
+| Stages | all six | `review, merge-gate, delivery-watch` (+ `spec` on request) | `review, merge-gate` |
+| Ticket source | agent (VanPM creates from Figma) | human (tickets already exist) | human |
+| Assignee filter | any | Van's tracker id: agents only pick up tickets assigned to Van | Van's id |
+| Branch model | feature-branch, lanes one at a time | ticket-branch (`<prefix>/<ticket-id>-<slug>`) | ticket-branch |
+| PR conventions | ours | the repo's template + CONTRIBUTING; PR body carries the ticket URL | the repo's |
+| Merge by | van | humans (reviewers on the team) | humans |
+| Deploy signal | cloud-build → `staged` | whatever the repo has, or `none` (on merge: `staged` if the board maps one, else `done`) | none |
+
+The orchestration skill becomes: *read Flow → for each stage in Stages, run the step; skip the rest.* One
+skill, no forks. The onboarding skill asks for the Flow answers as one checklist (defaults = `factory`).
+
+### 4.3 Team mode (acting as Van among humans)
+When Profile is `teammate` or `maintenance`:
+- Only tickets whose assignee matches **Assignee filter**, or that Van hands over by name, are claimed. Every
+  other ticket is read-only. `clickup_scan.py` lists human tickets; they are adopted with `existing_id`, never recreated.
+- Human tickets are never rewritten. VanPM adds a comment or a linked sub-ticket; the description stays theirs.
+- Branch from the project's PR base, rebase or merge it in before opening the PR when behind (`git fetch` +
+  `git merge origin/<base>` in the worktree; never force-push a shared branch).
+- Follow the repo's PR template, CODEOWNERS and commit conventions (from **PR conventions**). PR body carries
+  the ticket URL. Every agent comment on GitHub starts with `🤖 VanDev:`; human review comments are answered
+  within one heartbeat (`PR_FEEDBACK`): fix, push, then VanReviewer reviews the new head (`openclaw/review`).
+- Nobody on the team merges, closes other people's PRs, edits other people's branches, or moves other
+  people's tickets. Status moves happen only on Van's tickets, only through `clickup_status.py`, only per the map.
+- Opening a PR from a task branch is routine (the review happens on it). Messages to other people wait for Van's
+  yes; silence is a NO. **Open question for Van:** on team repos, replies to human reviewers are posted by the
+  `PR_FEEDBACK` flow today without asking; decide whether they should wait for his yes (there is no Flow switch for it).
+
+---
+
+## 5. The eight management areas
+
+Each: source of truth → the tool → rules → how it fails.
+
+**5.1 Context management.** Source: `PROJECT_CONTEXT.md` (validated) for project facts; `MEMORY.md` for
+lessons and the project index; daily `memory/` notes are OpenClaw's, not ours. Tools: `validate_context.py`,
+`spec_index.py`. Rules: every spawn message names slug + context path (the file cannot auto-load; it is
+outside every workspace on purpose); sessions are isolated per task and `/new` after long threads;
+`midTurnPrecheck` compaction on. Fails as: a value copied into USER.md/skill/script (drift), or a 12k-event
+session (degenerate loops).
+
+**5.2 Ticket management.** Source: the tracker, mirrored by `specs/<feature>.md` + `.clickup.json` markers.
+Tools: `clickup_push.py` (create/update, dedupe by title, marker = idempotency), `clickup_status.py`
+(`--get`, `--claim`, `--status`), `clickup_scan.py` (human tickets). Rules: VanPM is the only writer; canonical
+statuses through the Status map; `staged` only from the delivery watcher (DEPLOYED, or MERGED when Deploy signal is
+`none` and the board maps `staged`); `done` only by external QA, a MERGED action on a board without `staged`, or
+VanPM closing a `[SPIKE]` whose findings note exists; tickets not created through VanPM are reported, not guessed. Fails as:
+a second write path (curl, MCP update tool), or "ensure a ticket exists" sent to VanDev.
+
+**5.3 Worktree management.** Source: `artifacts/worktrees.jsonl`. Tool: `worktree.py`. Rules: one task = one
+branch = one worktree = one PR; primary checkout read-only and on the default branch; `create` refuses a
+branch another agent holds; `finish` refuses to drop local-only work (exit 2); `sweep` daily; handoffs pass
+slug + branch, never a path. Fails as: `sessions_spawn … worktree: true` (copies the settings repo), or a
+worktree under `~/projects/<slug>-agy-*`.
+
+**5.4 Orchestration.** Source: `AGENTS.md` roster + Flow section. Tool: `project-orchestration` skill,
+`validate_team.py`. Rules: main has every tool (spawned sessions inherit its deny list) and a prompt-level
+lock: shell for checking, never doing; spawn with `agentId`, `context: "isolated"`, `visible: true`, no cwd;
+verify artifacts, `git log`, `gh pr view` before relaying; silence is a NO; approval gate before anything
+outward. Fails as: a deny on main (workers lose tools), a specialist chat bot, main "just checking" a
+build by running it.
+
+**5.5 Git management.** Source: the project's remote. Tools: SSH deploy key per project for push,
+`git_env.py` for the API with a repo-scoped PAT. Rules (enforced in `git_env.py`, not prompts): no merge,
+PR base = the project's PR base, commit statuses only through `--review-status`; task branch pushed and PR
+opened directly by VanDev; never the default branch, never force. Review happens on the PR; its result is the
+commit status `openclaw/review` on the head SHA, set only when a saved review file names that SHA, so any push
+after a review needs a new review. **The merge-time check** is a GitHub ruleset on the PR base that requires
+`openclaw/review`: GitHub enforces it, and agents should not be able to change it (the token was minted without
+Administration permission; branch-protection reads return 403 — writes were not tested). The ruleset
+is per repo and Van's to set (team repos: the team's call, since it also gates human and bot PRs). Needs the
+token permission "Commit statuses: Read and write". Fails as: `/pull/new/` links called "the PR", a PR
+opened by main, or a "ready to merge" message on a head that is not green.
+
+**5.6 Development and pipeline integration.** Source: `## Stack` (install/test/lint/E2E/deploy commands,
+explicit, never inferred) and Deploy signal. Tools: coding agent in the worktree; `gcloud_env.py`;
+`delivery_watch.py` (PR feedback, deployed, build failed, rejected, feature complete, sweep due). Rules: the
+coding agent writes code, VanDev runs everything else itself; `git status` clean after `git add`; 3-poll
+rule; run log under `artifacts/runs/`. Fails as: watch-mode test targets (28 QA timeouts), `agy` used to
+run `git push`, a deploy workaround instead of a source fix.
+
+**5.7 Per-project tools and secrets.** Source: SecretRefs in the context file; values only in the vault
+(`env` kind). Tools: the four launchers + two MCP registrations per project. Rules: names
+`<KIND>_<SLUGUPPER>`; no ambient defaults (bare `gcloud`/`gh` fail); never list secrets (it prints values);
+store from a real terminal. Adding project #2 touches: one context file, four secrets, two `openclaw mcp set`
+lines, two `trustedWorkspaces` paths. Nothing in the framework. Fails as: a typo'd name repeated as fact,
+or an env-var fallback in a launcher.
+
+**5.8 File management.** Source: the manifest in `lint_workspace.py` + the table in §3. Rules: agents write
+only to worktrees and `artifacts/`; scratch goes to `$TMPDIR`; backups are `openclaw backup` + one dated dir
+per incident; the framework repo is committed after every change and its `git status` is empty; the
+linter runs daily. Fails as: everything in §0.
+
+---
+
+## 6. What to stop doing (the anti-patterns that produced the clutter)
+
+1. Writing a helper script next to the problem (`write_specs2.py`, `check_new_build.sh` × 200). → Registry row or `$TMPDIR`.
+2. Fixing behaviour with a new paragraph in an `AGENTS.md`. → Fix the tool or the linter; then the paragraph.
+3. Editing `openclaw.json` by hand, or leaving `.bak` copies beside it. → `config patch --dry-run`; backups dir.
+4. Copying a template into a skill "for convenience". → One template, referenced by path.
+5. Letting agents "ensure a ticket exists" / "just push it". → Roles are hard; VanPM writes tickets, VanDev pushes after review.
+6. Treating a `/pull/new/` link, a claim, or a timeout as done. → Verify; silence is a NO.
+7. Keeping every generated proposal, dream, backup and worktree forever. → Lifecycles in §3; linter counts them.
+8. Baking project names into the framework (`FMSSTUDIO` fallback in a launcher). → Zero project knowledge in layer 3.
+9. **An agent editing the framework to satisfy a request.** 2026-09-19 13:04: Van asked for reviews to live in the
+   GitHub PR; main (the orchestrator, whose rule is "shell is for checking, not doing") rewrote `git_env.py`, its own
+   `AGENTS.md` and the orchestration skill within six minutes, deleting the review gate outright. The request was
+   legitimate; the path was not. → Framework changes are design changes: they go through a Claude Code session with
+   Van, update the registry and linter, and land as one commit. Agents that receive such a request reply
+   "this is a framework change" and stop. The linter's `git status` check is what surfaced it. Follow-up (phase A,
+   same night): the check was rebuilt at merge time (§5.5), where GitHub enforces it instead of a script agents can edit.
+
+---
+
+## 7. Self-fix runbook for the current box
+
+Ordered. Each step ends with a check. **Agent may run** = safe for the orchestrator or a Claude Code session;
+**Van runs** = real SSH terminal (secrets, deletes the classifier blocks, root). Baseline first, then clutter,
+then structure, then the flow profile, then automation.
+
+**Status 2026-09-19 night: Steps 1-9 are DONE** (linter went from 18 OK / 10 FIX to 22 OK / 0 FIX after Step 5). Step 10 is open; phase A below is done on the box and waits for two GitHub settings.
+
+### Steps 1-5 — DONE 2026-09-19 (record)
+- **1. Framework baseline:** `~/.openclaw/workspace` committed (`e929997`), `.gitignore` carries the lifecycle rules
+  (memory, dreams, media, credentials, `__pycache__`, runs, watcher state). Agent-made edits recorded in `965c153`.
+- **2. Garbage removed** (`978ae5e`): `developer/test.sh`, `projects/fms-studio/fetch_figma.py`, `openclaw-sessions-explained.md`,
+  `diagrams/`, `skills/skill-creator/` (Decision H), `code-reviewer/pr37.diff`, and `developer/package*.json` (an agent ran
+  `npm install` in its own settings folder at 12:14). `projects/fms-studio/artifacts/runs/` created.
+- **3. Backups:** everything archived first to `~/Backups/openclaw-backups-2026-09-19.tgz` (84 entries, verified), then
+  `~/.openclaw/backups` pruned 48 → 8 (3 dated dirs + 5 newest files). 36 skill-workshop proposals deleted. The
+  `openclaw.json.bak`..`.bak.4` files are OpenClaw's own rotation ring and stay. No OpenClaw managed worktrees existed.
+- **4. `/tmp` capped at 1G** (Van, `sudo`, drop-in `/etc/systemd/system/tmp.mount.d/size.conf`; 353M used after cleanup).
+  1G rather than 512M because Claude Code sessions keep scratch files there.
+- **5. Platform:** active-memory plugin and dreaming turned off (`decisions-2026-09-19/02-memory.patch.json5`, gateway
+  restarted 17:03; restart hung in server close and systemd force-stopped it at 5m30s, no work lost). Models unchanged:
+  Gemini 3.1 Pro primary. Discord channel `/new` sent (context 272k tokens → 0). OpenClaw 2026.9.5 upgrade not done
+  (optional; no config-key changes found in its notes).
+
+Lessons from doing it: long pasted commands wrap in Van's terminal and break at the wrap, so anything longer than one
+line goes to Van as a small self-deleting script (`bash ~/<name>.sh`). Deletes Van approved by running them may be
+finished by the agent that wrote them.
+
+### Steps 6-8 — DONE 2026-09-19 (record)
+- **6. Flow profile** (`55be54f`): `## Flow` in the template and fms-studio; `validate_context.py` parses and
+  validates it and infers `factory` + a status map when it is missing. Stage names: `spec tickets review
+  internal-qa merge-gate delivery-watch` (`merge-gate` = step 5 "ready to merge" message, since Van's 13:04 flow
+  opens PRs right away). Tools use canonical statuses (`clickup_status.py --status staged`), the Flow PR base
+  (`worktree.py`, `git_env.py`, watcher), and the assignee filter (`--claim` SKIPs other people's tickets). The
+  watcher gained MERGED (no deploy pipeline) and stage gating. Orchestration skill: stage table, team mode,
+  branch models. Onboarding asks the Flow questions. Tested with a teammate fixture (custom board names) and a
+  deliberately broken one (7 precise errors).
+- Found and fixed on the way: the four agent workspaces are separate git repos whose files had **never been
+  committed** (the main repo ignored three of them and double-tracked `code-reviewer`). All five repos now have a
+  baseline and the linter checks all five.
+- **7. Prompts** (agent repos + `2fb2d5f`..): each specialist `AGENTS.md` is one shared header (entry routine, file
+  rules, red lines incl. "framework changes are Van's") plus a short lane: job, tool table, never-list. Sizes
+  61-91 lines; developer 10.9k → 6.1k chars. Removed two contradictions with the live pipeline (reviewer still
+  reviewed patch files; developer still waited for approval before pushing). Reviewer now posts on GitHub with
+  `--comment`/`--request-changes` (one GitHub account cannot approve its own PR) and saves
+  `reviews/<feature>--<lane>.md`. Main: "Existing Solutions Preflight" replaced by "Framework changes are not
+  agent work". Verified: each agent restated its tools, never-list and file rules correctly in a tool-free turn.
+- **8. Retention** (`850e68f`): `worktree.py sweep` deletes run logs > 30 days and `specs/_figma/<feature>/` of
+  features archived > 30 days (loose screenshot files are left alone); the watcher emits a daily `LINT` action
+  from the first project. Tested on a throwaway tree.
+
+### Step 9 — DONE 2026-09-19 17:29 UTC: heartbeat posts the daily lint (Van approved)
+`~/.openclaw/backups/decisions-2026-09-19/03-heartbeat-lint.patch.json5` adds one sentence to the heartbeat prompt
+(post LINT lines in one message, never fix files from a heartbeat). Applied as a hot reload; the gateway
+defers it until in-flight agent turns finish. Backup: `openclaw.json.pre-heartbeat-lint` in the same folder.
+
+### Phase A — DONE 2026-09-19 night: review check at merge time (Van approved)
+- `git_env.py --review-status <pr>`: `openclaw/review` = success/failure on the PR head, only when a review file's
+  `Reviewed SHA` equals it; raw `statuses` API writes refused; the unused PR-create review code removed.
+- Reviewer AGENTS.md step 4, orchestration steps 3 + 5 (ready message only on a green head), main AGENTS.md,
+  and the shared `worktree-lifecycle` skill (was untracked and still described push-after-APPROVED; now its own repo,
+  checked by the linter, which also flags any other shared skill).
+- Waiting on Van: token permission "Commit statuses: Read and write" (today reads and writes both return 403), then
+  "Require status checks: `openclaw/review`" in the repo ruleset. Until then the reviewer reports the 403 line and
+  step 5 cannot see a green status, so the ready message says the status is missing.
+
+### Phase B — Step 10 offline half DONE 2026-09-19 night (live half open)
+Run in an isolated copy of the framework (scratchpad), not in `projects/`: the heartbeat runs the watcher for every
+`projects/<slug>` every 15 min and hands the daily LINT to the alphabetically first project, so a half-onboarded
+test project would have posted errors to Discord all night. `demo-teammate`: teammate, human tickets, ticket-branch,
+Deploy signal none, a custom board (Backlog/In Dev/Staging/QA Failed/Blocked/Done/Won't do), no Figma/GCP/GitHub.
+- Fixed: the validator demanded a Figma secret for a project without Figma (now only when a Figma file is set);
+  onboarding did not create `artifacts/runs`; stale worktree.py text.
+- Passed: validator rules, worktree create/refuse/finish/sweep, every launcher refusing with the missing field
+  named, watcher Flow gating, assignee filter, canonical → board status names, claim without a token failing loudly.
+- Open (needs accounts): GitHub PRs, ClickUp, MCP registration, agents following the stage table. Create
+  `projects/<slug>/` LAST when doing it live (after secrets and MCP), because the heartbeat picks it up at once.
+
+### Phase C — off-box copy, 2026-09-19 night (tooling done; the push is Van's)
+- Framework: `_tools/framework_offbox.py` (registry row). Tested against a scratch repo; it refuses today because
+  the main repo's history holds the fms-studio Figma token (commit 7715e27): rotate it, then `--allow-rotated`.
+- Design docs now live in the framework repo (`docs/`), so invariant 3 (design, linter and guide change in one
+  commit) can finally hold and the docs travel with the off-box copy.
+- `~/Backups/openclaw-git` (2.7 GB, OpenClaw's database backup) is NOT pushable: its history, including the
+  2026-09-19 09:30 run (`excludedTables: []`), holds plaintext secrets (18 vault rows, one GCP key JSON).
+  `--exclude-secrets` was added to the schedule after that run; the first redacted run is 2026-09-20 09:30 UTC
+  (check `global/manifest.json` → `excludedTables` lists `secret_store_entries`). Copy it off the box by PULLING
+  from Van's own encrypted machine (rsync over ssh), never by a push from this box.
+
+### Step 10 — Second project dry-run (proves multi-project)
+Onboard a throwaway repo as `demo-teammate` with Profile `teammate`, Ticket source `human`, Deploy signal
+`none`, no Figma, no GCP. Expected: onboarding needs only the context file, three secrets, one MCP server;
+`worktree.py demo-teammate list`, `git_env.py demo-teammate --check`, and the linter all pass; the
+orchestration skill skips `spec`, `tickets`, `internal-qa`. Then delete it (context dir, `~/projects/demo-teammate`, MCP server, secrets) and confirm the linter is clean again. Two projects with different flows and no framework edit = the goal is met.
+
+---
+
+## 8. Decisions (closed 2026-09-19 by Van)
+
+| | Decision | State |
+|---|---|---|
+| A | Model: **stay on Gemini 3.1 Pro** (Flash + Sonnet fallbacks). No switch to Claude. | unchanged |
+| B | Coding backend: **agy on Gemini**. No Claude Code. | unchanged |
+| C | Tracker: keep `clickup_mcp.py` (reads) + VanPM scripts (writes) | unchanged |
+| D | Chat: **Discord and Telegram**, both bound to main only | unchanged |
+| E | active-memory plugin **off** (it never ran: 848/848 recalls skipped) | applied 17:03 |
+| F | Git: per-project SSH deploy key for push + repo-scoped PAT for the GitHub API | unchanged |
+| G | Dreaming **off** | applied 17:03 |
+| H | `skills/skill-creator` **removed** | done |
+| I | Private GitHub repo for the framework repos, pushed from Van's terminal only (`framework_offbox.py`); database backups pulled to Van's machine | tooling done; waits for Figma token rotation + SSH key |
+| J | Retention: runs 30 d, figma 30 d after archive, last 5 config backups, proposals weekly | first prune done; automation is Step 8 |
+| K | Review check at merge time: `openclaw/review` status + a ruleset that requires it (replaces the PR-create gate) | tooling done; token permission + ruleset are Van's |
+
+Any future choice that changes a model, provider or cost is confirmed with Van item by item, never as part of "go with the recommendations".
+
+## Appendix — linter output on 2026-09-19 (before Step 1; after Steps 1-5 it reports 22 OK / 0 FIX)
+```
+FIX [framework] 16 file(s) outside the manifest (test.sh, diagrams/*, openclaw-sessions-explained.md, fetch_figma.py, skills/skill-creator/*)
+FIX [framework] 7 __pycache__ file(s)
+FIX [framework] skill not in the manifest: skills/skill-creator
+FIX [framework] framework repo has 111 uncommitted/untracked path(s)
+OK  [project:fms-studio] PROJECT_CONTEXT.md VALID
+FIX [project:fms-studio] artifact dirs missing: ['runs']
+FIX [project:fms-studio] stray files in the project dir: ['fetch_figma.py']
+OK  [code:fms-studio] primary checkout clean on `Development`
+OK  [code] no OpenClaw managed worktrees          (9 "restorable" snapshots remain in the registry: Step 3)
+OK  [config] main tools.deny = [] · allowAgents · loopDetection · heartbeat.isolatedSession · specialist denies · MCP servers · skills · fallbacks
+FIX [host] /tmp is tmpfs sized 3.9G
+OK  [host] gateway TMPDIR, PATH, gcloud, gh
+FIX [host] 5 loose openclaw.json.bak*/clobbered/tmp copies
+FIX [host] 47 entries in ~/.openclaw/backups
+FIX [host] 30 pending skill-workshop proposal(s)
+18 OK, 10 FIX
+```

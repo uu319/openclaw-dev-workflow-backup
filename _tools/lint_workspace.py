@@ -32,7 +32,8 @@ ALLOWED = [
     "AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md", "TOOLS.md", ".gitignore",
     "DREAMS.md",                       # written by OpenClaw's dreaming feature (see Decision G)
     "memory/**", ".clawhub/**", "media/**", ".git/**",
-    "_tools/validate_team.py", "_tools/lint_workspace.py",
+    "_tools/validate_team.py", "_tools/lint_workspace.py", "_tools/framework_offbox.py",
+    "docs/*.md",                       # the architecture doc and the guide (~/OPENCLAW_*.md are symlinks here)
     "skills/project-onboarding/**", "skills/project-orchestration/**",
     "credentials/gcp/*.json",
     "projects/_template/**",
@@ -57,6 +58,18 @@ REQUIRED = ["AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md",
             *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
             *[f"{a}/AGENTS.md" for a in AGENTS],
             *[f"project-manager/skills/feature-breakdown/scripts/{s}" for s in PM_SCRIPTS]]
+# Token shapes that must never sit in a framework file (checked in every repo's working tree, ignored files included,
+# except credentials/, which holds the restored GCP key files by design).
+TOKEN_RX = (r"ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|pk_[0-9]+_[A-Z0-9]{20,}|figd_[A-Za-z0-9_-]{20,}"
+            r"|AIza[0-9A-Za-z_-]{30,}|sk-ant-[A-Za-z0-9_-]{20,}|xox[bp]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY")
+
+
+def framework_repos():
+    """(name, path) of every framework git repo; the off-box copy uses the same list."""
+    out = [("workspace", WS)] + [(a, f"{WS}/{a}") for a in AGENTS]
+    return out + [(f"skill-{n}", os.path.join(SHARED_SKILLS_DIR, n)) for n in SHARED_SKILLS]
+
+
 ARTIFACT_DIRS = ["specs", "specs/_done", "specs/_superseded", "patches", "reviews", "qa", "runs"]
 
 R = []  # (status, area, message, fix)
@@ -129,14 +142,44 @@ def check_framework_files():
             continue
         rc, out = run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=repo)
         lines = [l for l in out.splitlines() if l and not re.search(r"(^|/)(memory|media|__pycache__)/|DREAMS\.md", l)]
+        # Agent artifacts (project layer) change on every run and agents never commit: counted, not a FIX.
+        arts = [l for l in lines if re.search(r"\bprojects/[^/]+/artifacts/", l)]
+        lines = [l for l in lines if l not in arts]
+        if arts:
+            ok("project", f"{name} repo: {len(arts)} agent artifact change(s) not committed yet (commit them in a Claude Code session)")
         if lines:
             fix("framework", f"{name} repo has {len(lines)} uncommitted/untracked path(s) (first 15):\n      "
                 + "\n      ".join(lines[:15]), f"cd {repo} && git add -A && git commit -m '<what changed>'")
         else:
             ok("framework", f"{name} repo is clean (git status empty)")
+        rc, out = run(["git", "grep", "-I", "-l", "-E", "--untracked", "--no-exclude-standard", TOKEN_RX, "--",
+                       ".", ":(exclude)credentials/**", ":(exclude).git/**"], cwd=repo)
+        hits = [l for l in out.splitlines() if l.strip()] if rc == 0 else []
+        if hits:
+            fix("framework", f"{name}: token-shaped string in {len(hits)} file(s): {', '.join(hits[:5])}",
+                "remove the file (git rm), rotate that credential, tell Van; values live only in the vault")
         rc, out = run(["git", "remote", "-v"], cwd=repo)
         if out.strip():
             fix("framework", f"{name} repo has a remote:\n      {out}", f"git -C {repo} remote remove <name>; framework repos never push from an agent")
+
+
+def check_offbox():
+    """Decision I: every framework repo has a copy off this box (refs/offbox/<name> = last pushed HEAD)."""
+    never, behind = [], []
+    for name, repo in framework_repos():
+        if not os.path.isdir(os.path.join(repo, ".git")):
+            continue
+        rc, _ = run(["git", "rev-parse", "--verify", "--quiet", f"refs/offbox/{name}"], cwd=repo)
+        if rc != 0:
+            never.append(name); continue
+        rc, n = run(["git", "rev-list", "--count", "HEAD", f"^refs/offbox/{name}"], cwd=repo)
+        if rc == 0 and n.isdigit() and int(n):
+            behind.append(f"{name} +{n}")
+    if never:
+        fix("framework", f"no off-box copy yet for: {', '.join(never)} (Decision I)",
+            "Van, from a real terminal: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>")
+    else:
+        ok("framework", "off-box copy exists for every framework repo" + (f"; commits since: {', '.join(behind)}" if behind else ""))
 
 
 def load_validator():
@@ -304,6 +347,7 @@ def check_host():
 def main():
     as_json = "--json" in sys.argv
     check_framework_files()
+    check_offbox()
     ctxs = check_projects()
     check_code_roots(ctxs)
     check_config(ctxs)
