@@ -112,20 +112,24 @@ def check_framework_files():
         rel = os.path.relpath(skill, WS)
         if not allowed(rel + "/SKILL.md"):
             fix("framework", f"skill not in the manifest: {rel}", "delete it, or add it to the manifest with an owner")
-    # git hygiene: the framework repo is the clutter detector
-    if os.path.isdir(f"{WS}/.git"):
-        rc, out = run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=WS)
-        lines = [l for l in out.splitlines() if l and not re.search(r"(^|/)(memory|media|__pycache__)/", l)]
+    # git hygiene: the framework = the main workspace repo + one repo per agent workspace (each has its
+    # own .git; the main .gitignore excludes them). An uncommitted change in any of them is a FIX.
+    for rel in ["."] + AGENTS:
+        repo = os.path.normpath(os.path.join(WS, rel))
+        name = "main" if rel == "." else rel
+        if not os.path.isdir(os.path.join(repo, ".git")):
+            fix("framework", f"{name} workspace is not a git repo", f"cd {repo} && git init && git add -A && git commit -m baseline")
+            continue
+        rc, out = run(["git", "status", "--porcelain", "--untracked-files=all"], cwd=repo)
+        lines = [l for l in out.splitlines() if l and not re.search(r"(^|/)(memory|media|__pycache__)/|DREAMS\.md", l)]
         if lines:
-            fix("framework", f"framework repo has {len(lines)} uncommitted/untracked path(s) (first 15):\n      "
-                + "\n      ".join(lines[:15]), "cd ~/.openclaw/workspace && git add -A && git commit -m 'framework: <what changed>'")
+            fix("framework", f"{name} repo has {len(lines)} uncommitted/untracked path(s) (first 15):\n      "
+                + "\n      ".join(lines[:15]), f"cd {repo} && git add -A && git commit -m '<what changed>'")
         else:
-            ok("framework", "framework repo is clean (git status empty)")
-        rc, out = run(["git", "remote", "-v"], cwd=WS)
+            ok("framework", f"{name} repo is clean (git status empty)")
+        rc, out = run(["git", "remote", "-v"], cwd=repo)
         if out.strip():
-            fix("framework", f"settings repo has a remote:\n      {out}", "git -C ~/.openclaw/workspace remote remove <name>; the settings repo never pushes anywhere")
-    else:
-        fix("framework", "workspace is not a git repo", "cd ~/.openclaw/workspace && git init && git add -A && git commit -m 'framework baseline'")
+            fix("framework", f"{name} repo has a remote:\n      {out}", f"git -C {repo} remote remove <name>; framework repos never push from an agent")
 
 
 def load_validator():
