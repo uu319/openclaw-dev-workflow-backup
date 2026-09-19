@@ -13,13 +13,14 @@ metadata:
 
 # agy (Antigravity CLI)
 
-Background worker for feature builds, large refactors, and issue-to-PR loops.
+Background worker that writes code: feature work, large refactors, test suites. It never runs git, gh,
+builds, tests or deploys; those stay VanDev's own `exec` calls (commit, push and PR included).
 Sibling of the bundled `coding-agent` skill, which covers Claude Code. Same
 discipline applies; only the launch form differs.
 
 ## When to use
 
-Use for: multi-file feature work, large refactors, test suites, issue-to-PR loops.
+Use for: multi-file feature work, large refactors, test suites.
 
 Do **not** use for: simple edits, read-only code lookup, or any run inside
 `~/.openclaw`, `$OPENCLAW_STATE_DIR`, or active OpenClaw state dirs.
