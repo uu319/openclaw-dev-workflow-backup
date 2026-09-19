@@ -15,6 +15,7 @@
 - **GitHub Repo:** `<owner/repo>` (delete this line when the project is not on GitHub; when it is
   set, the GitHub Token SecretRef below becomes required)
 - **Default branch:** `main`
+- **PAT expiry:** <YYYY-MM-DD> (the GitHub Token below; renew before this date or `gh` calls start failing)
 
 ## Stack
 <!-- Filled by VanPM by inspecting the repo. No guesses: "unknown" is acceptable, an invented framework is not. -->
@@ -61,6 +62,7 @@
   - Lint: `<exact command>`
   - E2E: `<exact command, or "none yet: first feature carries [INT] Set up Playwright E2E runner">`
   - Forbidden: `<any watch-mode target>`
+- **Known repo issues:** <what an agent will hit in this repo, date found, "report and stop" or the workaround; mark Resolved with a date; or "none">
 
 ## Flow
 <!-- How THIS project works. Parsed by validate_context.py; see ~/OPENCLAW_ARCHITECTURE.md §4.
