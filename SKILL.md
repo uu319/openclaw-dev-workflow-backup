@@ -48,7 +48,7 @@ default branch.
 
 ## What each command guarantees
 
-- **create** fetches first, then either starts a new branch from `origin/<Default branch>` or,
+- **create** fetches first, then either starts a new branch from `origin/<Flow PR base>` (default: the Default branch) or,
   if `origin/<branch>` exists, checks that branch out. It verifies HEAD equals the fetched
   start SHA and prints a *preparation receipt* (worktree path, branch, start ref + SHA). Paste
   that receipt into the agy/Claude Code worker prompt: it is the `coding-agent` skill's Git
