@@ -40,7 +40,7 @@
 - **GCP Region:** `<region>`
 - **SecretRefs:**
   - Tracker: `CLICKUP_API_TOKEN_<SLUGUPPER>`
-  - Design: `FIGMA_API_KEY_<SLUGUPPER>`
+  - Design: `FIGMA_API_KEY_<SLUGUPPER>` (delete this line when Figma file is none)
   - GCP Key Vault: `GCP_SA_KEY_<SLUGUPPER>_<ENV>`
   - GCP Key JSON: `/home/openclaw/.openclaw/workspace/credentials/gcp/<slug>.json`
   - Reach GCP only through `projects/_tools/gcloud_env.py <slug> -- <command>`; there is no

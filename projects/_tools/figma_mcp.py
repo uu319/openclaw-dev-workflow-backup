@@ -48,7 +48,9 @@ def main():
     if fields.get("figma_mcp_server") != f"figma-{slug}":
         die(f"{ctx} must list '**Figma MCP server:** `figma-{slug}`'")
 
-    name = fields["design_secret"]
+    name = fields.get("design_secret")
+    if not name:
+        die(f"{ctx} has no 'Design:' SecretRef line; a project without Figma has no figma-{slug} server")
     openclaw = shutil.which("openclaw") or "/usr/bin/openclaw"
     r = subprocess.run([openclaw, "secrets", "store", "get", "--plain", name],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

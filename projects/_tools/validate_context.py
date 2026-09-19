@@ -33,13 +33,13 @@ REQUIRED = {
     "repo_url": r"\*\*Git SSH Clone URL:\*\*\s*`([^`<>]+)`",
     "list_id": r"\*\*ClickUp List ID:\*\*\s*`?([^`\n]+?)`?\s*$",
     "tracker_secret": r"Tracker:\s*`([^`]+)`",
-    "design_secret": r"Design:\s*`([^`]+)`",
     "statuses": r"\*\*Statuses:\*\*\s*(.+)",
     "create_status": r"\*\*Create status:\*\*\s*`?([^`\n]+?)`?\s*$",
     "code_cwd": r"\*\*Code \(CWD\):\*\*\s*`([^`<>]+)`",
     "artifacts_dir": r"\*\*Internal Artifacts:\*\*\s*`([^`<>]+)`",
 }
 OPTIONAL = {
+    "design_secret": r"Design:\s*`([^`]+)`",   # required only when a Figma file is set (checked below)
     "list_name": r"\*\*ClickUp List name:\*\*\s*(.+)",
     "figma_file": r"\*\*Figma file:\*\*\s*(\S+)",
     "figma_mcp_server": r"\*\*Figma MCP server:\*\*\s*`([^`]+)`",
@@ -211,6 +211,8 @@ def parse(path):
                 f"{k} '{v}' does not follow <KIND>_{slug_upper}; allowed only if the vault really uses this name")
     # Figma MCP server is per project: mcp.servers["figma-<slug>"] -> projects/_tools/figma_mcp.py <slug>
     has_figma = fields.get("figma_file", "none").lower().strip("<>") not in ("none", "")
+    if has_figma and not fields.get("design_secret"):
+        errors.append("Figma file is set, so a 'Design:' SecretRef line (FIGMA_API_KEY_<SLUGUPPER>) is required")
     if has_figma and "slug" in fields and fields.get("figma_mcp_server") != f"figma-{fields['slug']}":
         errors.append(f"Figma file is set, so '**Figma MCP server:** `figma-{fields['slug']}`' is required "
                       f"(found: {fields.get('figma_mcp_server', 'missing')})")
