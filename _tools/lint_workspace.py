@@ -337,6 +337,9 @@ def check_host():
     baks = glob.glob(f"{OC}/openclaw.json.clobbered*") + glob.glob(f"{OC}/openclaw.tmp.json")   # .bak..bak.4 is OpenClaw's own ring: allowed
     if baks:
         fix("host", f"{len(baks)} leftover openclaw.json.clobbered*/openclaw.tmp.json file(s)", "move to ~/.openclaw/backups/config-history/ (the .bak ring is OpenClaw's own and stays)")
+    cfg = [f for f in glob.glob(f"{OC}/backups/**/openclaw.json*", recursive=True) if os.path.isfile(f)]
+    (ok if len(cfg) <= 5 else fix)("host", f"{len(cfg)} openclaw.json backup copies in ~/.openclaw/backups (Decision J: last 5)",
+                                   "" if len(cfg) <= 5 else "delete all but the 5 newest openclaw.json.* copies")
     n = len(glob.glob(f"{OC}/backups/*"))
     (ok if n <= 10 else fix)("host", f"{n} entries in ~/.openclaw/backups", "" if n <= 10 else "keep the last 5 config backups + one dated dir per incident; delete the rest (they are 30 MB+)")
     props = glob.glob(f"{OC}/skill-workshop/proposals/*")

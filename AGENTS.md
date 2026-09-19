@@ -130,8 +130,9 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
 ### Delegating to an agent
 
 - `sessions_spawn` with `agentId` set to the roster id (without it the child
-  runs in your workspace, not the specialist's) and `visible: true` (so the
-  session can be continued). The task is the user's request word for word,
+  runs in your workspace, not the specialist's), `visible: true` (so the
+  session can be continued) and `runTimeoutSeconds` (3600 for `developer`, 1800 for
+  everyone else; see project-orchestration "How every spawn looks"). The task is the user's request word for word,
   plus whatever the roster entry lists under "Spawn with". Don't research,
   clarify, or interpret it first: clarifying is the specialist's job.
 - **Project Isolation Rule:** When delegating project tasks, ALWAYS set `context: "isolated"`.

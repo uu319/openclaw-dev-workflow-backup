@@ -19,7 +19,10 @@ path. Never call ClickUp, Figma, git push, or any external API yourself.
 ## How every spawn looks
 
 `sessions_spawn` with `agentId` = the roster id, `context: "isolated"`,
-`visible: true`. **Never `worktree: true`, never `cwd`**: OpenClaw can only copy
+`visible: true`, and a time limit `runTimeoutSeconds`: **3600** for `developer`, **1800** for
+`qa-engineer`, `project-manager` and `code-reviewer`. A run that hits the limit stops; its worktree
+and commits stay, so ask the agent what it has (`sessions_send`) or re-spawn it; never lift the limit
+to 0 to get past a hang (a hang is a watch-mode command or a loop: find it). **Never `worktree: true`, never `cwd`**: OpenClaw can only copy
 agent workspaces, never the code repo. Each specialist makes its own code
 checkout with the `worktree-lifecycle` skill. The message always starts with
 `Project <slug>. Context: <CTX>.` and names branches, never folder paths.

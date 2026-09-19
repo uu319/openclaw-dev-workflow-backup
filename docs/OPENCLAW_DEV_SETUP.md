@@ -615,8 +615,8 @@ Role text (put in `AGENTS.md`):
   tracker calls. Server health, failing builds, logs, patches, Figma reads, ticket writes are specialist work. Spawn.
 - **Answer first, then delegate.** First message back within seconds: the answer or "handed to VanDev".
 - **Delegating:** `sessions_spawn` with `agentId` (without it the child runs in *your* workspace),
-  `visible: true`, `context: "isolated"`, and ideally `runTimeoutSeconds` (1800 for QA, 3600 for dev: open decision,
-  the live orchestration skill does not set it yet). **No `worktree`,
+  `visible: true`, `context: "isolated"`, `runTimeoutSeconds` (3600 for dev, 1800 for QA, PM and reviewer;
+  in the orchestration skill since 2026-09-20). **No `worktree`,
   no project `cwd`** (11 in Section 2). Task text = Van's request word for word + slug + feature/ticket/**branch
   name**. Don't interpret it.
 - Follow-ups go to the same session via `sessions_send` with the `childSessionKey`. Relay each reply once.
@@ -708,8 +708,8 @@ Skills owned by `main`: `project-orchestration` (8.1), `project-onboarding` (Sec
   CI"), never files tickets (VanPM adds defects as tickets to the same spec). Cleans test output out of the
   worktree so `finish` finds it clean. No public tunnels; at most 3 checks about 60 s apart (7.1).
 - If the E2E runner is missing, report it; the first feature of a project carries `[INT] Set up Playwright E2E runner`.
-- Meant to be spawned with `runTimeoutSeconds: 1800` (not in the live skill yet). A watch-mode test command hits such a cap
-  every time (28 timeouts on the old box); the real fix is the explicit, non-watch test commands in PROJECT_CONTEXT.
+- Spawned with `runTimeoutSeconds: 1800`. A watch-mode test command hits that cap every time (28 timeouts on the old
+  box); the real fix is the explicit, non-watch test commands in PROJECT_CONTEXT.
 
 ---
 
