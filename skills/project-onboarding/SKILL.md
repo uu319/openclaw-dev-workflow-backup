@@ -71,7 +71,7 @@ print env-kind values in plain text into the transcript. Never shell out to
 
 ```
 mkdir -p /home/openclaw/projects/<slug>
-mkdir -p /home/openclaw/.openclaw/workspace/projects/<slug>/artifacts/{specs/_done,specs/_superseded,patches,reviews,qa}
+mkdir -p /home/openclaw/.openclaw/workspace/projects/<slug>/artifacts/{specs/_done,specs/_superseded,patches,reviews,qa,runs}
 SLUG=<slug>
 sed "s/<slug>/$SLUG/g" /home/openclaw/.openclaw/workspace/projects/_template/specs/_planned-data.md \
   > "/home/openclaw/.openclaw/workspace/projects/$SLUG/artifacts/specs/_planned-data.md"

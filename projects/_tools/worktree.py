@@ -273,7 +273,7 @@ def cmd_create(p, branch, agent, task):
             if agent and owner and owner != agent:
                 die(f"{branch} is checked out in {owner}'s worktree {wt['path']}. Agents never share a folder: "
                     f"{owner} must commit, `git push -u origin {branch}` and run `finish {branch}` first "
-                    f"(the workflow pushes a task branch as soon as VanReviewer approves it).")
+                    f"(VanDev pushes the task branch and opens the PR right after each lane commit).")
             print(f"exists: {wt['path']} (branch {branch}, HEAD {wt.get('head', '')[:12]}) - reusing it")
             return
     git(p.primary, "fetch", "--prune", "--quiet", "origin")
