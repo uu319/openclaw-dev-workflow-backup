@@ -23,6 +23,8 @@
 - **backend/**: <framework + version, test runner, where modules live>
 - **Database:** <ORM + engine, or "none yet">
 - **Schema file:** <path to the ORM schema in the repo (e.g. `backend/prisma/schema.prisma`), or "none yet">
+- **Deploy:** <pipeline: trigger, config files, targets, how to check builds, e.g. `gcloud_env.py <slug> -- gcloud builds list`; or "none">
+- **Deploy triggers:** `<trigger-a, trigger-b>` (Cloud Build trigger names that must ALL succeed before the watcher says DEPLOYED; delete this line when there is one trigger or no Cloud Build)
 - **Repo state:** <scaffold / active / legacy; commit count>
 
 ## Tracker & Design
@@ -52,6 +54,7 @@
 - **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`
 - **Create status:** `to do`
 - **Branch Prefixes:** `feature/`, `bug/`
+- **GitHub bots:** `<bot login>` (accounts whose PR comments are not review feedback, e.g. a PR-description bot; `*[bot]` accounts are always ignored; delete this line when none)
 - **Install command:** `<exact command run inside a fresh worktree, e.g. npm ci>`
 - **Dev/QA Test Commands:** explicit, never inferred (inferring them hung QA 28 times on the old box). VanPM fills these during onboarding after running each one once in a worktree.
   - Tests: `<exact command that runs once and exits>`
