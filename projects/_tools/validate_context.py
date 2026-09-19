@@ -9,6 +9,15 @@ Usage:
          environment, print the list name and statuses, and fail if the
          statuses in the file are not all present on the list.
 
+The optional `## Flow` section says how THIS project works (see OPENCLAW_ARCHITECTURE.md §4).
+It is parsed into fields["flow"] and fields["status"]:
+  fields["flow"]   profile, stages, ticket_source, assignee_filter, branch_model, pr_base,
+                   merge_by, deploy_signal, chat_channel, pr_conventions
+  fields["status"] canonical key -> this board's status name (or None when the board has none):
+                   todo doing staged rejected done cancelled hold
+Tools use the canonical keys and never hardcode a board's status names. A context without
+`## Flow` gets the `factory` profile and a status map inferred from its Statuses (warning only).
+
 Exit codes: 0 ok · 1 file/field errors · 3 live check failed.
 Standard library only.
 """
@@ -47,6 +56,120 @@ OPTIONAL = {
     "deploy_triggers": r"\*\*Deploy triggers:\*\*\s*(.+)",
 }
 PLACEHOLDER = re.compile(r"<[^>]*>")
+
+# ---------------------------------------------------------------- Flow profile
+STAGES = ["spec", "tickets", "review", "internal-qa", "merge-gate", "delivery-watch"]
+CANON = ["todo", "doing", "staged", "rejected", "done", "cancelled", "hold"]
+REQUIRED_STATUS = ["todo", "doing", "done", "cancelled"]
+ALIASES = {   # used only to infer a status map the file does not spell out
+    "todo": ["to do", "todo", "open", "backlog", "new", "ready"],
+    "doing": ["in progress", "in dev", "in development", "doing", "wip"],
+    "staged": ["qa", "staging", "in qa", "ready for qa", "deployed"],
+    "rejected": ["rejected", "for development", "qa failed", "reopened"],
+    "done": ["complete", "completed", "done", "closed"],
+    "cancelled": ["cancelled", "canceled", "won't do", "wont do"],
+    "hold": ["on hold", "blocked", "hold"],
+}
+PRESETS = {
+    "factory":     dict(stages=STAGES[:], ticket_source="agent", assignee_filter="any", branch_model="feature-branch",
+                        merge_by="van", deploy_signal="cloud-build"),
+    "teammate":    dict(stages=["review", "merge-gate", "delivery-watch"], ticket_source="human", assignee_filter=None,
+                        branch_model="ticket-branch", merge_by="humans", deploy_signal="none"),
+    "maintenance": dict(stages=["review", "merge-gate"], ticket_source="human", assignee_filter=None,
+                        branch_model="ticket-branch", merge_by="humans", deploy_signal="none"),
+    "custom":      dict(stages=None, ticket_source="agent", assignee_filter="any", branch_model="feature-branch",
+                        merge_by="van", deploy_signal="none"),
+}
+FLOW_LABELS = {
+    "profile": "Profile", "stages": "Stages", "ticket_source": "Ticket source", "assignee_filter": "Assignee filter",
+    "branch_model": "Branch model", "pr_base": "PR base", "merge_by": "Merge by", "deploy_signal": "Deploy signal",
+    "status_map": "Status map", "chat_channel": "Chat channel", "pr_conventions": "PR conventions",
+}
+CHOICES = {"ticket_source": {"agent", "human", "both"}, "branch_model": {"feature-branch", "ticket-branch"},
+           "merge_by": {"van", "humans"}, "deploy_signal": {"cloud-build", "none"}}
+
+
+def _ticks(v):
+    t = re.findall(r"`([^`]*)`", v)
+    return t if t else [x.strip() for x in v.split(",") if x.strip()]
+
+
+def parse_flow(text, fields, errors):
+    """Fill fields['flow'] and fields['status'] from the `## Flow` section (or defaults)."""
+    sec = re.search(r"^## Flow\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+    raw = {}
+    if sec:
+        for key, label in FLOW_LABELS.items():
+            m = re.search(r"^- \*\*" + re.escape(label) + r":\*\*\s*(.+)$", sec.group(1), re.M)
+            if m and not PLACEHOLDER.fullmatch(_ticks(m.group(1).strip())[0] if _ticks(m.group(1).strip()) else ""):
+                raw[key] = m.group(1).strip()      # an unfilled `<placeholder>` means "use the default"
+    else:
+        fields.setdefault("warnings", []).append(
+            "no '## Flow' section: using the `factory` profile and a status map inferred from Statuses")
+    profile = _ticks(raw["profile"])[0] if raw.get("profile") else "factory"
+    if profile not in PRESETS:
+        errors.append(f"Flow Profile must be one of {sorted(PRESETS)}: {profile}")
+        profile = "factory"
+    flow = dict(PRESETS[profile]); flow["profile"] = profile
+    if raw.get("stages"):
+        flow["stages"] = _ticks(raw["stages"])
+    for k in ("ticket_source", "assignee_filter", "branch_model", "merge_by", "deploy_signal", "chat_channel", "pr_conventions", "pr_base"):
+        if raw.get(k):
+            flow[k] = _ticks(raw[k])[0]
+    flow.setdefault("pr_base", None); flow.setdefault("chat_channel", None); flow.setdefault("pr_conventions", "none")
+    if not flow.get("pr_base"):
+        flow["pr_base"] = fields.get("default_branch")
+    # validate
+    if flow["stages"] is None:
+        errors.append("Flow Profile `custom` needs an explicit **Stages:** line")
+        flow["stages"] = []
+    bad = [x for x in flow["stages"] if x not in STAGES]
+    if bad:
+        errors.append(f"Flow Stages has unknown stage(s) {bad}; allowed: {STAGES}")
+    flow["stages"] = [x for x in STAGES if x in flow["stages"]]   # canonical order
+    for k, allowed in CHOICES.items():
+        if flow.get(k) not in allowed:
+            extra = " (github-actions is not supported by delivery_watch.py yet)" if flow.get(k) == "github-actions" else ""
+            errors.append(f"Flow {FLOW_LABELS[k]} must be one of {sorted(allowed)}: {flow.get(k)}{extra}")
+    if profile in ("teammate", "maintenance") and (not flow.get("assignee_filter") or flow["assignee_filter"] == "any"):
+        errors.append(f"Flow Profile `{profile}` needs **Assignee filter:** (Van's tracker user id or email): "
+                      "agents only pick up tickets assigned to Van")
+    if flow["assignee_filter"] is None:
+        flow["assignee_filter"] = "any"
+    if "tickets" in flow["stages"] and flow["ticket_source"] == "human":
+        errors.append("Flow Stages include `tickets` but Ticket source is `human`: agents would create tickets humans own")
+    if flow["deploy_signal"] == "cloud-build" and not fields.get("gcp_project_id"):
+        errors.append("Flow Deploy signal `cloud-build` needs **GCP Project ID:** (the watcher reads Cloud Build)")
+    if "delivery-watch" in flow["stages"] and not fields.get("github_repo"):
+        errors.append("Flow Stages include `delivery-watch` but **GitHub Repo:** is not set")
+    if flow.get("pr_base") and not re.fullmatch(r"[A-Za-z0-9._/-]+", flow["pr_base"]):
+        errors.append(f"Flow PR base is not a branch name: {flow['pr_base']}")
+    # status map: explicit entries, then inference from Statuses
+    statuses = fields.get("statuses") or []
+    low = {x.lower(): x for x in statuses}
+    smap = {}
+    if raw.get("status_map"):
+        for pair in _ticks(raw["status_map"]):
+            if "=" not in pair:
+                errors.append(f"Flow Status map entry must be key=status: {pair}"); continue
+            k, v = (x.strip() for x in pair.split("=", 1))
+            if k not in CANON:
+                errors.append(f"Flow Status map key `{k}` unknown; allowed: {CANON}"); continue
+            if v in ("-", "none", ""):
+                smap[k] = None
+            elif v.lower() in low:
+                smap[k] = low[v.lower()]
+            else:
+                errors.append(f"Flow Status map `{k}={v}`: '{v}' is not in Statuses {statuses}")
+    for k in CANON:
+        if k not in smap:
+            smap[k] = next((low[a] for a in ALIASES[k] if a in low), None)
+    for k in REQUIRED_STATUS:
+        if not smap.get(k):
+            errors.append(f"Flow Status map has no `{k}` status (add `{k}=<status>` to **Status map:**)")
+    if flow["deploy_signal"] != "none" and not smap.get("staged"):
+        errors.append("Flow Deploy signal is set but the Status map has no `staged` status to move deployed tickets to")
+    fields["flow"], fields["status"] = flow, smap
 
 
 def parse(path):
@@ -135,6 +258,7 @@ def parse(path):
     if "create_status" in fields and "statuses" in fields:
         if fields["create_status"].lower() not in [s.lower() for s in fields["statuses"]]:
             errors.append(f"create_status '{fields['create_status']}' is not in Statuses")
+    parse_flow(text, fields, errors)
     for k in ("code_cwd", "artifacts_dir"):
         if k in fields and not os.path.isdir(fields[k]):
             fields.setdefault("warnings", []).append(f"{k} directory does not exist yet: {fields[k]}")

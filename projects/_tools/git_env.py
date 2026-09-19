@@ -129,9 +129,9 @@ def guard(rest, fields, env):
             base = args[i + 1]
         elif a.startswith("--base="):
             base = a.split("=", 1)[1]
-    want = fields.get("default_branch")
+    want = (fields.get("flow") or {}).get("pr_base") or fields.get("default_branch")
     if want and base != want:
-        die(f"refused: PRs go into the Default branch `{want}` (PROJECT_CONTEXT); pass --base {want}"
+        die(f"refused: PRs go into the Flow PR base `{want}` (PROJECT_CONTEXT); pass --base {want}"
             + (f", not `{base}`." if base else "."))
     head = None
     for i, a in enumerate(args):

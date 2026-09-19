@@ -48,7 +48,8 @@
     has no login on this box.
 
 ## Workflow Rules
-- **Statuses:** `to do`, `in progress`, `qa for development`, `on hold`, `complete`, `cancelled`
+<!-- Statuses: exactly as on the board, confirmed by validate_context.py --live. -->
+- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`
 - **Create status:** `to do`
 - **Branch Prefixes:** `feature/`, `bug/`
 - **Install command:** `<exact command run inside a fresh worktree, e.g. npm ci>`
@@ -57,6 +58,23 @@
   - Lint: `<exact command>`
   - E2E: `<exact command, or "none yet: first feature carries [INT] Set up Playwright E2E runner">`
   - Forbidden: `<any watch-mode target>`
+
+## Flow
+<!-- How THIS project works. Parsed by validate_context.py; see ~/OPENCLAW_ARCHITECTURE.md §4.
+     Profiles: `factory` (we plan, build, review, QA, watch deploys) · `teammate` (Van is one dev on a human
+     team: tickets exist, agents only take Van's) · `maintenance` (bug fixes only) · `custom` (set Stages).
+     Every line except Profile is optional; the profile supplies defaults. -->
+- **Profile:** `factory`
+- **Stages:** `spec`, `tickets`, `review`, `internal-qa`, `merge-gate`, `delivery-watch`
+- **Ticket source:** `agent` (`agent` = VanPM creates tickets · `human` = the team does · `both`)
+- **Assignee filter:** `any` (teammate/maintenance: Van's tracker user id or email; only those tickets are claimed)
+- **Branch model:** `feature-branch` (`feature-branch` = one branch per feature · `ticket-branch` = one per ticket)
+- **PR base:** `<branch PRs go into; defaults to Default branch>`
+- **Merge by:** `van` (`van` or `humans`; agents never merge)
+- **Deploy signal:** `cloud-build` (`cloud-build` = watcher waits for Cloud Build before `staged` · `none` = merge is the signal)
+- **Status map:** `todo=to do`, `doing=in progress`, `staged=qa`, `rejected=rejected`, `done=complete`, `cancelled=cancelled`, `hold=on hold`
+- **Chat channel:** `<discord:channel id>`
+- **PR conventions:** `none` (or the repo path of its PR template / CONTRIBUTING.md; agents follow it)
 
 ## Ticket conventions (enforced by the PM's `feature-breakdown` skill)
 - One parent ticket per user-visible feature: `[Feature] <Area>: <Outcome>`.

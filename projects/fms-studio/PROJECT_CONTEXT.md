@@ -77,6 +77,20 @@
     in `nx.json`; never exits in a TTY) and any `vitest` without `run`.
   - `package.json` has no `scripts`, so there is nothing to infer from there.
 
+## Flow
+<!-- See projects/_template/PROJECT_CONTEXT.md for what each line means. -->
+- **Profile:** `factory`
+- **Stages:** `spec`, `tickets`, `review`, `internal-qa`, `merge-gate`, `delivery-watch`
+- **Ticket source:** `agent`
+- **Assignee filter:** `any`
+- **Branch model:** `feature-branch`
+- **PR base:** `Development`
+- **Merge by:** `van`
+- **Deploy signal:** `cloud-build`
+- **Status map:** `todo=to do`, `doing=in progress`, `staged=qa`, `rejected=rejected`, `done=complete`, `cancelled=cancelled`, `hold=on hold`
+- **Chat channel:** `discord:1547365802280362044`
+- **PR conventions:** `none`
+
 ## Ticket conventions (enforced by the PM's `feature-breakdown` skill)
 - One parent ticket per user-visible feature: `[Feature] <Area>: <Outcome>`.
 - Subtasks per engineering lane, only the lanes the feature touches: `[FE]`, `[BE]`, `[DB]`, `[INT]`, `[QA]`, `[SPIKE]`. Each ≤ 8h.

@@ -25,6 +25,19 @@ step below is optional.
   to. If set, the user also stores the service-account key JSON (step 2) and you fill
   the template's GCP fields; `gcloud_env.py <slug>` then works for that project only.
 
+- **How this project works (Flow)**, asked as one question with the default shown. Projects do not have
+  to share a workflow; the answers go into `## Flow` of PROJECT_CONTEXT.md:
+  - **Profile**: `factory` (default: we write specs, create tickets, build, review, QA, watch deploys) ·
+    `teammate` (Van is one developer on a human team; tickets already exist; agents only take Van's) ·
+    `maintenance` (bug fixes only) · `custom` (pick stages).
+  - `teammate`/`maintenance` only: **Van's tracker user id or email** (the Assignee filter), and the repo's
+    **PR template / CONTRIBUTING path** if it has one.
+  - **PR base** if PRs do not go into the default branch (e.g. `develop`).
+  - **Deploy signal**: `cloud-build` (needs GCP) or `none` (the merge is the signal).
+  - **Board status names**, if they are not `to do / in progress / qa / rejected / on hold / complete /
+    cancelled`: map them to the canonical keys `todo doing staged rejected done cancelled hold`.
+  - **Chat channel** where this project's updates go.
+
 Do not proceed with placeholders. Missing List ID = stop and ask.
 
 ## 2. Secrets (user runs these; you never see the values)
@@ -93,6 +106,11 @@ The one template is `/home/openclaw/.openclaw/workspace/projects/_template/PROJE
 every `<placeholder>` **except the `## Stack` section**. Keep field labels
 exactly as in the template; tooling parses them by label.
 
+Fill `## Flow` from the Flow answers. Unfilled optional Flow lines may keep their `<placeholder>`: the
+validator treats them as "use the profile default". The validator refuses combinations that cannot work
+(e.g. `teammate` without an Assignee filter, `tickets` stage with human-owned tickets, `cloud-build` without
+GCP, a Status map name that is not on the board), so fix the answer, not the tooling.
+
 ## 4b. Register the project's Figma MCP server (user runs these)
 
 Skip if the Figma file is "none". The server name is always `figma-<slug>`; it
@@ -155,7 +173,8 @@ user says it is the wrong list, fix the ID in the file and re-run step 6.
 - Check the code tooling for the new slug: `python3 /home/openclaw/.openclaw/workspace/projects/_tools/worktree.py <slug> list`
   (must run without error) and, if GitHub is set, `python3 .../_tools/git_env.py <slug> --check`.
 - Append to `MEMORY.md`: `<date> onboarded <slug>: context at <path>, Tracker list '<name>' (<id>), secrets CLICKUP_API_TOKEN_<SLUGUPPER> / FIGMA_API_KEY_<SLUGUPPER> / GITHUB_TOKEN_<SLUGUPPER>`.
-- Reply with the context path, the validated list name, the secret names, the Figma MCP server name, and the worktree root.
+- Reply with the context path, the validated list name, the secret names, the Figma MCP server name, the worktree root,
+  and the Flow in one line (profile, stages, PR base, deploy signal).
 
 ## Re-validating an existing project
 

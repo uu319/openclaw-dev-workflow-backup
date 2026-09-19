@@ -81,6 +81,8 @@ class Project:
         self.ledger = os.path.join(self.artifacts, "worktrees.jsonl")
         self.prs_md = os.path.join(self.artifacts, "prs.md")
         self.default_branch = fields.get("default_branch") or self._origin_head()
+        # new task branches start from the Flow PR base (the branch PRs go into); defaults to Default branch
+        self.pr_base = (fields.get("flow") or {}).get("pr_base") or self.default_branch
         self.branch_prefixes = fields.get("branch_prefixes") or []
         self.github = bool(fields.get("github_repo") and fields.get("git_secret"))
 
@@ -288,7 +290,7 @@ def cmd_create(p, branch, agent, task):
     else:
         if local_sha:
             die(f"local branch {branch} exists but was never pushed; use a new branch name or push it first")
-        base = f"origin/{p.default_branch}"
+        base = f"origin/{p.pr_base}"
         base_sha = sha(p.primary, base) or die(f"{base} not found after fetch")
         git(p.primary, "worktree", "add", "--quiet", "--no-track", "-b", branch, path, base)
         start_ref, start_sha, kind = base, base_sha, "new branch"

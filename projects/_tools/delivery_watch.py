@@ -21,6 +21,12 @@ The flow it drives (statuses are the project's; see the project-orchestration sk
   ticket moved to `rejected` by QA     -> REJECTED      (VanDev picks it up again)
   every ticket of a spec `complete`    -> FEATURE_COMPLETE (archive, clean up, note)
   worktree older than 3 days           -> STALE_WORKTREE; once a day SWEEP_DUE
+  once a day, first project only      -> LINT (lint_workspace.py found FIX lines; report, never delete)
+
+Per-project Flow (PROJECT_CONTEXT `## Flow`, parsed by validate_context.py):
+  - `delivery-watch` not in Stages     -> only SWEEP_DUE / STALE_WORKTREE / LINT are reported
+  - Deploy signal `none`               -> a merged PR gives MERGED (tickets -> `staged` if the board has it, else `done`)
+  - statuses are the board's own names through the Status map; PRs are watched on the Flow PR base
 
 Linking a PR to tickets: ClickUp task URLs (app.clickup.com/t/<id>) in the PR body, plus every
 ticket of `specs/<feature-slug>.md` when the branch is `<prefix>/<feature-slug>[--<suffix>]`.
@@ -39,9 +45,8 @@ API = "https://api.clickup.com/api/v2"
 AGENT_MARK = "🤖"
 DONE = {"SUCCESS"}
 RUNNING = {"QUEUED", "WORKING", "PENDING", "STATUS_UNKNOWN"}
-QA_FROM = {"to do", "in progress", "rejected", "for development", "on hold"}   # never from qa/complete/cancelled
-REJECTED = {"rejected", "for development"}   # "for development" = old name of "rejected"
-CLOSED = {"complete", "cancelled", "closed"}
+# Status sets are per project (Flow Status map); these are filled in Ctx.__init__.
+QA_FROM, REJECTED, CLOSED = set(), set(), set()
 NO_BUILD_AFTER_MIN = 45
 STALE_DAYS = 3
 
@@ -84,7 +89,16 @@ class Ctx:
         self.primary = os.path.realpath(self.f["code_cwd"])
         self.art = self.f["artifacts_dir"].rstrip("/")
         self.specs = os.path.join(self.art, "specs")
-        self.branch = self.f.get("default_branch") or "main"
+        self.flow = self.f.get("flow") or {}
+        self.st = self.f.get("status") or {}
+        # PRs are watched on the Flow PR base; builds on the same branch
+        self.branch = self.flow.get("pr_base") or self.f.get("default_branch") or "main"
+        low = lambda *ks: {self.st[k].lower() for k in ks if self.st.get(k)}
+        QA_FROM.clear(); QA_FROM.update(low("todo", "doing", "rejected", "hold") | {"for development"})
+        REJECTED.clear(); REJECTED.update(low("rejected") | {"for development"})   # old name of "rejected"
+        CLOSED.clear(); CLOSED.update(low("done", "cancelled") | {"closed"})
+        self.staged = self.st.get("staged")
+        self.done = self.st.get("done")
         self.prefixes = self.f.get("branch_prefixes") or []
         m = re.search(r"^- \*\*GitHub bots:\*\*(.*)$", open(self.path).read(), re.M)
         self.bots = set(re.findall(r"`([^`]+)`", m.group(1))) if m else set()
@@ -256,7 +270,10 @@ def main():
     run(["git", "fetch", "--quiet", "--prune", "origin"], cwd=ctx.primary)
     marks = markers(ctx)
     status_cmd = (f"python3 {WORKSPACE}/project-manager/skills/feature-breakdown/scripts/clickup_status.py "
-                  f"--context {ctx.path} --spec <spec> --only \"<title>\" --status qa")
+                  f"--context {ctx.path} --spec <spec> --only \"<title>\" --status "
+                  f"{'staged' if ctx.staged else 'done'}")
+    stages = ctx.flow.get("stages") or []
+    watching = "delivery-watch" in stages
 
     # ---- ClickUp snapshot
     tasks = {}
@@ -278,18 +295,23 @@ def main():
             if not kids or not (set(kids) & moved):
                 continue
             parent, children = kids[0], kids[1:]
-            if children and stat(parent) in QA_FROM and all(c in moved or stat(c) in {"qa"} | CLOSED for c in children):
+            staged = {ctx.staged.lower()} if ctx.staged else set()
+            if children and stat(parent) in QA_FROM and all(c in moved or stat(c) in staged | CLOSED for c in children):
                 moves.append((parent, slug, title_of[parent][1], stat(parent)))
         return moves
 
-    # ---- PRs + builds
-    try:
+    # ---- PRs + builds (only when the project's Flow has the delivery-watch stage)
+    if not watching:
+        prs = []
+        notes.append(f"delivery-watch is not in this project's Flow Stages {stages}; PRs and builds are not watched")
+    else:
+      try:
         prs = ctx.gh("pr", "list", "--state", "all", "--base", ctx.branch, "--limit", "40", "--json",
                      "number,title,state,headRefName,mergedAt,closedAt,mergeCommit,url,body,author,updatedAt") or []
-    except RuntimeError as e:
+      except RuntimeError as e:
         errors.append(str(e)); prs = []
     try:
-        commits = commits_from_builds(ctx, ctx.builds())
+        commits = commits_from_builds(ctx, ctx.builds()) if watching and ctx.flow.get("deploy_signal") == "cloud-build" else {}
     except RuntimeError as e:
         errors.append(str(e)); commits = {}
 
@@ -339,6 +361,20 @@ def main():
         msha = (pr.get("mergeCommit") or {}).get("oid")
         if not msha:
             continue
+        if ctx.flow.get("deploy_signal") == "none":        # no deploy pipeline: the merge is the signal
+            moves = qa_moves(ids)
+            target = "staged" if ctx.staged else "done"
+            if moves:
+                act(f"merged-pr{n}", "MERGED", f"{where} was merged (this project has no deploy signal)",
+                    f"Spawn VanPM: set each ticket below to `{target}` (the board's `{ctx.st.get(target)}`; one "
+                    f"clickup_status.py --only call each). Only tickets of this Flow's Assignee filter "
+                    f"(`{ctx.flow.get('assignee_filter')}`) may be moved; list any other ticket for Van instead. "
+                    f"Post one line in the channel. Ack after VanPM confirms.",
+                    tickets=[{"id": i, "spec": sp and f"{ctx.specs}/{sp}.md", "title": t, "status": st} for i, sp, t, st in moves],
+                    command=status_cmd)
+            else:
+                notes.append(f"{where}: merged; no linked ticket needs moving")
+            continue
         cands = sorted(((c, d) for c, d in commits.items() if ctx.is_ancestor(msha, c)), key=lambda x: x[1]["at"])
         ok = next(((c, d) for c, d in cands if d["status"] == "ok"), None)
         if ok:
@@ -346,7 +382,7 @@ def main():
             builds = "; ".join(bdesc(b) for b in ok[1]["builds"])
             if moves:
                 act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}: {builds})",
-                    "Spawn VanPM: set each ticket below to `qa` (one clickup_status.py --only call each), then post "
+                    f"Spawn VanPM: set each ticket below to `staged` (the board's `{ctx.staged}`; one clickup_status.py --only call each), then post "
                     "one line in the channel: what is ready for testing on staging. Ack after VanPM confirms.",
                     tickets=[{"id": i, "spec": s and f"{ctx.specs}/{s}.md", "title": t, "status": st} for i, s, t, st in moves],
                     command=status_cmd)
@@ -378,7 +414,7 @@ def main():
             notes.append(f"{where}: merged, waiting for Cloud Build")
 
     # ---- ClickUp: rejected by QA, features completed
-    for tid, t in tasks.items():
+    for tid, t in (tasks.items() if watching else []):
         st = stat(tid)
         if st in REJECTED:
             upd = t.get("date_updated") or ""
@@ -401,7 +437,7 @@ def main():
                 ticket={"id": tid, "spec": slug and f"{ctx.specs}/{slug}.md", "title": title}, comments=comments)
     for slug, (mpath, m) in markers(ctx, include_done=False).items():
         ids = [v["id"] for k, v in m.items() if not k.startswith("_") and isinstance(v, dict)]
-        if tasks and ids and all(stat(i) in CLOSED for i in ids) and any(stat(i) == "complete" for i in ids):
+        if watching and tasks and ids and all(stat(i) in CLOSED for i in ids) and ctx.done and any(stat(i) == ctx.done.lower() for i in ids):
             act(f"complete-{slug}", "FEATURE_COMPLETE", f"every ticket of `{slug}` is complete",
                 "Spawn VanPM: archive the feature (project-orchestration step 6: move spec + marker to specs/_done/, "
                 "update _planned-data.md, run spec_index.py). Run `worktree.py <slug> sweep`. Append one line to "
@@ -427,6 +463,23 @@ def main():
             f"Run `python3 {TOOLS}/worktree.py {ctx.slug} sweep` (removes only merged + clean worktrees). "
             "Relay any KEPT/UNMANAGED/PRIMARY line to Van. Ack.")
 
+    # ---- daily architecture lint (reported once, from the first project only: the check is global)
+    projects = sorted(d for d in os.listdir(f"{WORKSPACE}/projects") if not d.startswith("_")
+                      and os.path.isdir(f"{WORKSPACE}/projects/{d}"))
+    if projects and ctx.slug == projects[0]:
+        aid = f"lint-{now():%Y%m%d}"
+        if aid not in state["acked"]:
+            rc, out, err = run([sys.executable, f"{WORKSPACE}/_tools/lint_workspace.py", "--json"])
+            try:
+                fixes = [r for r in json.loads(out) if r["status"] == "FIX"]
+            except ValueError:
+                fixes = [{"area": "lint", "message": f"lint_workspace.py failed: {(err or out)[:300]}", "fix": ""}]
+            if fixes:
+                act(aid, "LINT", f"architecture lint found {len(fixes)} thing(s) to fix",
+                    "Post the lines below in ONE message in the channel, prefixed 'Daily lint:'. Never delete, move or "
+                    "edit files from a heartbeat; Van or a Claude Code session fixes them. Ack after posting.",
+                    lint=[f"[{r['area']}] {r['message'].splitlines()[0]} -> {r['fix']}" for r in fixes])
+
     for x in actions:
         state["pending"][x["id"]] = {k: v for k, v in x.items() if k == "feedback_ids"}
     save()
@@ -438,7 +491,7 @@ def main():
         print(f"ERROR   {e}")
     for x in actions:
         print(f"\nACTION  {x['id']}  [{x['kind']}]\n  {x['summary']}\n  do: {x['do']}")
-        for k in ("tickets", "ticket", "feedback", "comments"):
+        for k in ("tickets", "ticket", "feedback", "comments", "lint"):
             if x.get(k):
                 print(f"  {k}: {json.dumps(x[k], ensure_ascii=False)[:1500]}")
         if x.get("command"):

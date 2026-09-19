@@ -24,6 +24,46 @@ agent workspaces, never the code repo. Each specialist makes its own code
 checkout with the `worktree-lifecycle` skill. The message always starts with
 `Project <slug>. Context: <CTX>.` and names branches, never folder paths.
 
+## The project's Flow decides which steps run
+
+Every project declares its own flow in CTX `## Flow` (`validate_context.py CTX --json` gives `flow` and
+`status`). Read it at step 0 and run **only** the steps whose stage is in `flow.stages`:
+
+| Step | Stage | When the stage is off |
+|---|---|---|
+| 1 Spec + tickets | `spec`, `tickets` | Tickets already exist (made by people): VanPM runs `clickup_scan.py`, adopts them, pushes nothing |
+| 2 Build & PR | always | - |
+| 3 Review on GitHub | `review` | Tell Van the PR has no internal review before saying it is ready |
+| 4 Internal QA | `internal-qa` | Skip; go to step 5 after review |
+| 5 Readiness gate | `merge-gate` | Skip the "ready to merge" message; merges are still never ours |
+| 6 Delivery watch | `delivery-watch` | Watcher reports only sweep/lint; tell Van yourself when a PR merges |
+
+Statuses in this skill are **canonical keys** (`todo doing staged rejected done cancelled hold`); the board's
+real names come from `status` (fms-studio: `doing`=`in progress`, `staged`=`qa`, `done`=`complete`). Pass the key
+to `clickup_status.py --status <key>`; never type a board's name from memory.
+
+Branches follow `flow.branch_model`: `feature-branch` = `<prefix>/<feature-slug>` (the default below);
+`ticket-branch` = `<prefix>/<ticket id>-<short-slug>`, one branch and one PR per ticket. PRs always
+target `flow.pr_base` (`git_env.py` refuses any other base).
+
+**GitHub reviews and one token:** VanDev and VanReviewer act through the same GitHub account (the project's
+token), and GitHub does not let an account approve its own PR, so `gh pr review --approve` fails and reviews
+land as COMMENTED. VanReviewer therefore submits `--comment` (or `--request-changes`) and states the verdict on
+the first line of the review body (`APPROVED` / `CHANGES REQUESTED`) and in its reply to you. A real GitHub
+approval needs a second GitHub account for VanReviewer.
+
+## Team mode (Profile `teammate` or `maintenance`)
+
+Van is one developer on a human team that shares the repo and the board. Then:
+- Work only on tickets assigned to `flow.assignee_filter`, or ones Van names in chat. `clickup_status.py
+  --claim` enforces the filter and prints SKIP otherwise. Every other ticket is read-only.
+- Never rewrite a human's ticket description; VanPM adds a comment or a linked sub-ticket.
+- Follow the repo's own rules: `flow.pr_conventions` (PR template, CONTRIBUTING), CODEOWNERS, commit style.
+  The PR body carries the ticket URL. Before opening the PR, VanDev merges `origin/<pr_base>` into the
+  branch in its worktree if it is behind; never force-push a branch others may have checked out.
+- Never merge, close or edit other people's PRs or branches, and never move other people's tickets.
+- Human review comments are answered within one heartbeat (`PR_FEEDBACK`); every agent comment starts with 🤖.
+
 ## When not to use this
 
 A request that is only one agent's job ("fix the tickets", "refine this spec",
@@ -72,9 +112,10 @@ it to Van instead of guessing.
 - If CTX is missing → run the `project-onboarding` skill first.
 - Run `python3 /home/openclaw/.openclaw/workspace/projects/_tools/validate_context.py CTX`.
   Not VALID → fix via onboarding; do not continue.
+- Keep `flow` and `status` from `validate_context.py CTX --json`: they decide which steps below run.
 - Run the delivery watcher once (step 6) and handle what it prints.
 
-## 1. Spec (VanPM)
+## 1. Spec (VanPM) — stages `spec` + `tickets`
 
 Spawn `project-manager`:
 
@@ -109,22 +150,22 @@ For each lane ticket:
 
    > Project `<slug>`. Context: `<CTX>`. Implement ticket `<exact ticket title>` from
    > `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>`
-   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<Default branch>` using `git_env.py <slug> -- gh pr create --base <Default branch>`. The PR body must list the ClickUp URL of the ticket. Reply with the PR URL and the commit SHA.
+   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<PR base>` using `git_env.py <slug> -- gh pr create --base <PR base>`. The PR body must list the ClickUp URL of the ticket. Reply with the PR URL and the commit SHA.
 
    `sessions_yield`. VanDev says the spec is wrong or impossible → VanPM sets
    the ticket `on hold`, go back to step 1 with the objection; never "fix" the
    spec yourself.
 
-## 3. Review (VanReviewer on GitHub)
+## 3. Review (VanReviewer on GitHub) — stage `review`
 
 Spawn `code-reviewer`:
 
-> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If approved, use `--approve`. Reply with your verdict.
+> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Reply with your verdict.
 
 - `CHANGES REQUESTED` → back to step 2: spawn VanDev with the feedback to pull the review from GitHub (`git_env.py <slug> -- gh pr view <PR URL> --comments`), fix it, push, and reply on the PR.
 - `APPROVED` → Next lane ticket (step 2).
 
-## 4. Verify (VanQA), once per feature, after all lane tickets are approved
+## 4. Verify (VanQA), once per feature, after all lane tickets are approved — stage `internal-qa`
 
 This is our internal pre-merge check; it changes no ticket status. Spawn `qa-engineer`:
 
@@ -139,7 +180,7 @@ This is our internal pre-merge check; it changes no ticket status. Spawn `qa-eng
   spec** `<feature-slug>.md`, under the same parent, and push it". Then step 2 for
   each new ticket on the **same branch**, step 3, then step 4 again.
 
-## 5. Final Readiness Gate (User checks off on merge)
+## 5. Final Readiness Gate (User checks off on merge) — stage `merge-gate`
 
 Ask the user, with the PR URL and QA results:
 "Feature `<feature-slug>` passed GitHub PR review and QA. Everything is ready on the PR. Merging is yours."
@@ -150,7 +191,7 @@ Ask the user, with the PR URL and QA results:
 
 Nobody in the team merges. Van merges on GitHub.
 
-## 6. After the PR: the delivery watcher (heartbeat, every 15 min)
+## 6. After the PR: the delivery watcher (heartbeat, every 15 min) — stage `delivery-watch`
 
 Van merges on GitHub. From then on nothing waits for a person: every heartbeat runs
 
@@ -164,7 +205,7 @@ An action you could not finish stays un-acked and comes back next heartbeat.
   VanDev with the feedback; VanDev fixes it in its own worktree, VanReviewer reviews the
   new commit, VanDev pushes to the same branch and replies on the PR starting with
   "🤖 VanDev:". Fixes to an already approved PR need no new approval question.
-- `DEPLOYED`: spawn VanPM with the listed tickets → `qa`; post one line in the channel:
+- `DEPLOYED`: spawn VanPM with the listed tickets → `staged`; post one line in the channel:
   what is on staging, ready for testing.
 - `BUILD_FAILED`: one line to Van with build id and log link; VanPM files a bug ticket
   (the PR's spec, or a new `staging-build-<sha>` spec); then the normal flow for it. The
@@ -183,6 +224,9 @@ An action you could not finish stays un-acked and comes back next heartbeat.
 
   Then run `worktree.py <slug> sweep`, append the feature to MEMORY.md (step 7) and post
   one line in the channel.
+- `MERGED` (projects with Deploy signal `none`): spawn VanPM, tickets → `staged` or `done` as the action says;
+  on team projects only Van's tickets.
+- `LINT` (daily, first project only): post the listed lines in one message; never fix files from a heartbeat.
 - `SWEEP_DUE`: run `worktree.py <slug> sweep`; relay any KEPT / UNMANAGED / PRIMARY line.
 
 Nobody in the team merges, deploys, retries builds or sets `complete`.
