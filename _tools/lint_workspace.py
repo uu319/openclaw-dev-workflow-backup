@@ -261,7 +261,8 @@ def check_host():
     line = out.splitlines()[-1] if out else ""
     if line.startswith("tmpfs"):
         size = line.split()[1]
-        (ok if size.rstrip("MG").replace(".", "").isdigit() and size.endswith("M") else fix)("host", f"/tmp is tmpfs sized {size}", "" if size.endswith("M") else "shrink to 512M (guide 3.3) as root")
+        gb = float(size[:-1]) / (1024 if size.endswith("M") else 1) if size[-1] in "MG" else 99
+        (ok if gb <= 1.0 else fix)("host", f"/tmp is tmpfs sized {size}", "" if gb <= 1.0 else "cap at 1G as root (OPENCLAW_ARCHITECTURE.md step 4)")
     else:
         ok("host", "/tmp is on disk")
     rc, pid = run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "openclaw-gateway.service"])
@@ -279,9 +280,9 @@ def check_host():
         fix("host", "gateway not running (MainPID 0)", "systemctl --user start openclaw-gateway.service")
     for b in ("gcloud", "gh"):
         (ok if os.path.exists(f"{HOME}/.local/bin/{b}") else fix)("host", f"~/.local/bin/{b} present", "" if os.path.exists(f"{HOME}/.local/bin/{b}") else f"symlink {b} into ~/.local/bin (guide 3.2)")
-    baks = glob.glob(f"{OC}/openclaw.json.bak*") + glob.glob(f"{OC}/openclaw.json.clobbered*") + glob.glob(f"{OC}/openclaw.tmp.json")
+    baks = glob.glob(f"{OC}/openclaw.json.clobbered*") + glob.glob(f"{OC}/openclaw.tmp.json")   # .bak..bak.4 is OpenClaw's own ring: allowed
     if baks:
-        fix("host", f"{len(baks)} loose openclaw.json.bak*/clobbered/tmp copies next to the live config", "keep openclaw.json.last-good only; move the rest to ~/.openclaw/backups/config-history/")
+        fix("host", f"{len(baks)} leftover openclaw.json.clobbered*/openclaw.tmp.json file(s)", "move to ~/.openclaw/backups/config-history/ (the .bak ring is OpenClaw's own and stays)")
     n = len(glob.glob(f"{OC}/backups/*"))
     (ok if n <= 10 else fix)("host", f"{n} entries in ~/.openclaw/backups", "" if n <= 10 else "keep the last 5 config backups + one dated dir per incident; delete the rest (they are 30 MB+)")
     props = glob.glob(f"{OC}/skill-workshop/proposals/*")
