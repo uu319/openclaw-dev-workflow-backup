@@ -105,7 +105,7 @@ def check_framework_files():
             "move into place (artifacts/, a skill, _tools) or delete; nothing lives outside the manifest")
     else:
         ok("framework", "every workspace file matches the manifest")
-    if pyc:
+    if pyc and not open(f"{WS}/.gitignore").read().count("__pycache__"):
         fix("framework", f"{len(pyc)} __pycache__ file(s) (python bytecode; regenerated on every run)",
             "add __pycache__/ to .gitignore and delete: find ~/.openclaw/workspace -name __pycache__ -type d")
     for skill in glob.glob(f"{WS}/skills/*") + glob.glob(f"{WS}/*/skills/*"):
