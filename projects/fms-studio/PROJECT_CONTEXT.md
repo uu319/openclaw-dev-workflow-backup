@@ -29,6 +29,7 @@
   `cloudbuild-backend-staging.yaml`): `npm ci` -> `nx run <app>:build` -> `nx run <app>:deploy-prepare` ->
   App Engine (`nodejs22`; frontend = service `default`, backend = service `backend`, per each `app.yaml`).
   Check builds via `gcloud_env.py fms-studio -- gcloud builds list`.
+- **Deploy triggers:** `deploy-frontend-staging, deploy-backend-staging`
 - **Repo state:** early product build (64 commits on `Development` as of 2026-09-18). Read the tree
   before assuming anything exists.
 

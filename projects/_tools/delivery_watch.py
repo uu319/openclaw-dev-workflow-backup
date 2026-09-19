@@ -168,7 +168,7 @@ def tickets_for_pr(ctx, pr, marks):
 
 # ---------------------------------------------------------------- builds
 
-def commits_from_builds(builds):
+def commits_from_builds(ctx, builds):
     """commit -> {'status': ok|running|failed, 'builds': [...latest per trigger], 'at': first createTime}"""
     by = {}
     for b in builds:
@@ -180,11 +180,21 @@ def commits_from_builds(builds):
         cur = by.setdefault(c, {}).get(trig)
         if cur is None or (b.get("createTime") or "") > (cur.get("createTime") or ""):
             by[c][trig] = b
+            
+    expected = set(t.strip() for t in ctx.f.get("deploy_triggers", "").split(",") if t.strip())
+    
     out = {}
     for c, trigs in by.items():
         bs = list(trigs.values())
         sts = {b["status"] for b in bs}
-        st = "running" if sts & RUNNING else ("ok" if sts <= DONE else "failed")
+        
+        if sts & RUNNING:
+            st = "running"
+        elif expected and not expected.issubset(set(trigs.keys())):
+            st = "running"
+        else:
+            st = "ok" if sts <= DONE else "failed"
+            
         out[c] = {"status": st, "builds": bs, "at": min(b.get("createTime") or "" for b in bs)}
     return out
 
@@ -279,7 +289,7 @@ def main():
     except RuntimeError as e:
         errors.append(str(e)); prs = []
     try:
-        commits = commits_from_builds(ctx.builds())
+        commits = commits_from_builds(ctx, ctx.builds())
     except RuntimeError as e:
         errors.append(str(e)); commits = {}
 
@@ -311,9 +321,9 @@ def main():
             if new:
                 aid = f"feedback-pr{n}-" + "-".join(sorted(x[0] for x in new))[-40:]
                 act(aid, "PR_FEEDBACK", f"{where}: {len(new)} new comment(s)/review(s)",
-                    f"sessions_send/spawn VanDev: address this feedback on branch `{head}` (own worktree: "
-                    f"`create {head}`), VanReviewer reviews the fix, push to the same branch, then reply on the PR "
-                    f"with a comment that starts with '{AGENT_MARK} VanDev:'. Ack when the fix is pushed.",
+                    f"sessions_send/spawn VanDev: pull the review feedback directly from the PR using `gh pr view {pr.get('url')} --comments`, address the feedback on branch `{head}` (own worktree: "
+                    f"`create {head}`), push to the same branch, then reply on the PR "
+                    f"with a comment that starts with '{AGENT_MARK} VanDev:' directly on the threads you fixed. Ack when the fix is pushed.",
                     feedback=[{"by": x[1], "at": x[3], "text": (x[2] or "")[:800]} for x in new],
                     feedback_ids=[x[0] for x in new])
             continue

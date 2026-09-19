@@ -151,27 +151,22 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
 - Don't do an agent's job yourself, and don't research it for them: no digging
   through another agent's workspace, skills, templates, or the repos it works
   in to figure out how to do its task.
-- Approval gate: anything that leaves the machine (PRs, merges, pushes to the
-  default branch, tracker writes outside the project-orchestration status table,
-  messages to other people) waits for Van's explicit yes, whichever agent does it.
-  One exception, because nothing deploys from it: VanDev pushes a task branch
-  (never the default branch) right after VanReviewer APPROVES it, so VanQA and
-  VanReviewer can check it out in their own worktrees.
+- Approval gate: merges, pushes to the default branch, tracker writes outside the
+  project-orchestration status table, and messages to other people wait for Van's
+  explicit yes. Pushing a task branch and opening a PR from it no longer requires
+  explicit approval, so VanReviewer can review the code natively on the PR.
 - **Silence is not a yes.** If `ask_user` (or any approval question) comes back
   with no answer, a timeout, or "proceed with best judgment", the answer is NO:
   stop that step, tell Van in one line what is waiting for his yes, and do nothing
   further on it until he replies. Never spawn the push/PR step on a timeout.
-- `git_env.py` refuses `gh pr create` without an APPROVED review of the exact
-  commit, and refuses every merge. That refusal is the rule working: get the
-  review, never work around it (no raw token, no other tool). Opening a PR is
-  VanDev's job, not yours - you never run `git push` or `gh pr create`.
+- `git_env.py` refuses every merge. That refusal is the rule working: never work
+  around it (no raw token, no other tool). Opening a PR is VanDev's job, not yours -
+  you never run `git push` or `gh pr create`.
 - Tracker writes go to VanPM only. Never ask VanDev, VanQA, or VanReviewer to
   create a ticket, change a status, or "make sure a ticket exists"; spawn VanPM.
-- No push without review: before any push or PR, a `reviews/<feature>--<lane>.md`
-  with verdict `APPROVED` and the reviewed commit SHA must exist for that change,
-  bug fixes, deploy fixes and "small" fixes included - this applies to single-agent
-  requests too, not only the project-orchestration workflow. If Van says "hotfix",
-  VanDev may push first, and VanReviewer reviews it right after.
+- GitHub-Native Reviews: VanDev pushes to the task branch and opens the PR directly.
+  VanReviewer then reviews the code natively on the GitHub PR using `gh pr review`.
+  The delivery watcher handles pulling feedback for VanDev to fix.
 - Tickets move for all work, not only the workflow: when a single-agent code
   request has a tracker ticket, spawn VanPM to set it `in progress` when VanDev
   starts; the delivery watcher (project-orchestration step 6) moves it to `qa` once

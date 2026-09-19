@@ -87,7 +87,7 @@ hours, open questions) to the user **verbatim**. Wait for Van's explicit "go".
 No answer is not a go. On "go": `sessions_send` VanPM "approved, push". VanPM
 replies with ticket links; relay them.
 
-## 2. Build (VanDev), one lane ticket at a time, in dependency order
+## 2. Build & PR (VanDev), one lane ticket at a time, in dependency order
 
 Branch: **one branch per feature**, `<branch prefix>/<feature-slug>`
 (`bug/<slug>` for a bug-only feature). Lane tickets of one feature run **one at
@@ -109,35 +109,20 @@ For each lane ticket:
 
    > Project `<slug>`. Context: `<CTX>`. Implement ticket `<exact ticket title>` from
    > `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>`
-   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit, then save
-   > `git diff <last approved SHA or origin/<Default branch>>...HEAD` to
-   > `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch` and reply
-   > with the commit SHA. Do not push or open a PR.
+   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<Default branch>` using `git_env.py <slug> -- gh pr create --base <Default branch>`. The PR body must list the ClickUp URL of the ticket. Reply with the PR URL and the commit SHA.
 
    `sessions_yield`. VanDev says the spec is wrong or impossible → VanPM sets
    the ticket `on hold`, go back to step 1 with the objection; never "fix" the
-   spec yourself. `ls` the patch before moving on.
+   spec yourself.
 
-## 3. Review (VanReviewer)
+## 3. Review (VanReviewer on GitHub)
 
 Spawn `code-reviewer`:
 
-> Project `<slug>`. Context: `<CTX>`. Review commit `<SHA>` on branch `<branch>`:
-> patch `<Internal Artifacts>/patches/<feature-slug>--<lane-slug>.patch`, against ticket
-> `<title>` in `<Internal Artifacts>/specs/<feature-slug>.md`. Write
-> `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` with the verdict and
-> the reviewed SHA on its first two lines.
+> Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If approved, use `--approve`. Reply with your verdict.
 
-- `CHANGES REQUESTED` → back to step 2 with the review path, using
-  `sessions_send` to the **same** VanDev session (its worktree still exists).
-  The ticket stays `in progress`.
-- `APPROVED` →
-  - `sessions_send` VanDev: "Review APPROVED at `<SHA>`. Check `git status`, push
-    `<branch>` (`git push -u origin <branch>`, never the default branch) and run
-    `finish <branch>`. No PR." A task branch push deploys nothing; this is what lets
-    QA and review fixes get their own worktree.
-  - The ticket stays `in progress` (it reaches `qa` only once it is on staging).
-  - Next lane ticket (step 2).
+- `CHANGES REQUESTED` → back to step 2: spawn VanDev with the feedback to pull the review from GitHub (`git_env.py <slug> -- gh pr view <PR URL> --comments`), fix it, push, and reply on the PR.
+- `APPROVED` → Next lane ticket (step 2).
 
 ## 4. Verify (VanQA), once per feature, after all lane tickets are approved
 
@@ -154,22 +139,11 @@ This is our internal pre-merge check; it changes no ticket status. Spawn `qa-eng
   spec** `<feature-slug>.md`, under the same parent, and push it". Then step 2 for
   each new ticket on the **same branch**, step 3, then step 4 again.
 
-## 5. Approval gate (external side-effects start here)
+## 5. Final Readiness Gate (User checks off on merge)
 
-Ask the user, with the review and QA paths and the SHA:
-"Feature `<feature-slug>` passed review and QA at `<SHA>`. Approve PR to `<Default branch>`?"
+Ask the user, with the PR URL and QA results:
+"Feature `<feature-slug>` passed GitHub PR review and QA. Everything is ready on the PR. Merging is yours."
 
-- Only an explicit yes counts. `ask_user` timing out, "no answer" or "proceed
-  with best judgment" means **stop and wait**; say what is waiting and do nothing.
-- On yes: spawn VanDev: "Open the PR for `<branch>` into `<Default branch>` with
-  `git_env.py <slug> -- gh pr create --base <Default branch>`, from its own
-  worktree (`create <branch>`), then `finish <branch> --pr <url>`. The PR body must
-  list the ClickUp URL of every ticket it delivers (`https://app.clickup.com/t/<id>`,
-  from the spec's `.clickup.json`): that is how the delivery watcher moves them to
-  `qa` after the deploy. Do not merge."
-- `git_env.py` refuses `gh pr create` unless `reviews/*.md` holds an APPROVED review
-  whose `Reviewed SHA:` is the branch head on origin, and refuses every merge. Never
-  work around it; if it refuses, the review is missing or stale.
 - Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid`:
   the head SHA must equal the QA'd SHA. Relay the PR link and say: "Merging is
   yours; tickets close when the merge is detected."

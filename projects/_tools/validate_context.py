@@ -44,6 +44,7 @@ OPTIONAL = {
     "default_branch": r"\*\*Default branch:\*\*\s*`([^`<>]+)`",
     "github_repo": r"\*\*GitHub Repo:\*\*\s*`?([^`\n]+?)`?\s*$",
     "git_secret": r"GitHub Token:\s*`([^`]+)`",
+    "deploy_triggers": r"\*\*Deploy triggers:\*\*\s*(.+)",
 }
 PLACEHOLDER = re.compile(r"<[^>]*>")
 
