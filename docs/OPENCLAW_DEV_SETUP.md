@@ -23,6 +23,12 @@ rest of the document is those learnings turned into a setup.
 - Section 10 is now a copy of the real template (it had drifted both ways); layout, tool list, watcher actions,
   heartbeat prompt and skill names match the box; the shared `worktree-lifecycle` skill is its own git repo.
 - Superseded text in 12.5b/12.5c/12.5d is marked, not deleted (it is history).
+- **Security (found 2026-09-19 night):** an agent-written `specs/_figma/fetch.py` held the live fms-studio Figma token in
+  the framework repo since 09-17 (also in agent transcripts, so it reached the model provider): file removed, token to be
+  rotated. The linter now greps every framework file for token shapes. `~/Backups/openclaw-git` history holds plaintext
+  vault rows up to the 2026-09-19 09:30 run: never push it; pull it to your own machine (architecture §7 phase C).
+- Design docs live in the framework repo (`~/.openclaw/workspace/docs/`, `~/OPENCLAW_*.md` are symlinks);
+  `_tools/framework_offbox.py` makes the off-box copy (Decision I).
 
 **What changed in 1.3 (2026-09-19 evening):** decisions closed (Gemini stays, agy stays, Discord + Telegram,
 active-memory and dreaming off, skill-creator removed); `/tmp` cap is 1G; cleanup done on the old box. The architecture,
