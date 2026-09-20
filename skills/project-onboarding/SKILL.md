@@ -19,7 +19,11 @@ step below is optional.
 - **Display name**
 - **Git SSH clone URL** and SSH alias if the host uses one
 - **GitHub repo** as `owner/repo` (or "not on GitHub"), and its **default branch**
-- **Tracker List ID**: digits from the list URL (`https://app.clickup.com/<team>/v/l/li/<LIST_ID>`) or List settings → "Copy ID". Never query the Tracker API to find it.
+- **Tracker**: `clickup`, `jira`, `linear`, or `none` (no ticket system - then skip every tracker step below).
+- **Tracker Board ID**: never query the tracker API to find it.
+  - ClickUp: digits from the list URL (`https://app.clickup.com/<team>/v/l/li/<LIST_ID>`) or List settings -> "Copy ID".
+  - Jira: the project key (`BILL`), plus the site URL `https://<site>.atlassian.net`.
+  - Linear: the team key (`ENG`) or team id, from Settings -> Teams.
 - **Figma file link** (or "none"). If "none", skip every Figma step below.
 - **GCP** (or "none"): GCP Project ID and region of the environment the project deploys
   to. If set, the user also stores the service-account key JSON (step 2) and you fill
@@ -33,19 +37,25 @@ step below is optional.
   - `teammate`/`maintenance` only: **Van's tracker user id or email** (the Assignee filter), and the repo's
     **PR template / CONTRIBUTING path** if it has one.
   - **PR base** if PRs do not go into the default branch (e.g. `develop`).
-  - **Deploy signal**: `cloud-build` (needs GCP) or `none` (the merge is the signal).
+  - **Deploy signal**: `cloud-build` (needs GCP) · `github-actions` (needs a GitHub repo; the watcher
+    reads check runs) · `none` (the merge is the signal).
+  - **Deploy checks**: the trigger or workflow names that must ALL pass before a ticket moves to
+    `staged`. Omit when there is one, or no CI.
   - **Board status names**, if they are not `to do / in progress / qa / rejected / on hold / complete /
     cancelled`: map them to the canonical keys `todo doing staged rejected done cancelled hold`.
   - **Chat channel** where this project's updates go.
 
-Do not proceed with placeholders. Missing List ID = stop and ask.
+Do not proceed with placeholders. A missing Tracker Board ID (when the Tracker is not `none`) =
+stop and ask.
 
 ## 2. Secrets (user runs these; you never see the values)
 
 Names are fixed by the rule `<KIND>_<SLUGUPPER>`:
 
 ```
-openclaw secrets store set CLICKUP_API_TOKEN_<SLUGUPPER> --kind env --value-file -
+openclaw secrets store set <CLICKUP|JIRA|LINEAR>_API_TOKEN_<SLUGUPPER> --kind env --value-file -
+#   ClickUp: the raw API token.   Linear: the API key.
+#   Jira:    `email:api_token` on one line - Basic auth needs both halves.
 openclaw secrets store set FIGMA_API_KEY_<SLUGUPPER> --kind env --value-file -
 openclaw secrets store set GITHUB_TOKEN_<SLUGUPPER> --kind env --value-file -
 # only if GCP is set: the name you put in PROJECT_CONTEXT's GCP Key Vault field
@@ -130,15 +140,20 @@ on main is denied to every agent it spawns), so nothing else changes per project
 
 ## 4c. Register the project's tracker MCP server (user runs these)
 
-The server name is always `tracker-<slug>`. VanPM reads tickets through it (writes go
-through its scripts). QA, reviewer and VanDev deny `tracker-*`.
+**Skip this step entirely when the project's Tracker is `none`.**
+
+The server name is always `tracker-<slug>` and the launcher is the same for every
+tracker: it reads the project's `**Tracker:**` line and talks to ClickUp, Jira or
+Linear accordingly. VanPM reads tickets through it (writes go through its scripts).
+QA, reviewer and VanDev deny `tracker-*`.
 
 ```
-openclaw mcp set tracker-<slug> '{"command":"/usr/bin/python3","args":["/home/openclaw/.openclaw/workspace/projects/_tools/clickup_mcp.py","<slug>"],"connectionTimeoutMs":30000,"requestTimeoutMs":120000}'
+openclaw mcp set tracker-<slug> '{"command":"/usr/bin/python3","args":["/home/openclaw/.openclaw/workspace/projects/_tools/tracker_mcp.py","<slug>"],"connectionTimeoutMs":30000,"requestTimeoutMs":120000}'
 openclaw mcp probe tracker-<slug>
 ```
 
-The probe must list `tracker-<slug>__clickup_get_task`.
+The probe must list `tracker-<slug>__tracker_get_task`. The tool names are the same
+whatever the tracker is, which is why no deny list or prompt changes per project.
 
 ## 5. Validate (must pass before delegating)
 
@@ -163,7 +178,7 @@ spawned agent cannot use a project path as cwd, it reads the repo by absolute pa
 > `finish`): keep only commands that run once and exit; list watch-mode ones under
 > Forbidden. Then run
 > `validate_context.py <file> --live`, paste the LIVE list name/space/statuses
-> into the file's "ClickUp List name" and "Statuses" fields, re-run until VALID
+> into the file's "Tracker Board name" and "Statuses" fields, re-run until VALID
 > and LIVE OK. Do not create tickets. Report the list name so the user can
 > confirm it is the right list.
 
@@ -174,7 +189,7 @@ user says it is the wrong list, fix the ID in the file and re-run step 6.
 
 - Check the code tooling for the new slug: `python3 /home/openclaw/.openclaw/workspace/projects/_tools/worktree.py <slug> list`
   (must run without error) and, if GitHub is set, `python3 .../_tools/git_env.py <slug> --check`.
-- Append to `MEMORY.md`: `<date> onboarded <slug>: context at <path>, Tracker list '<name>', secrets CLICKUP_API_TOKEN_<SLUGUPPER> / FIGMA_API_KEY_<SLUGUPPER> / GITHUB_TOKEN_<SLUGUPPER>`.
+- Append to `MEMORY.md`: `<date> onboarded <slug>: context at <path>, <tracker> board '<name>', secret *names* only (never ids or values).`
 - Reply with the context path, the validated list name, the secret names, the Figma MCP server name, the worktree root,
   and the Flow in one line (profile, stages, PR base, deploy signal).
 

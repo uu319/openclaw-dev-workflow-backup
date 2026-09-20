@@ -23,8 +23,10 @@ OC = f"{HOME}/.openclaw"
 WS = f"{OC}/workspace"
 CODE = f"{HOME}/projects"
 AGENTS = ["project-manager", "developer", "qa-engineer", "code-reviewer"]
-SHARED_TOOLS = ["clickup_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_env.py", "git_env.py",
+SHARED_TOOLS = ["tracker_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_env.py", "git_env.py",
                 "spec_index.py", "validate_context.py", "worktree.py"]
+# one module per tracker provider, reached only through trackers.for_project() (architecture §2)
+TRACKER_ADAPTERS = ["__init__.py", "clickup.py", "jira.py", "linear.py"]
 PM_SCRIPTS = ["clickup_push.py", "clickup_scan.py", "clickup_status.py"]
 
 # ---- MANIFEST: allowed paths, relative to the workspace. Globs; ** matches any depth. ----
@@ -38,6 +40,7 @@ ALLOWED = [
     "credentials/gcp/*.json",
     "projects/_template/**",
     *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
+    *[f"projects/_tools/trackers/{t}" for t in TRACKER_ADAPTERS],
     "projects/*/PROJECT_CONTEXT.md",
     "projects/*/artifacts/specs/**", "projects/*/artifacts/patches/**", "projects/*/artifacts/reviews/**",
     "projects/*/artifacts/qa/**", "projects/*/artifacts/runs/**",
@@ -56,6 +59,7 @@ REQUIRED = ["AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md",
             "_tools/validate_team.py", "skills/project-onboarding/SKILL.md", "skills/project-orchestration/SKILL.md",
             "projects/_template/PROJECT_CONTEXT.md", "projects/_template/specs/_planned-data.md",
             *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
+            *[f"projects/_tools/trackers/{t}" for t in TRACKER_ADAPTERS],
             *[f"{a}/AGENTS.md" for a in AGENTS],
             *[f"project-manager/skills/feature-breakdown/scripts/{s}" for s in PM_SCRIPTS]]
 # Token shapes that must never sit in a framework file (checked in every repo's working tree, ignored files included,
@@ -287,14 +291,15 @@ def check_config(ctxs):
     dev_deny = ent.get("developer", {}).get("tools", {}).get("deny", [])
     (ok if "tracker-*" in dev_deny else fix)("config", f"developer deny = {dev_deny}", "" if "tracker-*" in dev_deny else "add tracker-*")
     pm_deny = ent.get("project-manager", {}).get("tools", {}).get("deny", [])
-    need = {"tracker-*__clickup_update_task", "tracker-*__clickup_create_task"}
+    need = {"tracker-*__tracker_update_task", "tracker-*__tracker_create_task"}
     (ok if need <= set(pm_deny) else fix)("config", f"project-manager deny = {pm_deny}", "" if need <= set(pm_deny) else "add the two tracker write tools (writes go through scripts)")
     for a in ("qa-engineer", "code-reviewer"):
         d = set(ent.get(a, {}).get("tools", {}).get("deny", []))
         (ok if {"figma-*", "tracker-*"} <= d else fix)("config", f"{a} deny = {sorted(d)}", "" if {"figma-*", "tracker-*"} <= d else "add figma-* and tracker-*")
     servers = set(c.get("mcp", {}).get("servers", {}).keys())
     for slug, f in ctxs.items():
-        want = {f"tracker-{slug}"} | ({f"figma-{slug}"} if f.get("figma_mcp_server") else set())
+        want = ({f"tracker-{slug}"} if f.get("tracker", "none") != "none" else set()) \
+               | ({f"figma-{slug}"} if f.get("figma_mcp_server") else set())
         missing = want - servers
         (ok if not missing else fix)("config", f"MCP servers for {slug}: {sorted(want & servers)}", "" if not missing else f"openclaw mcp set {sorted(missing)} (onboarding 4b/4c)")
     orphan = [s for s in servers if not any(s.endswith(f"-{slug}") for slug in ctxs)]

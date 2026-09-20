@@ -35,7 +35,10 @@ import sys
 import urllib.error
 import urllib.request
 
-import trackers
+# This module is also loaded through importlib by lint_workspace.py and the MCP
+# launchers, where sys.path does not include this directory. Add it ourselves.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import trackers  # noqa: E402
 
 # Required for every project, whatever its toolchain. Everything a project may
 # not have (tracker, design, cloud, git host) is conditional and checked in parse().
