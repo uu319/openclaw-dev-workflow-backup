@@ -27,7 +27,7 @@ Header keys:
 | `status` | no | status for a ticket when it is first created (ignored on re-push; move statuses with clickup_status.py) |
 | `figma` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
 | `screenshots` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
-| `existing_id` | no | ClickUp task id to update when the title differs from the existing ticket (used when adopting the 11 legacy screen tickets as parents) |
+| `existing_id` | no | tracker ticket id to update when the title differs from the existing ticket (used when adopting tickets people already made) |
 
 ## Complete example
 
@@ -40,12 +40,12 @@ Source: Figma node 9836-6520. Written 2026-09-16 by VanPM.
 title: [Feature] Event Creation: Step 3.1 — Set event password
 lane: FEATURE
 priority: high
-existing_id: z94kyda6qm
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520
+existing_id: <existing ticket id>
+figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id>
 screenshots: specs/_figma/event-creation-step-3-1-set-password/9836-6520.png
 
 ## Context
-Parent: this is the parent · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520 · Lane: FEATURE
+Parent: this is the parent · Figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id> · Lane: FEATURE
 
 ## User story
 As an organizer, I want to set a password on my event, so that only invited guests can open the album.
@@ -87,11 +87,11 @@ parent: [Feature] Event Creation: Step 3.1 — Set event password
 priority: high
 estimate_hours: 6
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520
+figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id>
 screenshots: specs/_figma/event-creation-step-3-1-set-password/9836-6520.png
 
 ## Context
-Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520 · Lane: FE
+Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id> · Lane: FE
 
 ## User story
 As an organizer, I want a clear password step, so that I know what is required before I continue.
@@ -147,7 +147,7 @@ lane: FE
 parent: [Feature] Event Creation: Step 3.1 — Set event password
 estimate_hours: 3
 depends_on: [FE] Set password: form layout + validation states, [BE] Set password: PATCH /api/events/:id/draft stores password hash
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9836-6520
+figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id>
 screenshots: specs/_figma/event-creation-step-3-1-set-password/9836-6520.png
 
 ...body per template...
