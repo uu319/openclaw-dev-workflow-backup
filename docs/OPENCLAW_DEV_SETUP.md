@@ -590,6 +590,11 @@ Rules:
 - Van stores; agents never see values. **Do not run `openclaw secrets store list`**: it prints env-kind
   values in plaintext. Verify names and kinds without a Node process:
   ```bash
+  # NOTE 2026-09-20: the sqlite3 CLI is NOT installed on this box (3.2 says to install it, and it was
+  # never done), so the line below fails with "command not found". Until it is installed, use python3,
+  # which needs no extra package and starts no second Node process:
+  python3 -c "import sqlite3;c=sqlite3.connect('file:/home/openclaw/.openclaw/state/openclaw.sqlite?mode=ro',uri=True);[print(f'{k:8} {n}') for n,k in c.execute('select name,kind from secret_store_entries where deleted_at_ms is null order by name')]"
+
   sqlite3 'file:/home/openclaw/.openclaw/state/openclaw.sqlite?mode=ro' \
     "select name, kind from secret_store_entries where deleted_at_ms is null order by name"
   ```
@@ -1410,8 +1415,8 @@ sqlite3 'file:/home/openclaw/.openclaw/agents/<id>/agent/openclaw-agent.sqlite?m
 # inherited deny on spawned sessions
 sqlite3 'file:/home/openclaw/.openclaw/agents/<id>/agent/openclaw-agent.sqlite?mode=ro' \
   "select substr(entry_json,1,400) from session_nodes where entry_json like '%inheritedToolDeny%' order by rowid desc limit 5"
-# secrets present? (no Node process, no values printed)
-sqlite3 'file:/home/openclaw/.openclaw/state/openclaw.sqlite?mode=ro' "select name,kind from secret_store_entries where deleted_at_ms is null"
+# secrets present? (no Node process, no values printed). sqlite3 is not installed on this box: use python3.
+python3 -c "import sqlite3;c=sqlite3.connect('file:/home/openclaw/.openclaw/state/openclaw.sqlite?mode=ro',uri=True);[print(f'{k:8} {n}') for n,k in c.execute('select name,kind from secret_store_entries where deleted_at_ms is null order by name')]"
 # delivery watcher (what the heartbeat sees); --dry writes nothing
 python3 ~/.openclaw/workspace/projects/_tools/delivery_watch.py <slug> --dry
 cat <Internal Artifacts>/delivery_state.json      # pending / acked actions, watch_since
