@@ -1,7 +1,7 @@
 # OpenClaw Fresh Setup — Development Factory
 
-**Version:** 1.5 · **Written:** 2026-09-17 · **Revised:** 2026-09-19 night (1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
-> **Architecture and self-fix runbook (2026-09-19):** `~/OPENCLAW_ARCHITECTURE.md` v2.3 defines the layers, the file manifest, the per-project Flow profile, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
+**Version:** 1.6 · **Written:** 2026-09-17 · **Revised:** 2026-09-20 (1.6: development-only + pluggable tracker/CI; 1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
+> **Architecture and self-fix runbook (2026-09-20):** `~/OPENCLAW_ARCHITECTURE.md` **v2.5** defines the layers, the file manifest, the per-project Flow profile and toolchain block, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
 
 **Target OpenClaw version:** 2026.9.4 or later (every config key below was checked against
 `/usr/lib/node_modules/openclaw/docs` on that version; re-check keys if you install a newer one).
@@ -13,11 +13,32 @@ credentials. Nothing else (no workflow generator, no email/calendar/weather auto
 instance and the incidents it produced. Section 12 (Learnings) is the part that matters most; the
 rest of the document is those learnings turned into a setup.
 
+**What changed in 1.6 (2026-09-20):**
+- **Development only** (Decision P). The setup no longer offers general-assistant work. `AGENTS.md`
+  routing step 4 says "nobody owns it" instead of "handle it yourself if it is general assistant work";
+  `SOUL.md` was stock OpenClaw boilerplate and is now VanOpenClaw's own; the **active** USER.md
+  directive "act as Van's main agent, not a dev-only orchestrator" is superseded. Config enforces it
+  too: `skills.allowBundled` (28 ready skills → 9), non-development plugins removed. (5.6, 7.2)
+- **The tracker is a provider** (Decision Q): `clickup | jira | linear | none`, behind
+  `projects/_tools/trackers/`. Fields are vendor-neutral (`Tracker`, `Tracker Board ID`,
+  `Tracker Board name`, `Tracker MCP server`, `Tracker Base URL` for Jira); the old ClickUp labels are
+  still read. `none` is a real answer. `clickup_mcp.py` → `tracker_mcp.py` with neutral tool names
+  (`tracker_get_task`/`tracker_create_task`/`tracker_update_task`), so the PM deny list and the linter
+  no longer name a vendor. PM scripts renamed `tracker_push/status/scan.py`. (6, 9.1, 9.2, 9.4, 9.5, 10)
+- **CI is a provider** (Decision R): `cloud-build | github-actions | none`, behind
+  `projects/_tools/ci/`. `Deploy triggers` → `Deploy checks`. (9.4, 10)
+- **Still ClickUp-only:** `tracker_push.py` (spec → tickets) needs attachments and dependency links;
+  it refuses other trackers and names the alternative. Status reads/writes work everywhere.
+- **Bug:** the "`## Stack` is unfilled" check never worked - `\s*[^<\n]` backtracks so the space after
+  the colon satisfied it. Every unfilled template passed. Fixed. (9.8)
+- `runTimeoutSeconds` was a prompt rule only; with `agents.defaults.subagents.runTimeoutSeconds` unset,
+  a spawn that omitted it got **no timeout at all**. Now set to 1800 as a floor. (5.1)
+
 **What changed in 1.4 (2026-09-19 night, aligned with `~/OPENCLAW_ARCHITECTURE.md` v2.3):**
 - **Review check at merge time.** VanDev pushes and opens the PR right after a lane commit; VanReviewer reviews on the
   PR and runs `git_env.py <slug> --review-status <pr>`, which sets the commit status `openclaw/review` on the PR head
-  (only when a saved review file names that exact SHA). A repo ruleset that requires that status blocks merging
-  unreviewed or changed-after-review code. The old PR-create review gate is gone. (5.4 note, 7.5, 8.1, 9.4, 12.5e)
+  (only when a saved review file names that exact SHA). Main checks that status is green before calling a PR ready;
+  a ruleset that would make GitHub enforce it is **Decision N: not enabled for now**. The old PR-create review gate is gone. (5.4 note, 7.5, 8.1, 9.4, 12.5e)
 - **Flow profile per project** (`## Flow` in PROJECT_CONTEXT): stages, ticket source, assignee filter, branch model,
   PR base, status map. Scripts use canonical statuses (`todo doing staged rejected done cancelled hold`). (8.1, 9.1, 10)
 - Section 10 is now a copy of the real template (it had drifted both ways); layout, tool list, watcher actions,
@@ -248,13 +269,14 @@ loginctl enable-linger openclaw             # so the user systemd unit runs with
 │       ├── credentials/gcp/<slug>.json       # 0600, restored from vault by gcloud_env.py
 │       ├── projects/
 │       │   ├── _template/PROJECT_CONTEXT.md, specs/_planned-data.md   # THE templates; no copies anywhere else
-│       │   ├── _tools/{validate_context,figma_mcp,clickup_mcp,gcloud_env,git_env,worktree,delivery_watch,spec_index}.py
+│       │   ├── _tools/{validate_context,figma_mcp,tracker_mcp,gcloud_env,git_env,worktree,delivery_watch,spec_index}.py
+│       │   ├── _tools/trackers/{__init__,clickup,jira,linear}.py   _tools/ci/{__init__,cloud_build,github_actions}.py
 │       │   └── <slug>/PROJECT_CONTEXT.md
 │       │   └── <slug>/artifacts/{specs,patches,reviews,qa,runs}/ + worktrees.jsonl + prs.md + delivery_state.json
 │       ├── project-manager/{AGENTS.md,SOUL.md,USER.md,IDENTITY.md,skills/feature-breakdown/}
 │       ├── developer/{AGENTS.md,SOUL.md,USER.md,IDENTITY.md,skills/agy-coding/}
 │       ├── code-reviewer/{AGENTS.md,SOUL.md,USER.md,IDENTITY.md,skills/code-review/}
-│       └── qa-engineer/{AGENTS.md,SOUL.md,USER.md,IDENTITY.md}   # skills/qa-verification/ is allowed but not written yet
+│       └── qa-engineer/{AGENTS.md,SOUL.md,USER.md,IDENTITY.md,skills/qa-verification/}
 ├── .local/bin/{gcloud,gsutil,bq,gh}          # on the gateway PATH
 ├── .local/opt/gh/                            # gh release, checksum-verified
 ├── .local/lib/figma-developer-mcp/           # pinned MCP server packages (NOT under ~/.openclaw, keeps backups small)
@@ -404,7 +426,7 @@ routing: main is never given a project `cwd`, never runs the pipeline steps itse
         identity: { name: "VanPM", emoji: "📋", theme: "Organized, precise, strict project manager" },
         subagents: { allowAgents: [] },
         memory: { search: { sources: ["memory"], rememberAcrossConversations: false } },
-        tools: { deny: ["tracker-*__clickup_update_task", "tracker-*__clickup_create_task"] }   // live 2026-09-19; writes go through scripts
+        tools: { deny: ["tracker-*__tracker_update_task", "tracker-*__tracker_create_task"] }   // writes go through scripts
       },
       developer: {
         workspace: "/home/openclaw/.openclaw/workspace/developer",
@@ -437,8 +459,8 @@ Note on `figma-*` deny: it only **hides** the tools. OpenClaw still spawns every
 (~120 MB each) in any agent session that has tools, because the MCP runtime checks per-run
 `toolsAllow`, not the agent deny list. Mitigation is 5.5.
 
-**VanPM tracker writes (2026-09-19):** that is why `project-manager` denies `tracker-*__clickup_update_task` and
-`tracker-*__clickup_create_task` (the linter checks these exact lists; `apply_patch` is not denied anywhere on the live box). It keeps `clickup_get_task` for reads; every write goes through
+**VanPM tracker writes (2026-09-19):** that is why `project-manager` denies `tracker-*__tracker_update_task` and
+`tracker-*__tracker_create_task` (the linter checks these exact lists; `apply_patch` is not denied anywhere on the live box). It keeps `tracker_get_task` for reads; every write goes through
 `tracker_push.py` / `tracker_status.py`, which keep the spec markers in sync. A VanPM that had the MCP write tool
 moved three tickets to `qa`/`complete` on its own during the first live run.
 
@@ -456,11 +478,22 @@ project's context file and the vault, and injects the key into the child process
 {
   skills: {
     workshop: { autonomous: { mode: "propose" }, approvalPolicy: "pending" },   // agents cannot self-install skills
-    entries: { "coding-agent": { enabled: true } }                              // bundled Claude Code skill; everything else off
+    allowBundled: ["coding-agent", "spike", "python-debugpy", "node-inspect-debugger"],  // development only
+    entries: { "coding-agent": { enabled: true } }
   }
 }
 ```
-Disable every bundled skill you do not need (1password, obsidian, spotify, weather, gog, …). Each one is prompt text on every turn.
+**Use `skills.allowBundled`, not a list of `false` entries.** The old box had 30 entries set `false` but
+**21 bundled skills were never named at all**, so `weather`, `notion`, `meme-maker`, `taskflow`,
+`clawhub`, `apple-*` and `peekaboo` were all live (28 ready for main). An allowlist closes every gap at
+once and only affects *bundled* skills: managed (`worktree-lifecycle`), workspace
+(`project-orchestration`, `project-onboarding`) and agent-level (`feature-breakdown`, `agy-coding`,
+`code-review`, `qa-verification`) skills are untouched. It does **not** cover workshop skills in
+`~/.openclaw/agents/*/agent/workshop-skills` - remove those by hand (2026-09-20: `workflow-architect`
+and `chat-media-attachments` moved to `~/Backups/removed-skills/`). Deliberately not allowed:
+`github`/`gh-issues` (they would give agents a path around `git_env.py`'s merge and PR-base refusals),
+`clawhub` (installs third-party skills), `diagram-maker`, `healthcheck`, `control-ui`, `tmux`.
+Each enabled skill is prompt text on every turn.
 The skill workshop still generates *proposals* (the old box accumulated seven in one day: "troubleshoot npm ci",
 "deploy nx app engine", …). They stay pending; review or delete them weekly.
 
@@ -540,7 +573,7 @@ channel Van works in; several projects share it until per-project heartbeats are
 
 | Secret | Name | Kind | Why that kind |
 |---|---|---|---|
-| ClickUp API key | `CLICKUP_API_TOKEN_<SLUGUPPER>` | `env` | tracker launcher must read it back |
+| Tracker API key | `<CLICKUP\|JIRA\|LINEAR>_API_TOKEN_<SLUGUPPER>` | `env` | tracker launcher must read it back. Jira stores `email:api_token` (Basic auth needs both) |
 | Figma token | `FIGMA_API_KEY_<SLUGUPPER>` | `env` | figma launcher must read it back |
 | GitHub fine-grained PAT | `GITHUB_TOKEN_<SLUGUPPER>` | `env` | git launcher must read it back |
 | GCP SA key JSON | `GCP_SA_KEY_<SLUGUPPER>_<ENV>` | `env` | gcloud launcher restores the file from it |
@@ -662,7 +695,7 @@ Skills owned by `main`: `project-orchestration` (8.1), `project-onboarding` (Sec
 - Figma is required only for specs that have an `[FE]` ticket; CI/backend specs use `figma: none` (the old check
   made agents paste dummy PNGs with fake node ids).
 - Owns one onboarding step: fill `## Stack` from the repo (reading it by absolute path) and run the validator `--live`.
-- Tools: `tracker-<slug>__clickup_get_task` (writes denied, 5.4), `figma-<slug>__*`, exec (scripts, validators), read/write.
+- Tools: `tracker-<slug>__tracker_get_task` (writes denied, 5.4), `figma-<slug>__*`, exec (scripts, validators), read/write.
 
 ### 7.4 `developer` — VanDev
 - Implements **one lane ticket at a time**, named in the spawn message. AC + out-of-scope are the contract.
@@ -755,7 +788,8 @@ fms-studio names (`staged` = `qa` = merged **and deployed to staging**, ready fo
 5. **Final Readiness Gate:** main checks `gh pr view <n> --json state,headRefOid,statusCheckRollup`: head = the QA'd
    SHA and `openclaw/review` = SUCCESS (empty can also mean the token cannot read statuses: say so). Then: "Feature
    `<feature-slug>` passed GitHub PR review and QA. Everything is ready on the PR. Merging is yours." Van merges on
-   GitHub; a repo ruleset requiring `openclaw/review` makes GitHub refuse the merge of an unreviewed head.
+   GitHub. A ruleset requiring `openclaw/review` would make GitHub refuse an unreviewed head, but **Decision N
+   (2026-09-20) is not to add one yet**, so step 5's check is what enforces it.
 6. **Delivery watcher** (heartbeat, 15 min): `delivery_watch.py <slug>` prints ACTIONs — `PR_FEEDBACK`, `DEPLOYED`,
    `BUILD_FAILED`, `NO_BUILD`, `PR_CLOSED`, `REJECTED`, `FEATURE_COMPLETE`, `STALE_WORKTREE`, `SWEEP_DUE`, `MERGED`
    (Deploy signal `none`: the merge is the signal), `LINT` (daily, first project only: posted, never fixed) — each
@@ -774,12 +808,12 @@ that PR before Van hears "ready", and the PR body carries the ticket URL when a 
   spec validator (rejects > 8h, < 3 AC, non-GWT AC, filler phrases, missing out-of-scope), push **only** through
   `scripts/tracker_push.py` (dedupe by title, similarity check, `<feature-slug>.clickup.json` marker next to the spec),
   statuses through `scripts/tracker_status.py`, human tickets through `scripts/tracker_scan.py`. The MCP write tools
-  are denied to VanPM (5.4); `tracker-<slug>__clickup_get_task` is for reads.
+  are denied to VanPM (5.4); `tracker-<slug>__tracker_get_task` is for reads.
 - `developer/skills/agy-coding/` — how to launch the coding-agent backend (9.6) in the worktree
   `create` printed, in background, with a notification route; what "proof of delegation" means; when
   hand-coding is right; the explicit list of things never delegated (git, gh, builds, tests, gcloud).
 - `code-reviewer/skills/code-review/` — review checklist and report format (the posting rules in 7.5 win).
-- `qa-engineer/skills/qa-verification/` — *not written yet* (the linter allows it); VanQA works from its AGENTS.md.
+- `qa-engineer/skills/qa-verification/` — how to test against acceptance criteria and what a QA report must contain (written 2026-09-20).
 - `~/.openclaw/skills/worktree-lifecycle/` — shared by all four; its own git repo; copy from the old box as-is.
   Nothing else goes in `~/.openclaw/skills/` (every skill there loads for every agent; the linter flags extras).
 
@@ -796,7 +830,8 @@ tickets land in the wrong list and secrets resolve under the wrong name. No step
 ### 9.1 Collect from Van (one checklist)
 - Slug, display name.
 - Git SSH clone URL + SSH alias (deploy key per project), **GitHub repo as `owner/repo`**, default branch.
-- ClickUp List ID (digits from the list URL `…/v/l/li/<LIST_ID>` or List settings → Copy ID). **Never discovered by API.**
+- Tracker (`clickup`/`jira`/`linear`/`none`) and its Board ID - a ClickUp list id (digits), a Jira
+  project key plus the site URL, or a Linear team key/id. **Never discovered by API.**
 - Figma file link (or "none").
 - GCP project id(s) + region per environment (or "none").
 - **Explicit install, test, lint, E2E, and deploy commands/pipeline** (or "none yet"). Never "infer from the repo".
@@ -806,7 +841,7 @@ tickets land in the wrong list and secrets resolve under the wrong name. No step
 
 ### 9.2 Secrets (Van runs, real SSH terminal; agents never see values)
 ```bash
-openclaw secrets store set CLICKUP_API_TOKEN_<SLUGUPPER> --kind env --value-file -
+openclaw secrets store set <CLICKUP|JIRA|LINEAR>_API_TOKEN_<SLUGUPPER> --kind env --value-file -   # Jira: email:api_token
 openclaw secrets store set FIGMA_API_KEY_<SLUGUPPER> --kind env --value-file -
 openclaw secrets store set GITHUB_TOKEN_<SLUGUPPER> --kind env --value-file -
 openclaw secrets store set GCP_SA_KEY_<SLUGUPPER>_STAGING --kind env --value-file /path/to/sa.json   # then delete the file
@@ -846,7 +881,7 @@ Nothing is written to `~/.bashrc`, `~/.gitconfig`, `~/.config/gh`, or the repo; 
 | Launcher | Called by | Injects |
 |---|---|---|
 | `figma_mcp.py <slug>` | `mcp.servers["figma-<slug>"]` | `FIGMA_API_KEY`, `IMAGE_DIR`=Internal Artifacts, cwd=Internal Artifacts (the server loads `<cwd>/.env` with override, so it must never start inside the repo), `--no-telemetry` |
-| `clickup_mcp.py <slug>` | `mcp.servers["tracker-<slug>"]` | ClickUp token from the `Tracker:` SecretRef (fixed 2026-09-18: it used to read a hardcoded env var and silently failed on every call) |
+| `tracker_mcp.py <slug>` | `mcp.servers["tracker-<slug>"]` | the tracker token from the `Tracker:` SecretRef; the provider comes from the `**Tracker:**` line and the work is done by `_tools/trackers/`. Tool names are neutral (`tracker_get_task` …) so no deny list or prompt is per project |
 | `gcloud_env.py <slug> -- <cmd>` | VanDev/VanQA in exec | `GOOGLE_APPLICATION_CREDENTIALS`, `CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE`, `CLOUDSDK_CORE_PROJECT`, `CLOUDSDK_COMPUTE_REGION`, `CLOUDSDK_ACTIVE_CONFIG_NAME=<slug>`; strips inherited `GOOGLE_*`/`CLOUDSDK_*`; restores the key file 0600 from the vault |
 | `git_env.py <slug> -- <cmd>` / `--check` / `--review-status <pr>` | VanDev, VanReviewer (`--review-status`), main read-only | `GH_TOKEN`/`GITHUB_TOKEN`, `GH_REPO=<owner/repo>` (gh cannot infer the repo from an SSH-alias remote), `GH_PROMPT_DISABLED=1`, `GIT_TERMINAL_PROMPT=0`, one-shot `credential.helper` scoped to `https://github.com` for HTTPS remotes |
 | `delivery_watch.py <slug> [--json\|--ack <id>…\|--dry --since <iso>]` | the heartbeat (main) | nothing; read-only join of GitHub (via `git_env.py`), Cloud Build (via `gcloud_env.py`, builds on the Flow PR base (default: Default branch), every `Deploy triggers` name must succeed, `COMMIT_SHA` per build, ancestry via `git merge-base --is-ancestor`) and ClickUp (list tasks + comments; token from env or vault). State in `<Internal Artifacts>/delivery_state.json` (`watch_since` set on first run: older merges are history). Ignores `*[bot]`, the `GitHub bots:` context line, and comments starting with 🤖. Refuses unknown `--ack` ids |
@@ -857,8 +892,10 @@ refuses `gh pr create` unless `--base` is the Flow PR base and the branch exists
 `gh api …/statuses/…` writes. `--review-status <pr>` is the only status writer: `openclaw/review` = success/failure on
 the PR head, only when a `reviews/*.md` file has that head as `Reviewed SHA:` (newest file wins).
 
-`validate_context.py` fields (all parsed by label): required `slug`, `repo_url`, `list_id`, `tracker_secret`,
-`statuses`, `create_status`, `code_cwd`, `artifacts_dir`; conditional `figma_file`→`figma_mcp_server`+`design_secret`,
+`validate_context.py` fields (all parsed by label): required for every project `slug`, `repo_url`,
+`code_cwd`, `artifacts_dir`; required only when `**Tracker:**` is not `none`: `board_id`,
+`tracker_secret`, `statuses`, `create_status` (plus `tracker_mcp_server`, and `tracker_base_url` for
+Jira); conditional `figma_file`→`figma_mcp_server`+`design_secret`,
 `gcp_project_id`→`gcp_key_secret`+`gcp_key_json`+`gcp_region`, `github_repo`→`git_secret`; plus `default_branch`,
 `branch_prefixes`, `deploy_triggers`, and `flow` + `status` from `## Flow` (all optional: Profile defaults to `factory`; Stages is required only for `custom`; `teammate`/`maintenance` need an
 Assignee filter; the Status map must resolve `todo doing done cancelled`, plus `staged` when a Deploy signal is set,
@@ -873,12 +910,12 @@ openclaw mcp set figma-<slug> '{"command":"/usr/bin/python3","args":["/home/open
 openclaw mcp probe figma-<slug>        # must list figma-<slug>__get_figma_data and figma-<slug>__download_figma_images
 
 # Tracker
-openclaw mcp set tracker-<slug> '{"command":"/usr/bin/python3","args":["/home/openclaw/.openclaw/workspace/projects/_tools/clickup_mcp.py","<slug>"],"connectionTimeoutMs":30000,"requestTimeoutMs":120000}'
+openclaw mcp set tracker-<slug> '{"command":"/usr/bin/python3","args":["/home/openclaw/.openclaw/workspace/projects/_tools/tracker_mcp.py","<slug>"],"connectionTimeoutMs":30000,"requestTimeoutMs":120000}'
 openclaw mcp probe tracker-<slug>
 ```
 A failed probe almost always means: context file invalid, secret missing, or secret stored as kind `secret`.
-Check those before touching any prompt. When the tracker is Jira/Linear later, only the launcher and the
-`Tracker Tool` line change; VanPM's skill talks to `tracker-<slug>__*` tools regardless (Decision C).
+Check those before touching any prompt. Jira and Linear are supported: set `**Tracker:**` and the launcher does the rest; VanPM talks to
+`tracker-<slug>__*` tools regardless (Decision Q). Skip this step when the Tracker is `none`.
 
 ### 9.6 Coding-agent backend for VanDev (Decision B: agy on Gemini)
 - *(not used; Van chose agy)* **Claude Code via ACP** (`docs/tools/acp-agents/`): install the `@openclaw/acpx` runtime plugin; VanDev spawns
@@ -1320,6 +1357,42 @@ Cloud Build had been idle for six hours, and no ticket had ever moved to `qa` on
   before trusting a watcher's summary — `gcloud_env.py <slug> -- gcloud builds list --limit=20 --format=...`
   against `delivery_watch.py <slug> --dry`, and `--dry --since <older>` to replay a path that never fires.
 
+### 12.7b Development-only and the toolchain seam (2026-09-20)
+
+- **A capability you did not name is a capability you have.** `skills.entries` had 30 skills set
+  `false`, which read like a lockdown - but 21 bundled skills were never named at all, so `weather`,
+  `notion`, `meme-maker`, `taskflow`, `clawhub`, the Apple skills and `peekaboo` were all live
+  (28 ready for main). Denylists rot as the upstream package adds skills; `skills.allowBundled` is an
+  allowlist and cannot. It does not cover workshop skills under
+  `~/.openclaw/agents/*/agent/workshop-skills`, which had to be moved by hand.
+- **An active USER.md directive beats any AGENTS.md edit.** "Always act as Van's main agent, **not a
+  dev-only orchestrator**" was `status: active` while the guide's own mission statement said
+  "software development delivery … nothing else". Change the directive first, or the prompt edit is
+  decoration.
+- **A vendor name in a tool name becomes a config dependency.** `clickup_update_task` was load-bearing
+  in `project-manager.tools.deny` *and* in the linter's check of that list, so the tracker could not
+  change without editing an agent's tool policy. Neutral names (`tracker_update_task`) removed that
+  coupling. Re-pointing the MCP server and renaming the deny entries had to be **one** config patch:
+  either order alone leaves VanPM briefly holding live write tools.
+- **Validation failure is fatal to every consumer.** `delivery_watch`, `worktree`, `git_env`,
+  `gcloud_env`, `figma_mcp`, `spec_index` and the PM scripts all `die()` on an invalid context file.
+  So "the tracker field is wrong" also meant "no worktree and no PR". Anything a project may not have
+  must be *conditional*, never required - the pattern Figma and GCP already used and the tracker did not.
+- **A regex that backtracks can make a guard inert.** The "`## Stack` is unfilled" check used
+  `\*\*[A-Za-z/]+:\*\*\s*[^<\n]`: `\s*` matches empty and `[^<\n]` then matches the *space*, so
+  `- **Layout:** <placeholder>` passed. Every unfilled template has always passed a check written to
+  catch exactly that. Anchor on the first non-space character.
+- **A prompt-level limit needs a config-level floor.** `runTimeoutSeconds` was passed per spawn by the
+  orchestration skill. With `agents.defaults.subagents.runTimeoutSeconds` unset, a spawn that *omitted*
+  it fell back to `0` - no timeout at all. The rule was right; nothing caught the one time it was forgotten.
+- **Verify a refactor against the live system, not its own output** (12.5f again). Every tracker/CI
+  change here was checked with `validate_context.py --live`, `delivery_watch.py --dry` (byte-identical
+  notes before and after), a 7- and 30-day `--dry --since` replay, and a real `tracker_get_task` through
+  the MCP server - not by reading the new code.
+- **A third-party skill is prompt text you did not write.** `code-review` was an unedited ClawHub
+  import: it carried `npx clawhub@latest install` *inside* the skill and prescribed a review format
+  that contradicted the one VanReviewer's AGENTS.md requires. Two formats, no precedence marker.
+
 ### 12.6 Operations cheat sheet
 ```bash
 # health
@@ -1365,16 +1438,18 @@ openclaw memory reset --agent <id> --yes   # then one headless turn that calls m
 
 ## 13. Decisions (closed 2026-09-19 by Van)
 
-A Gemini 3.1 Pro stays primary (no Claude switch) · B agy on Gemini · C keep `clickup_mcp.py` · D Discord + Telegram, both
+A Gemini 3.1 Pro stays primary (no Claude switch) · B agy on Gemini · C tracker MCP + VanPM scripts (superseded by Q) · D Discord + Telegram, both
 bound to main · E active-memory off · F deploy key + repo PAT · G dreaming off · H skill-creator removed · I framework
 backup remote (open) · J retention 30 d / 30 d / last 5 / weekly · K review check at merge time (`openclaw/review` +
-ruleset). Details and state: `~/OPENCLAW_ARCHITECTURE.md` §8.
+ruleset) · **P development-only** · **Q tracker = clickup|jira|linear|none** · **R CI = cloud-build|github-actions|none** ·
+**S evolve the toolchain seam, keep the pipeline**. Details and state: `~/OPENCLAW_ARCHITECTURE.md` §8.
 
 ---
 
 ## Appendix: what to copy from the old box before it is retired
 ```
-~/.openclaw/workspace/projects/_tools/{validate_context.py,figma_mcp.py,clickup_mcp.py,gcloud_env.py,git_env.py,worktree.py,delivery_watch.py,spec_index.py}   # current 2026-09-19; copy as-is
+~/.openclaw/workspace/projects/_tools/{validate_context.py,figma_mcp.py,tracker_mcp.py,gcloud_env.py,git_env.py,worktree.py,delivery_watch.py,spec_index.py}   # current 2026-09-20; copy as-is
+~/.openclaw/workspace/projects/_tools/trackers/  ~/.openclaw/workspace/projects/_tools/ci/         # the provider adapters
 ~/.openclaw/workspace/projects/_template/PROJECT_CONTEXT.md        # current (Section 10 is a copy of it)
 ~/.openclaw/skills/worktree-lifecycle/                             # shared skill incl. .git; goes to the same path
 ~/.openclaw/workspace/_tools/{validate_team.py,lint_workspace.py,framework_offbox.py} + docs/  # or clone all six repos from the off-box copy
