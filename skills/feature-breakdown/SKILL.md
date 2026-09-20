@@ -100,7 +100,7 @@ against these.
 | `[BE]` | Screen reads, submits, or mutates data | One subtask per endpoint or CRUD operation |
 | `[DB]` | New table, column, relation, or index | One per migration. If the Stack says `Database: none yet`, the first `[DB]` ticket must also choose and set up the ORM and say so |
 | `[INT]` | Third-party or cross-cutting: auth, storage, email, payments, Figma | One per integration |
-| `[QA]` | Always, exactly one per feature | Never; it is the E2E scenario for the parent's AC. If the Stack lists no E2E runner, the project's **first** feature also gets `[INT] Set up Playwright E2E runner` and `[QA]` depends on it |
+| `[QA]` | Always, exactly one per feature | Never; it is the E2E scenario for the parent's AC. If the Stack lists no E2E runner, the project's **first** feature also gets `[INT] Set up an E2E runner` (which one is VanDev's call from the Stack) and `[QA]` depends on it |
 | `[SPIKE]` | An unknown blocks estimation | Time-box ≤ 4h, output is a written answer, not code |
 
 Title format for subtasks: `[FE] <Feature short name>: <what>` e.g.
@@ -269,9 +269,11 @@ not created by you; report it instead of editing it by hand.
 
 ## Onboarding hand-off (when the orchestrator asks you to fill the Stack)
 
-1. Inspect the repo at the `cwd` you were spawned in: `package.json`, `nx.json`,
-   `*/project.json`, lockfiles, top-level dirs. Write what is there. "none yet"
-   and "unknown" are valid answers; an invented framework is not.
+1. Inspect the repo at the `cwd` you were spawned in. Look for whichever manifest it has:
+   `package.json`/`nx.json`/lockfiles (JS), `pyproject.toml`/`requirements.txt` (Python),
+   `go.mod`, `Cargo.toml`, `pom.xml`/`build.gradle`, `Gemfile`, `composer.json`,
+   plus the top-level directories and any per-package manifests. Write what is
+   there. "none yet" and "unknown" are valid answers; an invented framework is not.
 2. Fill `## Stack` in the project's `PROJECT_CONTEXT.md`.
 3. Run `validate_context.py <file> --live`. Copy the LIVE list name into
    "ClickUp List name" and align "Statuses" with the LIVE statuses. Re-run until

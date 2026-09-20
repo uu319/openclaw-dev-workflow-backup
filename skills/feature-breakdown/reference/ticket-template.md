@@ -24,9 +24,10 @@ As a <role>, I want <goal>, so that <benefit>.
 - <at least three, all in Given/when/then form; [FE]: one per button, input, link and state in the screen inventory, quoting exact Figma labels>
 
 ## Technical notes
-- Endpoint / schema: <METHOD /api/... → request/response shape | table.column types>
+- Interface / schema: <the contract this lane adds or changes: HTTP endpoint, CLI command, queue
+  message, exported function | table.column types>
 - Mock or fixture for parallel work: <shape the FE can code against before the BE exists>
-- Breakpoints (FE only): <mobile <640px: …, tablet 640–1024px: …, desktop >1024px: …>
+- Breakpoints (UI lanes only): <mobile <640px: …, tablet 640–1024px: …, desktop >1024px: …>
 
 ## Depends on / blocks
 - Depends on: <ticket titles or none>
@@ -37,10 +38,11 @@ As a <role>, I want <goal>, so that <benefit>.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Unit tests for this lane added and green (`npx nx test <project>`)
-- [ ] Lint and typecheck clean (`npx nx lint <project>`, `npx tsc -p <project>/tsconfig.json --noEmit`)
-- [ ] PR opened from `feature/<slug>` and reviewed
-- [ ] Status moved to `qa` (VanPM sets it after review approves)
+- [ ] Unit tests for this lane added and green (the project's **Tests** command)
+- [ ] Lint clean (the project's **Lint** command)
+- [ ] PR opened from the branch this project's Flow **Branch model** gives, and reviewed
+- [ ] Status moved to the board's `staged` status once the change is on staging (the delivery
+      watcher tells VanPM; nobody sets it by hand)
 ```
 
 ## Acceptance-criteria examples
