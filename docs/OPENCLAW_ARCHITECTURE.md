@@ -66,7 +66,8 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 |---|---|---|---|---|
 | Project facts | `projects/<slug>/PROJECT_CONTEXT.md` + `projects/_tools/validate_context.py` | main (onboarding), VanPM (`## Stack`) | — | duplicated into USER.md, skills, scripts |
 | Figma access | `projects/_tools/figma_mcp.py` → MCP `figma-<slug>` | VanPM, VanDev | context + vault | REST calls, shared key |
-| Tracker read | `projects/_tools/clickup_mcp.py` → MCP `tracker-<slug>` (get only for VanPM) | VanPM | context + vault | discovery of lists by API |
+| Tracker adapters | `projects/_tools/trackers/` (`for_project(fields, token)` → clickup · jira · linear · none) | shared by every tracker caller | context + vault | a provider name outside this package; a second client for the same tracker |
+| Tracker read | `projects/_tools/clickup_mcp.py` → MCP `tracker-<slug>` (get only for VanPM) | VanPM | context + vault | discovery of boards by API |
 | Tracker write | `feature-breakdown/scripts/clickup_push.py`, `clickup_status.py` | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
 | Human-made tickets | `feature-breakdown/scripts/clickup_scan.py` | VanPM | tracker | creating a duplicate; adopt with `existing_id` |
 | Spec planning index | `projects/_tools/spec_index.py` → `specs/_index.md`, `specs/_planned-data.md` | VanPM | specs | hand edits of `_index.md` |

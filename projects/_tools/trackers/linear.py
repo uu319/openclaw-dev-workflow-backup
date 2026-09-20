@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Linear. Board = a team id (UUID) or team key (ENG). One GraphQL endpoint.
+
+Linear calls a status a workflow state, and states belong to the team, so a move
+resolves the state name against that team's states.
+"""
+import json
+import re
+
+from . import Tracker, http_json
+
+API = "https://api.linear.app/graphql"
+CLOSED_TYPES = {"completed", "canceled"}
+
+
+class Linear(Tracker):
+    kind = "linear"
+
+    def __init__(self, fields, token=None):
+        super().__init__(fields, token)
+        self._team = None
+
+    def _h(self):
+        return {"Authorization": self.token, "Content-Type": "application/json"}
+
+    def _q(self, query, **variables):
+        res = http_json(API, self._h(),
+                        data=json.dumps({"query": query, "variables": variables}).encode())
+        if res.get("errors"):
+            raise RuntimeError(f"Linear API: {res['errors'][0].get('message')}")
+        return res.get("data") or {}
+
+    def team(self):
+        """Resolve the board id (UUID or key) to {id, key, name, states}."""
+        if self._team is not None:
+            return self._team
+        bid = self.board_id or ""
+        if re.fullmatch(r"[0-9a-fA-F-]{20,}", bid):
+            d = self._q("query($id:String!){team(id:$id){id key name "
+                        "states{nodes{id name type}}}}", id=bid)
+            t = d.get("team")
+        else:
+            d = self._q("query($k:String!){teams(filter:{key:{eq:$k}},first:1){nodes{id key name "
+                        "states{nodes{id name type}}}}}", k=bid)
+            nodes = ((d.get("teams") or {}).get("nodes") or [])
+            t = nodes[0] if nodes else None
+        if not t:
+            raise RuntimeError(f"no Linear team matches '{bid}'")
+        self._team = t
+        return t
+
+    def _task(self, i):
+        st = i.get("state") or {}
+        return {
+            "id": i.get("identifier"),
+            "title": i.get("title"),
+            "status": st.get("name") or "",
+            "url": i.get("url"),
+            "assignees": [x for x in [(i.get("assignee") or {}).get("email")
+                                      or (i.get("assignee") or {}).get("name")] if x],
+            "parent": (i.get("parent") or {}).get("identifier"),
+            "closed": (st.get("type") or "") in CLOSED_TYPES,
+            "updated": i.get("updatedAt"),
+            "description": i.get("description") or "",
+            "_uuid": i.get("id"),
+        }
+
+    def board_info(self):
+        t = self.team()
+        return t["name"], [s["name"] for s in (t.get("states") or {}).get("nodes", [])], "Linear"
+
+    def tasks(self):
+        t, out, after, page = self.team(), {}, None, (
+            "query($id:ID!,$after:String){team(id:$id){issues(first:100,after:$after,"
+            "includeArchived:true){pageInfo{hasNextPage endCursor}"
+            "nodes{id identifier title url updatedAt description "
+            "state{name type} assignee{name email} parent{identifier}}}}}")
+        while True:
+            d = self._q(page, id=t["id"], after=after)
+            iss = ((d.get("team") or {}).get("issues") or {})
+            for i in iss.get("nodes", []):
+                out[i["identifier"]] = self._task(i)
+            info = iss.get("pageInfo") or {}
+            if not info.get("hasNextPage"):
+                return out
+            after = info.get("endCursor")
+
+    def comments(self, tid, limit=3):
+        d = self._q("query($id:String!){issue(id:$id){comments(first:%d){nodes{body user{name}}}}}" % limit,
+                    id=tid)
+        nodes = (((d.get("issue") or {}).get("comments") or {}).get("nodes") or [])
+        return [{"by": (c.get("user") or {}).get("name"), "text": (c.get("body") or "")[:800]}
+                for c in nodes[:limit]]
+
+    def task_url(self, tid):
+        return f"https://linear.app/issue/{tid}"
+
+    def links_in_text(self, text):
+        text = text or ""
+        key = (self.team().get("key") if self.board_id else None) or r"[A-Z][A-Z0-9]*"
+        ids = re.findall(r"linear\.app/[^/\s]+/issue/([A-Z][A-Z0-9]*-\d+)", text)
+        ids += re.findall(rf"\b({re.escape(key)}-\d+)\b", text)
+        seen, out = set(), []
+        for i in ids:
+            if i not in seen:
+                seen.add(i); out.append(i)
+        return out
+
+    def _state_id(self, name):
+        for s in (self.team().get("states") or {}).get("nodes", []):
+            if s["name"].lower() == (name or "").lower():
+                return s["id"]
+        avail = [s["name"] for s in (self.team().get("states") or {}).get("nodes", [])]
+        raise RuntimeError(f"no Linear state named '{name}'; this team has: {avail}")
+
+    def set_status(self, tid, status):
+        uuid = self._q("query($id:String!){issue(id:$id){id}}", id=tid).get("issue", {}).get("id")
+        if not uuid:
+            raise RuntimeError(f"Linear issue '{tid}' not found")
+        self._q("mutation($id:String!,$s:String!){issueUpdate(id:$id,input:{stateId:$s}){success}}",
+                id=uuid, s=self._state_id(status))
+
+    def create_task(self, title, description="", status=None, parent=None, **kw):
+        t = self.team()
+        inp = {"teamId": t["id"], "title": title, "description": description or ""}
+        if status:
+            inp["stateId"] = self._state_id(status)
+        if parent:
+            puuid = self._q("query($id:String!){issue(id:$id){id}}", id=parent).get("issue", {}).get("id")
+            if puuid:
+                inp["parentId"] = puuid
+        d = self._q("mutation($i:IssueCreateInput!){issueCreate(input:$i){issue{id identifier title url "
+                    "updatedAt description state{name type} assignee{name email} parent{identifier}}}}", i=inp)
+        return self._task(((d.get("issueCreate") or {}).get("issue")) or {})

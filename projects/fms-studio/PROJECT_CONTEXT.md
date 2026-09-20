@@ -36,7 +36,7 @@
 ## Tracker & Design
 - **Tracker:** `clickup`
 - **Tracker Board ID:** `1100770000001008`
-- **Tracker Board name:** <unconfirmed; fill from `validate_context.py --live`>
+- **Tracker Board name:** List
 - **Tracker MCP server:** `tracker-fms-studio` (tool `tracker-fms-studio__tracker_get_task`; writes go
   through VanPM's feature-breakdown scripts, never the MCP write tools)
 - **Figma file:** https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding

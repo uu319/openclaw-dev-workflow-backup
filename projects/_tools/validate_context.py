@@ -35,6 +35,8 @@ import sys
 import urllib.error
 import urllib.request
 
+import trackers
+
 # Required for every project, whatever its toolchain. Everything a project may
 # not have (tracker, design, cloud, git host) is conditional and checked in parse().
 REQUIRED = {
@@ -363,86 +365,29 @@ def parse(path):
     return fields, errors
 
 
-def _http_json(url, headers, data=None, timeout=30):
-    req = urllib.request.Request(url, headers=headers, data=data,
-                                 method="POST" if data else "GET")
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode())
-
-
-def _live_clickup(fields, token):
-    """-> (board name, [status names]). ClickUp takes the raw token, not Bearer."""
-    lst = _http_json(f"https://api.clickup.com/api/v2/list/{fields['board_id']}",
-                     {"Authorization": token})
-    where = f"folder '{(lst.get('folder') or {}).get('name')}' / space '{(lst.get('space') or {}).get('name')}'"
-    return lst.get("name"), [st["status"] for st in lst.get("statuses", [])], where
-
-
-def _live_jira(fields, token):
-    """-> (project name, [status names]). The vault value is `email:api_token`."""
-    import base64
-    if ":" not in token:
-        raise ValueError("the Jira vault entry must hold `email:api_token` (Basic auth needs both)")
-    base = fields["tracker_base_url"].rstrip("/")
-    auth = base64.b64encode(token.encode()).decode()
-    head = {"Authorization": f"Basic {auth}", "Accept": "application/json"}
-    key = fields["board_id"]
-    proj = _http_json(f"{base}/rest/api/3/project/{key}", head)
-    types = _http_json(f"{base}/rest/api/3/project/{key}/statuses", head)
-    names = []
-    for it in types:
-        for st in it.get("statuses", []):
-            if st["name"] not in names:
-                names.append(st["name"])
-    return proj.get("name"), names, f"Jira site {base}"
-
-
-def _live_linear(fields, token):
-    """-> (team name, [workflow state names]). Linear is one GraphQL endpoint."""
-    bid = fields["board_id"]
-    if re.fullmatch(r"[0-9a-fA-F-]{20,}", bid):     # a team UUID
-        q = "query($id:String!){team(id:$id){name states{nodes{name}}}}"
-    else:                                            # a team key such as ENG
-        q = "query($id:String!){teams(filter:{key:{eq:$id}},first:1){nodes{name states{nodes{name}}}}}"
-    body = json.dumps({"query": q, "variables": {"id": bid}}).encode()
-    res = _http_json("https://api.linear.app/graphql",
-                     {"Authorization": token, "Content-Type": "application/json"}, data=body)
-    if res.get("errors"):
-        raise ValueError(f"Linear API: {res['errors'][0].get('message')}")
-    team = (res.get("data") or {}).get("team")
-    if team is None:
-        nodes = (((res.get("data") or {}).get("teams") or {}).get("nodes") or [])
-        if not nodes:
-            raise ValueError(f"no Linear team matches '{bid}'")
-        team = nodes[0]
-    return team.get("name"), [n["name"] for n in (team.get("states") or {}).get("nodes", [])], "Linear"
-
-
-LIVE = {"clickup": _live_clickup, "jira": _live_jira, "linear": _live_linear}
-
-
 def live_check(fields):
     """Ask the real tracker for the board's name and statuses, and compare.
 
-    Same contract for every provider: the secret named by the Tracker SecretRef
-    must be in the environment, and every status in the file must exist on the
-    board. A project with no tracker has nothing to check.
+    Same contract for every provider (see `trackers/`): the secret named by the
+    Tracker SecretRef must be in the environment, and every status in the file
+    must exist on the board. A project with no tracker has nothing to check.
     """
-    tracker = fields.get("tracker", "none")
-    if tracker == "none":
+    if fields.get("tracker", "none") == "none":
         print("LIVE skipped: this project has no tracker")
         return []
     token = os.environ.get(fields["tracker_secret"])
     if not token:
-        return [f"live check: env var {fields['tracker_secret']} is not set (run inside the agent with the secret injected)"]
+        return [f"live check: env var {fields['tracker_secret']} is not set "
+                f"(run inside the agent with the secret injected)"]
+    tk = trackers.for_project(fields, token)
     try:
-        name, names, where = LIVE[tracker](fields, token)
+        name, names, where = tk.board_info()
     except urllib.error.HTTPError as e:
-        # never echo the token; the body can contain the request we sent
-        return [f"live check: {tracker} board {fields['board_id']} -> HTTP {e.code} {e.reason}"]
-    except (urllib.error.URLError, ValueError, KeyError) as e:
-        return [f"live check: {tracker} board {fields['board_id']} -> {type(e).__name__}: {e}"]
-    print(f"LIVE {tracker} board {fields['board_id']} = '{name}' ({where})")
+        # never echo the body: it can contain the request we sent, token included
+        return [f"live check: {tk.kind} board {fields['board_id']} -> HTTP {e.code} {e.reason}"]
+    except (urllib.error.URLError, RuntimeError, ValueError, KeyError) as e:
+        return [f"live check: {tk.kind} board {fields['board_id']} -> {type(e).__name__}: {e}"]
+    print(f"LIVE {tk.kind} board {fields['board_id']} = '{name}' ({where})")
     print(f"LIVE statuses: {names}")
     errs = []
     low = [n.lower() for n in names]
@@ -450,7 +395,8 @@ def live_check(fields):
     if missing:
         errs.append(f"live check: statuses in file not on the board: {missing}")
     if fields.get("board_name") and fields["board_name"].strip() != (name or "").strip():
-        errs.append(f"live check: file says board name '{fields['board_name']}', {tracker} says '{name}'")
+        errs.append(f"live check: file says board name '{fields['board_name']}', "
+                    f"{tk.kind} says '{name}'")
     return errs
 
 
