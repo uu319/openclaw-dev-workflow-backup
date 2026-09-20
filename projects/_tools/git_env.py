@@ -3,9 +3,9 @@
 
 Usage:
   git_env.py <slug> -- <command> [args...]
-      e.g. git_env.py fms-studio -- gh pr create --base Development --head fix/x --title "..." --body "..."
-           git_env.py fms-studio -- gh pr view 42
-           git_env.py fms-studio -- git push origin HEAD
+      e.g. git_env.py <slug> -- gh pr create --base <pr-base> --head fix/x --title "..." --body "..."
+           git_env.py <slug> -- gh pr view 42
+           git_env.py <slug> -- git push origin HEAD
   git_env.py <slug> --check            # verify the token works for this project's repo
   git_env.py <slug> --review-status <pr> [--dry]
                                        # VanReviewer, after saving its review file: sets the commit status

@@ -42,8 +42,8 @@ Every project declares its own flow in CTX `## Flow` (`validate_context.py CTX -
 | 6 Delivery watch | `delivery-watch` | Watcher reports only sweep/lint; tell Van yourself when a PR merges |
 
 Statuses in this skill are **canonical keys** (`todo doing staged rejected done cancelled hold`); the board's
-real names come from `status` (fms-studio: `doing`=`in progress`, `staged`=`qa`, `done`=`complete`). Pass the key
-to `clickup_status.py --status <key>`; never type a board's name from memory.
+real names come from `status` (example: a board may map `doing`=`In Dev`, `staged`=`Staging`, `done`=`Done`).
+Pass the key to `tracker_status.py --status <key>`; never type a board's name from memory.
 
 Branches follow `flow.branch_model`: `feature-branch` = `<prefix>/<feature-slug>` (the default below);
 `ticket-branch` = `<prefix>/<ticket id>-<short-slug>`, one branch and one PR per ticket. PRs always
