@@ -5,9 +5,16 @@ Usage:
   validate_context.py <PROJECT_CONTEXT.md> [--json] [--live]
 
 --json   print the parsed fields as JSON (used by other tools)
---live   also call ClickUp GET /list/{id} with the Tracker secret from the
-         environment, print the list name and statuses, and fail if the
-         statuses in the file are not all present on the list.
+--live   ask the project's real tracker for the board's name and statuses using
+         the Tracker secret from the environment, and fail if a status in the
+         file is not on the board. Skipped when the project has no tracker.
+
+Trackers: `clickup`, `jira`, `linear`, or `none`. Declared as **Tracker:**; a
+file that still uses the old ClickUp-specific labels is read as `clickup`.
+The board is **Tracker Board ID:** (ClickUp list id / Jira project key / Linear
+team id or key). `jira` also needs **Tracker Base URL:** and stores its vault
+value as `email:api_token`. A project with `none` needs no board, no tracker
+secret and no statuses - it just cannot run the `tickets` stage.
 
 The optional `## Flow` section says how THIS project works (see OPENCLAW_ARCHITECTURE.md §4).
 It is parsed into fields["flow"] and fields["status"]:
@@ -28,19 +35,25 @@ import sys
 import urllib.error
 import urllib.request
 
+# Required for every project, whatever its toolchain. Everything a project may
+# not have (tracker, design, cloud, git host) is conditional and checked in parse().
 REQUIRED = {
     "slug": r"\*\*Slug:\*\*\s*`([^`]+)`",
     "repo_url": r"\*\*Git SSH Clone URL:\*\*\s*`([^`<>]+)`",
-    "list_id": r"\*\*ClickUp List ID:\*\*\s*`?([^`\n]+?)`?\s*$",
-    "tracker_secret": r"Tracker:\s*`([^`]+)`",
-    "statuses": r"\*\*Statuses:\*\*\s*(.+)",
-    "create_status": r"\*\*Create status:\*\*\s*`?([^`\n]+?)`?\s*$",
     "code_cwd": r"\*\*Code \(CWD\):\*\*\s*`([^`<>]+)`",
     "artifacts_dir": r"\*\*Internal Artifacts:\*\*\s*`([^`<>]+)`",
 }
 OPTIONAL = {
+    # --- tracker (required together when Tracker is not `none`) ---
+    "tracker": r"\*\*Tracker:\*\*\s*`?([A-Za-z-]+)`?\s*$",
+    "board_id": r"\*\*Tracker Board ID:\*\*\s*`?([^`\n]+?)`?\s*$",
+    "board_name": r"\*\*Tracker Board name:\*\*\s*(.+)",
+    "tracker_mcp_server": r"\*\*Tracker MCP server:\*\*\s*`([^`]+)`",
+    "tracker_base_url": r"\*\*Tracker Base URL:\*\*\s*`?([^`\n]+?)`?\s*$",   # jira only
+    "tracker_secret": r"Tracker:\s*`([^`]+)`",
+    "statuses": r"\*\*Statuses:\*\*\s*(.+)",
+    "create_status": r"\*\*Create status:\*\*\s*`?([^`\n]+?)`?\s*$",
     "design_secret": r"Design:\s*`([^`]+)`",   # required only when a Figma file is set (checked below)
-    "list_name": r"\*\*ClickUp List name:\*\*\s*(.+)",
     "figma_file": r"\*\*Figma file:\*\*\s*(\S+)",
     "figma_mcp_server": r"\*\*Figma MCP server:\*\*\s*`([^`]+)`",
     "database": r"\*\*Database:\*\*\s*(.+)",
@@ -55,6 +68,25 @@ OPTIONAL = {
     "git_secret": r"GitHub Token:\s*`([^`]+)`",
     "deploy_triggers": r"\*\*Deploy triggers:\*\*\s*(.+)",
 }
+# Pre-2026-09-20 files spelled the tracker fields with ClickUp's names. They are
+# still read so an un-migrated project keeps working; the new labels win when both
+# are present. `Tracker Tool:` was in the old template but nothing ever parsed it.
+LEGACY = {
+    "board_id": r"\*\*ClickUp List ID:\*\*\s*`?([^`\n]+?)`?\s*$",
+    "board_name": r"\*\*ClickUp List name:\*\*\s*(.+)",
+    "tracker": r"\*\*Tracker Tool:\*\*\s*`?([A-Za-z-]+)`?\s*$",
+}
+
+# One row per tracker we can talk to. `none` is a real answer: a repo with PRs and
+# no ticket system is a project like any other.
+TRACKERS = {
+    "clickup": dict(board_rx=r"\d{6,}",              board_kind="list id"),
+    "jira":    dict(board_rx=r"[A-Z][A-Z0-9_]{1,19}", board_kind="project key"),
+    "linear":  dict(board_rx=r"[0-9a-fA-F][0-9a-fA-F-]{7,}|[A-Z][A-Z0-9]{1,9}",
+                                                      board_kind="team id or key"),
+}
+TRACKER_CHOICES = sorted(TRACKERS) + ["none"]
+
 PLACEHOLDER = re.compile(r"<[^>]*>")
 
 # ---------------------------------------------------------------- Flow profile
@@ -86,7 +118,7 @@ FLOW_LABELS = {
     "status_map": "Status map", "chat_channel": "Chat channel", "pr_conventions": "PR conventions",
 }
 CHOICES = {"ticket_source": {"agent", "human", "both"}, "branch_model": {"feature-branch", "ticket-branch"},
-           "merge_by": {"van", "humans"}, "deploy_signal": {"cloud-build", "none"}}
+           "merge_by": {"van", "humans"}, "deploy_signal": {"cloud-build", "github-actions", "none"}}
 
 
 def _ticks(v):
@@ -96,6 +128,7 @@ def _ticks(v):
 
 def parse_flow(text, fields, errors):
     """Fill fields['flow'] and fields['status'] from the `## Flow` section (or defaults)."""
+    has_tracker = fields.get("tracker", "none") != "none"
     sec = re.search(r"^## Flow\n(.*?)(?=^## |\Z)", text, re.S | re.M)
     raw = {}
     if sec:
@@ -129,8 +162,7 @@ def parse_flow(text, fields, errors):
     flow["stages"] = [x for x in STAGES if x in flow["stages"]]   # canonical order
     for k, allowed in CHOICES.items():
         if flow.get(k) not in allowed:
-            extra = " (github-actions is not supported by delivery_watch.py yet)" if flow.get(k) == "github-actions" else ""
-            errors.append(f"Flow {FLOW_LABELS[k]} must be one of {sorted(allowed)}: {flow.get(k)}{extra}")
+            errors.append(f"Flow {FLOW_LABELS[k]} must be one of {sorted(allowed)}: {flow.get(k)}")
     if profile in ("teammate", "maintenance") and (not flow.get("assignee_filter") or flow["assignee_filter"] == "any"):
         errors.append(f"Flow Profile `{profile}` needs **Assignee filter:** (Van's tracker user id or email): "
                       "agents only pick up tickets assigned to Van")
@@ -138,8 +170,12 @@ def parse_flow(text, fields, errors):
         flow["assignee_filter"] = "any"
     if "tickets" in flow["stages"] and flow["ticket_source"] == "human":
         errors.append("Flow Stages include `tickets` but Ticket source is `human`: agents would create tickets humans own")
+    if "tickets" in flow["stages"] and not has_tracker:
+        errors.append("Flow Stages include `tickets` but **Tracker:** is `none`: there is nowhere to create them")
     if flow["deploy_signal"] == "cloud-build" and not fields.get("gcp_project_id"):
         errors.append("Flow Deploy signal `cloud-build` needs **GCP Project ID:** (the watcher reads Cloud Build)")
+    if flow["deploy_signal"] == "github-actions" and not fields.get("github_repo"):
+        errors.append("Flow Deploy signal `github-actions` needs **GitHub Repo:** (the watcher reads check runs)")
     if "delivery-watch" in flow["stages"] and not fields.get("github_repo"):
         errors.append("Flow Stages include `delivery-watch` but **GitHub Repo:** is not set")
     if flow.get("pr_base") and not re.fullmatch(r"[A-Za-z0-9._/-]+", flow["pr_base"]):
@@ -164,11 +200,12 @@ def parse_flow(text, fields, errors):
     for k in CANON:
         if k not in smap:
             smap[k] = next((low[a] for a in ALIASES[k] if a in low), None)
-    for k in REQUIRED_STATUS:
-        if not smap.get(k):
-            errors.append(f"Flow Status map has no `{k}` status (add `{k}=<status>` to **Status map:**)")
-    if flow["deploy_signal"] != "none" and not smap.get("staged"):
-        errors.append("Flow Deploy signal is set but the Status map has no `staged` status to move deployed tickets to")
+    if has_tracker:
+        for k in REQUIRED_STATUS:
+            if not smap.get(k):
+                errors.append(f"Flow Status map has no `{k}` status (add `{k}=<status>` to **Status map:**)")
+        if flow["deploy_signal"] != "none" and not smap.get("staged"):
+            errors.append("Flow Deploy signal is set but the Status map has no `staged` status to move deployed tickets to")
     fields["flow"], fields["status"] = flow, smap
 
 
@@ -177,18 +214,59 @@ def parse(path):
     fields, errors = {}, []
     for key, rx in {**REQUIRED, **OPTIONAL}.items():
         m = re.search(rx, text, re.M)
-        if not m:
-            if key in REQUIRED:
-                errors.append(f"missing required field: {key}")
-            continue
-        val = m.group(1).strip()
-        if PLACEHOLDER.search(val) and key in REQUIRED:
-            errors.append(f"{key} still has a placeholder: {val}")
-        fields[key] = val
+        if m:
+            fields[key] = m.group(1).strip()
+    for key, rx in LEGACY.items():          # old ClickUp labels fill what the new ones did not
+        if key not in fields:
+            m = re.search(rx, text, re.M)
+            if m:
+                fields[key] = m.group(1).strip()
+
+    # Which tracker, if any. Stated explicitly, else inferred from a pre-rename
+    # file, else `none` - a repo with PRs and no ticket system is a real project.
+    tracker = (fields.get("tracker") or "").lower().strip("` ")
+    if not tracker:
+        tracker = "clickup" if (fields.get("board_id") or fields.get("tracker_secret")) else "none"
+    if tracker not in TRACKER_CHOICES:
+        errors.append(f"Tracker must be one of {TRACKER_CHOICES}: {tracker}")
+        tracker = "none"
+    fields["tracker"] = tracker
+    has_tracker = tracker != "none"
+
+    # Required = the always-required fields plus whatever this toolchain implies.
+    required = dict(REQUIRED)
+    if has_tracker:
+        for k in ("board_id", "tracker_secret", "statuses", "create_status"):
+            required[k] = OPTIONAL[k]
+    for key in required:
+        if key not in fields:
+            why = "" if key in REQUIRED else f" (required because Tracker is `{tracker}`)"
+            errors.append(f"missing required field: {key}{why}")
+        elif PLACEHOLDER.search(fields[key]):
+            errors.append(f"{key} still has a placeholder: {fields[key]}")
+
+    # An optional field left as a bare `<placeholder>` means "not set". Required
+    # ones were already reported above, so dropping here is safe and keeps a
+    # half-filled template from being mistaken for a real value downstream.
+    for key in [k for k, v in fields.items() if k not in required and isinstance(v, str)
+                and re.fullmatch(r"<[^>]*>", v.strip())]:
+        del fields[key]
+
     if "slug" in fields and not re.fullmatch(r"[a-z0-9][a-z0-9-]*", fields["slug"]):
         errors.append(f"slug must be lowercase letters, digits, hyphens: {fields['slug']}")
-    if "list_id" in fields and not re.fullmatch(r"\d{6,}", fields["list_id"]):
-        errors.append(f"ClickUp List ID must be digits only: {fields['list_id']}")
+    if has_tracker and fields.get("board_id") and not PLACEHOLDER.search(fields["board_id"]):
+        spec = TRACKERS[tracker]
+        if not re.fullmatch(spec["board_rx"], fields["board_id"]):
+            errors.append(f"Tracker Board ID is not a {tracker} {spec['board_kind']}: {fields['board_id']}")
+    if tracker == "jira" and not fields.get("tracker_base_url"):
+        errors.append("Tracker is `jira`, so '**Tracker Base URL:** `https://<site>.atlassian.net`' is required")
+    if tracker not in ("jira", "none") and fields.get("tracker_base_url"):
+        fields.setdefault("warnings", []).append(
+            f"Tracker Base URL is set but `{tracker}` has a fixed endpoint; it is ignored")
+    if not has_tracker:
+        for k in ("board_id", "tracker_secret", "tracker_mcp_server"):
+            if fields.get(k):
+                errors.append(f"Tracker is `none` but {k} is set: delete the line or name the tracker")
     for k in ("tracker_secret", "design_secret"):
         if k in fields and not re.fullmatch(r"[A-Z0-9_]+", fields[k]):
             errors.append(f"{k} must be UPPER_SNAKE: {fields[k]}")
@@ -203,6 +281,17 @@ def parse(path):
             t for part in _ticks(raw) for t in (x.strip() for x in part.split(",")) if t]
     if "statuses" in fields:
         fields["statuses"] = [s.strip(" `") for s in fields["statuses"].split(",") if s.strip(" `")]
+    # The tracker MCP server is per project, exactly like the Figma one:
+    # mcp.servers["tracker-<slug>"] -> projects/_tools/tracker_mcp.py <slug>
+    if has_tracker and "slug" in fields and fields.get("tracker_mcp_server") != f"tracker-{fields['slug']}":
+        errors.append(f"Tracker is `{tracker}`, so '**Tracker MCP server:** `tracker-{fields['slug']}`' is required "
+                      f"(found: {fields.get('tracker_mcp_server', 'missing')})")
+    # Bridge for callers not yet converted to the vendor-neutral names. Both keys
+    # carry the same value; `board_id`/`board_name` are the ones to use.
+    if "board_id" in fields:
+        fields["list_id"] = fields["board_id"]
+    if "board_name" in fields:
+        fields["list_name"] = fields["board_name"]
     # Stack section must exist and not be entirely placeholders
     stack = re.search(r"## Stack\n(.*?)\n## ", text, re.S)
     if not stack:
@@ -274,26 +363,94 @@ def parse(path):
     return fields, errors
 
 
+def _http_json(url, headers, data=None, timeout=30):
+    req = urllib.request.Request(url, headers=headers, data=data,
+                                 method="POST" if data else "GET")
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode())
+
+
+def _live_clickup(fields, token):
+    """-> (board name, [status names]). ClickUp takes the raw token, not Bearer."""
+    lst = _http_json(f"https://api.clickup.com/api/v2/list/{fields['board_id']}",
+                     {"Authorization": token})
+    where = f"folder '{(lst.get('folder') or {}).get('name')}' / space '{(lst.get('space') or {}).get('name')}'"
+    return lst.get("name"), [st["status"] for st in lst.get("statuses", [])], where
+
+
+def _live_jira(fields, token):
+    """-> (project name, [status names]). The vault value is `email:api_token`."""
+    import base64
+    if ":" not in token:
+        raise ValueError("the Jira vault entry must hold `email:api_token` (Basic auth needs both)")
+    base = fields["tracker_base_url"].rstrip("/")
+    auth = base64.b64encode(token.encode()).decode()
+    head = {"Authorization": f"Basic {auth}", "Accept": "application/json"}
+    key = fields["board_id"]
+    proj = _http_json(f"{base}/rest/api/3/project/{key}", head)
+    types = _http_json(f"{base}/rest/api/3/project/{key}/statuses", head)
+    names = []
+    for it in types:
+        for st in it.get("statuses", []):
+            if st["name"] not in names:
+                names.append(st["name"])
+    return proj.get("name"), names, f"Jira site {base}"
+
+
+def _live_linear(fields, token):
+    """-> (team name, [workflow state names]). Linear is one GraphQL endpoint."""
+    bid = fields["board_id"]
+    if re.fullmatch(r"[0-9a-fA-F-]{20,}", bid):     # a team UUID
+        q = "query($id:String!){team(id:$id){name states{nodes{name}}}}"
+    else:                                            # a team key such as ENG
+        q = "query($id:String!){teams(filter:{key:{eq:$id}},first:1){nodes{name states{nodes{name}}}}}"
+    body = json.dumps({"query": q, "variables": {"id": bid}}).encode()
+    res = _http_json("https://api.linear.app/graphql",
+                     {"Authorization": token, "Content-Type": "application/json"}, data=body)
+    if res.get("errors"):
+        raise ValueError(f"Linear API: {res['errors'][0].get('message')}")
+    team = (res.get("data") or {}).get("team")
+    if team is None:
+        nodes = (((res.get("data") or {}).get("teams") or {}).get("nodes") or [])
+        if not nodes:
+            raise ValueError(f"no Linear team matches '{bid}'")
+        team = nodes[0]
+    return team.get("name"), [n["name"] for n in (team.get("states") or {}).get("nodes", [])], "Linear"
+
+
+LIVE = {"clickup": _live_clickup, "jira": _live_jira, "linear": _live_linear}
+
+
 def live_check(fields):
+    """Ask the real tracker for the board's name and statuses, and compare.
+
+    Same contract for every provider: the secret named by the Tracker SecretRef
+    must be in the environment, and every status in the file must exist on the
+    board. A project with no tracker has nothing to check.
+    """
+    tracker = fields.get("tracker", "none")
+    if tracker == "none":
+        print("LIVE skipped: this project has no tracker")
+        return []
     token = os.environ.get(fields["tracker_secret"])
     if not token:
         return [f"live check: env var {fields['tracker_secret']} is not set (run inside the agent with the secret injected)"]
-    req = urllib.request.Request(f"https://api.clickup.com/api/v2/list/{fields['list_id']}",
-                                 headers={"Authorization": token})
     try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            lst = json.loads(r.read().decode())
+        name, names, where = LIVE[tracker](fields, token)
     except urllib.error.HTTPError as e:
-        return [f"live check: GET /list/{fields['list_id']} -> {e.code}: {e.read().decode()[:300]}"]
-    names = [s["status"] for s in lst.get("statuses", [])]
-    print(f"LIVE list {fields['list_id']} = '{lst.get('name')}' in folder '{(lst.get('folder') or {}).get('name')}' / space '{(lst.get('space') or {}).get('name')}'")
+        # never echo the token; the body can contain the request we sent
+        return [f"live check: {tracker} board {fields['board_id']} -> HTTP {e.code} {e.reason}"]
+    except (urllib.error.URLError, ValueError, KeyError) as e:
+        return [f"live check: {tracker} board {fields['board_id']} -> {type(e).__name__}: {e}"]
+    print(f"LIVE {tracker} board {fields['board_id']} = '{name}' ({where})")
     print(f"LIVE statuses: {names}")
     errs = []
-    missing = [s for s in fields["statuses"] if s.lower() not in [n.lower() for n in names]]
+    low = [n.lower() for n in names]
+    missing = [st for st in fields.get("statuses", []) if st.lower() not in low]
     if missing:
-        errs.append(f"live check: statuses in file not on the list: {missing}")
-    if fields.get("list_name") and fields["list_name"].strip() != (lst.get("name") or "").strip():
-        errs.append(f"live check: file says list name '{fields['list_name']}', ClickUp says '{lst.get('name')}'")
+        errs.append(f"live check: statuses in file not on the board: {missing}")
+    if fields.get("board_name") and fields["board_name"].strip() != (name or "").strip():
+        errs.append(f"live check: file says board name '{fields['board_name']}', {tracker} says '{name}'")
     return errs
 
 

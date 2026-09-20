@@ -29,9 +29,13 @@
 - **Repo state:** <scaffold / active / legacy; commit count>
 
 ## Tracker & Design
-- **Tracker Tool:** ClickUp
-- **ClickUp List ID:** <digits only, copied from the list URL or list settings; never discovered by API>
-- **ClickUp List name:** <as shown in ClickUp, confirmed by validate_context.py --live>
+- **Tracker:** `clickup` (`clickup` | `jira` | `linear` | `none`; `none` = this project has no
+  ticket system, which turns off the `tickets` stage and every status move)
+- **Tracker Board ID:** <ClickUp list id (digits) / Jira project key (PROJ) / Linear team id or key;
+  copied from the board's URL or settings, never discovered by API>
+- **Tracker Board name:** <as shown in the tracker, confirmed by validate_context.py --live>
+- **Tracker MCP server:** `tracker-<slug>` (required unless Tracker is `none`; delete the line then)
+- **Tracker Base URL:** `https://<site>.atlassian.net` (Jira only; delete this line otherwise)
 - **Figma file:** <https://www.figma.com/design/... or none>
 - **Figma MCP server:** `figma-<slug>` (required when Figma file is set; delete this line when it is none)
 - **GCP Environment:** <prose: which environments exist, or "none">
@@ -39,7 +43,8 @@
   set, the two GCP SecretRefs below become required)
 - **GCP Region:** `<region>`
 - **SecretRefs:**
-  - Tracker: `CLICKUP_API_TOKEN_<SLUGUPPER>`
+  - Tracker: `<CLICKUP|JIRA|LINEAR>_API_TOKEN_<SLUGUPPER>` (delete this line when Tracker is `none`.
+    Jira stores `email:api_token`, because Basic auth needs both)
   - Design: `FIGMA_API_KEY_<SLUGUPPER>` (delete this line when Figma file is none)
   - GCP Key Vault: `GCP_SA_KEY_<SLUGUPPER>_<ENV>`
   - GCP Key JSON: `/home/openclaw/.openclaw/workspace/credentials/gcp/<slug>.json`

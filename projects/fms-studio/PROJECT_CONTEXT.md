@@ -34,9 +34,11 @@
   before assuming anything exists.
 
 ## Tracker & Design
-- **Tracker Tool:** ClickUp
-- **Tracker MCP Prefix:** clickup_
-- **ClickUp List ID:** `1100770000001008`
+- **Tracker:** `clickup`
+- **Tracker Board ID:** `1100770000001008`
+- **Tracker Board name:** <unconfirmed; fill from `validate_context.py --live`>
+- **Tracker MCP server:** `tracker-fms-studio` (tool `tracker-fms-studio__tracker_get_task`; writes go
+  through VanPM's feature-breakdown scripts, never the MCP write tools)
 - **Figma file:** https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding
 - **Figma MCP server:** `figma-fms-studio` (tools `figma-fms-studio__get_figma_data`, `figma-fms-studio__download_figma_images`; uses only this project's Design key)
 - **GCP Environment:** Staging only. No production environment exists yet.
