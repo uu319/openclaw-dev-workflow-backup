@@ -27,6 +27,8 @@ SHARED_TOOLS = ["tracker_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_e
                 "spec_index.py", "validate_context.py", "worktree.py"]
 # one module per tracker provider, reached only through trackers.for_project() (architecture §2)
 TRACKER_ADAPTERS = ["__init__.py", "clickup.py", "jira.py", "linear.py"]
+# one module per CI provider, behind ci.for_project() (architecture §2)
+CI_ADAPTERS = ["__init__.py", "cloud_build.py", "github_actions.py"]
 PM_SCRIPTS = ["clickup_push.py", "clickup_scan.py", "clickup_status.py"]
 
 # ---- MANIFEST: allowed paths, relative to the workspace. Globs; ** matches any depth. ----
@@ -41,6 +43,7 @@ ALLOWED = [
     "projects/_template/**",
     *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
     *[f"projects/_tools/trackers/{t}" for t in TRACKER_ADAPTERS],
+    *[f"projects/_tools/ci/{t}" for t in CI_ADAPTERS],
     "projects/*/PROJECT_CONTEXT.md",
     "projects/*/artifacts/specs/**", "projects/*/artifacts/patches/**", "projects/*/artifacts/reviews/**",
     "projects/*/artifacts/qa/**", "projects/*/artifacts/runs/**",
@@ -60,6 +63,7 @@ REQUIRED = ["AGENTS.md", "SOUL.md", "USER.md", "IDENTITY.md", "MEMORY.md",
             "projects/_template/PROJECT_CONTEXT.md", "projects/_template/specs/_planned-data.md",
             *[f"projects/_tools/{t}" for t in SHARED_TOOLS],
             *[f"projects/_tools/trackers/{t}" for t in TRACKER_ADAPTERS],
+            *[f"projects/_tools/ci/{t}" for t in CI_ADAPTERS],
             *[f"{a}/AGENTS.md" for a in AGENTS],
             *[f"project-manager/skills/feature-breakdown/scripts/{s}" for s in PM_SCRIPTS]]
 # Token shapes that must never sit in a framework file (checked in every repo's working tree, ignored files included,

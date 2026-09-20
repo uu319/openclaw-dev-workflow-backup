@@ -25,7 +25,9 @@
 - **Database:** <ORM + engine, or "none yet">
 - **Schema file:** <path to the ORM schema in the repo (e.g. `backend/prisma/schema.prisma`), or "none yet">
 - **Deploy:** <pipeline: trigger, config files, targets, how to check builds, e.g. `gcloud_env.py <slug> -- gcloud builds list`; or "none">
-- **Deploy triggers:** `<trigger-a, trigger-b>` (Cloud Build trigger names that must ALL succeed before the watcher says DEPLOYED; delete this line when there is one trigger or no Cloud Build)
+- **Deploy checks:** `<check-a, check-b>` (the CI runs that must ALL succeed before the watcher says
+  DEPLOYED: Cloud Build trigger names, or GitHub Actions workflow names. Delete this line when there is
+  one check or no CI. Old name: `Deploy triggers`, still read.)
 - **Repo state:** <scaffold / active / legacy; commit count>
 
 ## Tracker & Design
@@ -81,7 +83,9 @@
 - **Branch model:** `feature-branch` (`feature-branch` = one branch per feature · `ticket-branch` = one per ticket)
 - **PR base:** `<branch PRs go into; defaults to Default branch>`
 - **Merge by:** `van` (`van` or `humans`; agents never merge)
-- **Deploy signal:** `cloud-build` (`cloud-build` = watcher waits for Cloud Build before `staged` · `none` = merge is the signal)
+- **Deploy signal:** `cloud-build` (`cloud-build` = watcher waits for Cloud Build · `github-actions` =
+  it waits for workflow runs · `none` = the merge is the signal). `cloud-build` needs a GCP Project ID;
+  `github-actions` needs a GitHub Repo.
 - **Status map:** `todo=to do`, `doing=in progress`, `staged=qa`, `rejected=rejected`, `done=complete`, `cancelled=cancelled`, `hold=on hold`
 - **Chat channel:** `<discord:channel id>`
 - **PR conventions:** `none` (or the repo path of its PR template / CONTRIBUTING.md; agents follow it)

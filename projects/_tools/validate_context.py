@@ -71,7 +71,7 @@ OPTIONAL = {
     "default_branch": r"\*\*Default branch:\*\*\s*`([^`<>]+)`",
     "github_repo": r"\*\*GitHub Repo:\*\*\s*`?([^`\n]+?)`?\s*$",
     "git_secret": r"GitHub Token:\s*`([^`]+)`",
-    "deploy_triggers": r"\*\*Deploy triggers:\*\*\s*(.+)",
+    "deploy_checks": r"\*\*Deploy checks:\*\*\s*(.+)",
 }
 # Pre-2026-09-20 files spelled the tracker fields with ClickUp's names. They are
 # still read so an un-migrated project keeps working; the new labels win when both
@@ -80,6 +80,7 @@ LEGACY = {
     "board_id": r"\*\*ClickUp List ID:\*\*\s*`?([^`\n]+?)`?\s*$",
     "board_name": r"\*\*ClickUp List name:\*\*\s*(.+)",
     "tracker": r"\*\*Tracker Tool:\*\*\s*`?([A-Za-z-]+)`?\s*$",
+    "deploy_checks": r"\*\*Deploy triggers:\*\*\s*(.+)",   # Cloud Build-only name
 }
 
 # One row per tracker we can talk to. `none` is a real answer: a repo with PRs and
@@ -277,13 +278,14 @@ def parse(path):
             errors.append(f"{k} must be UPPER_SNAKE: {fields[k]}")
     if "branch_prefixes" in fields:
         fields["branch_prefixes"] = re.findall(r"`([^`]+)`", fields["branch_prefixes"])
-    if "deploy_triggers" in fields:
+    if "deploy_checks" in fields:
         # `a, b` and `a`, `b` and bare a, b all mean the same list. Backticks left in
         # here become trigger names that match nothing, which wedges the watcher on
         # "still building" forever (2026-09-19), so split them out and drop placeholders.
-        raw = fields["deploy_triggers"]
-        fields["deploy_triggers"] = [] if PLACEHOLDER.search(raw) else [
+        raw = fields["deploy_checks"]
+        fields["deploy_checks"] = [] if PLACEHOLDER.search(raw) else [
             t for part in _ticks(raw) for t in (x.strip() for x in part.split(",")) if t]
+        fields["deploy_triggers"] = fields["deploy_checks"]   # bridge for unconverted callers
     if "statuses" in fields:
         fields["statuses"] = [s.strip(" `") for s in fields["statuses"].split(",") if s.strip(" `")]
     # The tracker MCP server is per project, exactly like the Figma one:

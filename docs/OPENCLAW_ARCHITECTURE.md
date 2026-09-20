@@ -75,6 +75,7 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 | Review result on GitHub | `git_env.py <slug> --review-status <pr>` → commit status `openclaw/review` on the PR head | VanReviewer | `reviews/*.md` (`Reviewed SHA` must equal the head) | any other status write; calling a PR ready while it is not green |
 | Git push | plain `git` over the project's SSH deploy-key alias | VanDev | — | default branch, force, primary checkout |
 | Cloud | `projects/_tools/gcloud_env.py <slug> -- …` | VanDev, VanQA | context + vault | bare `gcloud`, global config |
+| CI adapters | `projects/_tools/ci/` (`for_project(fields, host)` → cloud-build · github-actions · none) | the delivery watcher | the host's `gh`/`gcloud` runners | holding a token itself; a provider name outside this package |
 | Code checkouts | `projects/_tools/worktree.py <slug> create/finish/sweep/list` | every specialist | context | OpenClaw `worktree: true`, `git worktree add` by hand, editing Code (CWD) |
 | Delivery (PR → build → ticket) | `projects/_tools/delivery_watch.py <slug>` from the heartbeat | main (isolated heartbeat) | GitHub, Cloud Build, tracker (read) | writing anything itself; agents setting `complete` (sole exception: VanPM closes a `[SPIKE]` ticket once its findings note exists) |
 | Team registry | `AGENTS.md` roster + `_tools/validate_team.py` | main | — | a second roster file |

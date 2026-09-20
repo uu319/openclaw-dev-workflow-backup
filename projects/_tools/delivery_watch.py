@@ -12,7 +12,7 @@ Usage:
 
 The flow it drives (statuses are the project's; see the project-orchestration skill):
   PR open + new GitHub comment/review  -> PR_FEEDBACK   (VanDev fixes, internal review, push, reply)
-  PR merged                            -> wait for Cloud Build on the Flow PR base
+  PR merged                            -> wait for the project's CI on the Flow PR base
   every build of the first commit that contains the merge commit succeeded
                                        -> DEPLOYED      (VanPM: linked tickets -> `qa`)
   the PR's OWN merge commit is red     -> BUILD_FAILED  (report + bug ticket, normal flow)
@@ -51,10 +51,9 @@ VALIDATOR = os.path.join(TOOLS, "validate_context.py")
 WORKSPACE = "/home/openclaw/.openclaw/workspace"
 
 sys.path.insert(0, TOOLS)
+import ci  # noqa: E402
 import trackers  # noqa: E402
 AGENT_MARK = "🤖"
-DONE = {"SUCCESS"}
-RUNNING = {"QUEUED", "WORKING", "PENDING", "STATUS_UNKNOWN"}
 # Status sets are per project (Flow Status map); these are filled in Ctx.__init__.
 QA_FROM, REJECTED, CLOSED = set(), set(), set()
 NO_BUILD_AFTER_MIN = 45
@@ -124,16 +123,22 @@ class Ctx:
             raise RuntimeError(f"gh {' '.join(args[:3])}: {err.strip()[:300]}")
         return json.loads(out) if out.strip() else None
 
-    # ---- Cloud Build (through gcloud_env.py) ----
-    def builds(self, limit=60):
-        if not self.f.get("gcp_project_id"):
-            return []
+    # ---- GCP (through gcloud_env.py: the project's own service account) ----
+    def gcloud(self, *args):
         rc, out, err = run([sys.executable, os.path.join(TOOLS, "gcloud_env.py"), self.slug, "--",
-                            "gcloud", "builds", "list", f"--limit={limit}", "--format=json",
-                            f"--filter=substitutions.BRANCH_NAME={self.branch}"], cwd=self.primary)
+                            "gcloud", *args], cwd=self.primary)
         if rc != 0:
-            raise RuntimeError(f"gcloud builds list: {err.strip()[:300]}")
+            raise RuntimeError(f"gcloud {' '.join(args[:2])}: {err.strip()[:300]}")
         return json.loads(out or "[]")
+
+    # ---- CI (whichever this project uses; see ci/) ----
+    def ci(self):
+        if getattr(self, "_ci", None) is None:
+            self._ci = ci.for_project(self.f, self)
+        return self._ci
+
+    def ci_runs(self, limit=60):
+        return self.ci().runs(self.branch, limit)
 
     # ---- tracker (read-only; token from env, else the vault, like the other launchers) ----
     def tracker(self):
@@ -189,41 +194,43 @@ def tickets_for_pr(ctx, pr, marks):
 
 # ---------------------------------------------------------------- builds
 
-def commits_from_builds(ctx, builds):
-    """commit -> {'status': ok|running|failed, 'builds': [...latest per trigger], 'at': first createTime}"""
+def commits_from_runs(ctx, runs):
+    """commit -> {'status': ok|running|failed, 'runs': [latest per check], 'at': first start}
+
+    Provider-independent: `runs` are already normalised by ci/. Every check the
+    project lists in **Deploy checks** must be green before a commit counts as
+    deployed, which is what stops a monorepo's frontend build alone from moving a
+    backend ticket (2026-09-19).
+    """
     by = {}
-    for b in builds:
-        s = b.get("substitutions") or {}
-        c = s.get("COMMIT_SHA")
-        if not c:
-            continue
-        trig = s.get("TRIGGER_NAME") or b.get("buildTriggerId") or "?"
-        cur = by.setdefault(c, {}).get(trig)
-        if cur is None or (b.get("createTime") or "") > (cur.get("createTime") or ""):
-            by[c][trig] = b
-            
-    expected = set(ctx.f.get("deploy_triggers") or [])
+    for r in runs:
+        c, check = r["commit"], r["check"]
+        cur = by.setdefault(c, {}).get(check)
+        if cur is None or (r.get("at") or "") > (cur.get("at") or ""):
+            by[c][check] = r
+
+    expected = set(ctx.f.get("deploy_checks") or [])
 
     out = {}
-    for c, trigs in by.items():
-        bs = list(trigs.values())
-        sts = {b["status"] for b in bs}
-        missing = sorted(expected - set(trigs.keys()))
-        # A trigger we expect but have not seen usually means it is still queued, so we
-        # wait. But "wait" must not be forever: a trigger that never fires (path filter,
-        # disabled trigger, or the build falling out of the `limit` window) would pin the
+    for c, checks in by.items():
+        rs = list(checks.values())
+        sts = {r["status"] for r in rs}
+        missing = sorted(expected - set(checks.keys()))
+        # A check we expect but have not seen usually means it is still queued, so we
+        # wait. But "wait" must not be forever: a check that never fires (path filter,
+        # disabled trigger, or the run falling out of the `limit` window) would pin the
         # commit on "running" and silently stop every ticket move. After NO_BUILD_AFTER_MIN
-        # we judge the commit on the builds that did run and say which trigger is missing.
-        last = parse_t(max((b.get("createTime") or "") for b in bs))
+        # we judge the commit on the runs that did happen and say which check is missing.
+        last = parse_t(max((r.get("at") or "") for r in rs))
         waiting = missing and last and now() - last <= datetime.timedelta(minutes=NO_BUILD_AFTER_MIN)
 
-        if sts & RUNNING or waiting:
+        if "running" in sts or waiting:
             st = "running"
         else:
-            st = "ok" if sts <= DONE else "failed"
+            st = "ok" if sts == {"ok"} else "failed"
 
-        out[c] = {"status": st, "builds": bs, "missing": [] if waiting else missing,
-                  "at": min(b.get("createTime") or "" for b in bs)}
+        out[c] = {"status": st, "runs": rs, "missing": [] if waiting else missing,
+                  "at": min(r.get("at") or "" for r in rs)}
     return out
 
 
@@ -245,9 +252,9 @@ def is_ours(pr, prefixes, me):
     return not prefixes or any(head.startswith(p) for p in prefixes)
 
 
-def bdesc(b):
-    s = b.get("substitutions") or {}
-    return f"{s.get('TRIGGER_NAME', '?')} {b['status']} build {b['id']} ({b.get('logUrl', '')})"
+def bdesc(r):
+    """One line about a CI run, whichever provider produced it."""
+    return f"{r.get('check', '?')} {r.get('raw_status') or r['status']} run {r.get('id', '')} ({r.get('url', '')})"
 
 
 # ---------------------------------------------------------------- main
@@ -343,7 +350,7 @@ def main():
       except RuntimeError as e:
         errors.append(str(e)); prs = []
     try:
-        commits = commits_from_builds(ctx, ctx.builds()) if watching and ctx.flow.get("deploy_signal") == "cloud-build" else {}
+        commits = commits_from_runs(ctx, ctx.ci_runs()) if watching and ctx.flow.get("deploy_signal") != "none" else {}
     except RuntimeError as e:
         errors.append(str(e)); commits = {}
 
@@ -355,7 +362,7 @@ def main():
             errors.append(f"gh api user: {e}")
 
     def build_failed(c, d, where, ids):
-        bad = [b for b in d["builds"] if b["status"] not in DONE]
+        bad = [r for r in d["runs"] if r["status"] != "ok"]
         why = "; ".join(bdesc(b) for b in bad)
         if d.get("missing"):
             why += f"; never ran: {', '.join(d['missing'])}"
@@ -442,7 +449,7 @@ def main():
         ok = next(((c, d) for c, d in cands if d["status"] == "ok"), None)
         if ok:
             moves = qa_moves(ids)
-            builds = "; ".join(bdesc(b) for b in ok[1]["builds"])
+            builds = "; ".join(bdesc(r) for r in ok[1]["runs"])
             if moves:
                 act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}: {builds})",
                     f"Spawn VanPM: set each ticket below to `staged` (the board's `{ctx.staged}`; one tracker_status.py --only call each), then post "
@@ -473,10 +480,10 @@ def main():
         elif running or failed:
             notes.append(f"{where}: staging build running for {(running or failed)[-1][0][:10]}")
         elif now() - merged_at > datetime.timedelta(minutes=NO_BUILD_AFTER_MIN):
-            act(f"nobuild-pr{n}", "NO_BUILD", f"{where} merged {iso(merged_at)} and no Cloud Build on "
-                f"`{ctx.branch}` contains it yet", "Tell Van in one line (triggers may be off). Ack.")
+            act(f"nobuild-pr{n}", "NO_BUILD", f"{where} merged {iso(merged_at)} and no {ctx.ci().kind} run on "
+                f"`{ctx.branch}` contains it yet", "Tell Van in one line (the check may be off). Ack.")
         else:
-            notes.append(f"{where}: merged, waiting for Cloud Build")
+            notes.append(f"{where}: merged, waiting for {ctx.ci().kind}")
 
     # ---- staging is red on a commit no PR on this base accounts for (direct push, other team)
     greens = [c for c, d in commits.items() if d["status"] == "ok"]
