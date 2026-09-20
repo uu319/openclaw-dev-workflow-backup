@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Delivery watcher: GitHub PRs -> Cloud Build (staging) -> ClickUp, for one onboarded project.
+"""Delivery watcher: GitHub PRs -> CI (staging) -> the tracker, for one onboarded project.
 
 Read-only. It looks, then prints the ACTIONS the orchestrator (heartbeat) must carry out. It never
-writes to GitHub, GCP or ClickUp itself; ticket moves stay VanPM's, code stays VanDev's.
+writes to GitHub, the CI or the tracker itself; ticket moves stay VanPM's, code stays VanDev's.
 
 Usage:
   delivery_watch.py <slug>                 # print pending actions (and remember them)
@@ -35,7 +35,8 @@ Only PRs authored by the project token's own account are acted on (branch prefix
 fallback if that lookup fails). Anyone else's PR is watched for a red build on the base and
 still moves our tickets when its body links them, but is never pushed to or replied to.
 
-Linking a PR to tickets: ClickUp task URLs (app.clickup.com/t/<id>) in the PR body, plus every
+Linking a PR to tickets: the tracker's own references in the PR body (ClickUp task URLs,
+Jira browse URLs or bare KEY-123, Linear issue URLs or bare ENG-12), plus every
 ticket of `specs/<feature-slug>.md` when the branch is `<prefix>/<feature-slug>[--<suffix>]`.
 Agent replies on GitHub start with the AGENT_MARK so they are not read back as new feedback.
 Comments by `*[bot]` accounts and by the PROJECT_CONTEXT line `- **GitHub bots:** `name`` are ignored.
@@ -48,7 +49,9 @@ import argparse, datetime, glob, importlib.util, json, os, re, shutil, subproces
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 VALIDATOR = os.path.join(TOOLS, "validate_context.py")
 WORKSPACE = "/home/openclaw/.openclaw/workspace"
-API = "https://api.clickup.com/api/v2"
+
+sys.path.insert(0, TOOLS)
+import trackers  # noqa: E402
 AGENT_MARK = "🤖"
 DONE = {"SUCCESS"}
 RUNNING = {"QUEUED", "WORKING", "PENDING", "STATUS_UNKNOWN"}
@@ -100,10 +103,13 @@ class Ctx:
         self.st = self.f.get("status") or {}
         # PRs are watched on the Flow PR base; builds on the same branch
         self.branch = self.flow.get("pr_base") or self.f.get("default_branch") or "main"
+        # Only the project's own Status map decides these. Literal board names used to
+        # live here ("for development", "closed") - fms-studio's, in a tool shared by
+        # every project. A board whose statuses differ is handled by the map, not here.
         low = lambda *ks: {self.st[k].lower() for k in ks if self.st.get(k)}
-        QA_FROM.clear(); QA_FROM.update(low("todo", "doing", "rejected", "hold") | {"for development"})
-        REJECTED.clear(); REJECTED.update(low("rejected") | {"for development"})   # old name of "rejected"
-        CLOSED.clear(); CLOSED.update(low("done", "cancelled") | {"closed"})
+        QA_FROM.clear(); QA_FROM.update(low("todo", "doing", "rejected", "hold"))
+        REJECTED.clear(); REJECTED.update(low("rejected"))
+        CLOSED.clear(); CLOSED.update(low("done", "cancelled"))
         self.staged = self.st.get("staged")
         self.done = self.st.get("done")
         self.prefixes = self.f.get("branch_prefixes") or []
@@ -129,31 +135,22 @@ class Ctx:
             raise RuntimeError(f"gcloud builds list: {err.strip()[:300]}")
         return json.loads(out or "[]")
 
-    # ---- ClickUp (read-only; token from env, else the vault, like the other launchers) ----
-    def cu_token(self):
-        name = self.f["tracker_secret"]
-        tok = os.environ.get(name)
-        if tok:
-            return tok
-        rc, out, err = run([shutil.which("openclaw") or "/usr/bin/openclaw", "secrets", "store", "get", "--plain", name])
-        if rc != 0 or not out.strip():
-            raise RuntimeError(f"could not read vault entry {name}")
-        return out.strip()
-
-    def cu_get(self, path, tok):
-        req = urllib.request.Request(API + path, headers={"Authorization": tok})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.load(r)
-
-    def cu_tasks(self, tok):
-        tasks, page = {}, 0
-        while True:
-            d = self.cu_get(f"/list/{self.f['list_id']}/task?include_closed=true&subtasks=true&page={page}", tok)
-            for t in d.get("tasks", []):
-                tasks[t["id"]] = t
-            if d.get("last_page", True) or not d.get("tasks"):
-                return tasks
-            page += 1
+    # ---- tracker (read-only; token from env, else the vault, like the other launchers) ----
+    def tracker(self):
+        """The adapter for whatever tracker this project uses. `none` -> NoTracker."""
+        if getattr(self, "_tk", None) is None:
+            token = None
+            if self.f.get("tracker", "none") != "none":
+                name = self.f["tracker_secret"]
+                token = os.environ.get(name)
+                if not token:
+                    rc, out, err = run([shutil.which("openclaw") or "/usr/bin/openclaw",
+                                        "secrets", "store", "get", "--plain", name])
+                    if rc != 0 or not out.strip():
+                        raise RuntimeError(f"could not read vault entry {name}")
+                    token = out.strip()
+            self._tk = trackers.for_project(self.f, token)
+        return self._tk
 
     def is_ancestor(self, a, b):
         return run(["git", "merge-base", "--is-ancestor", a, b], cwd=self.primary)[0] == 0
@@ -164,10 +161,13 @@ class Ctx:
 def markers(ctx, include_done=True):
     """feature-slug -> (marker path, {title: info})"""
     out = {}
-    pats = [os.path.join(ctx.specs, "*.clickup.json")] + ([os.path.join(ctx.specs, "_done", "*.clickup.json")] if include_done else [])
+    # `.tracker.json` is the name going forward; `.clickup.json` markers written
+    # before the rename are still read, so no live feature loses its ticket link.
+    dirs = [ctx.specs] + ([os.path.join(ctx.specs, "_done")] if include_done else [])
+    pats = [os.path.join(d, f"*{sfx}") for d in dirs for sfx in (".tracker.json", ".clickup.json")]
     for p in pats:
         for m in glob.glob(p):
-            slug = os.path.basename(m)[:-len(".clickup.json")]
+            slug = re.sub(r"\.(tracker|clickup)\.json$", "", os.path.basename(m))
             try:
                 out.setdefault(slug, (m, json.load(open(m))))
             except (OSError, ValueError):
@@ -176,7 +176,7 @@ def markers(ctx, include_done=True):
 
 
 def tickets_for_pr(ctx, pr, marks):
-    ids, spec = set(re.findall(r"app\.clickup\.com/t/(?:\d+/)?([a-z0-9]+)", pr.get("body") or "")), None
+    ids, spec = set(ctx.tracker().links_in_text(pr.get("body") or "")), None
     head = pr.get("headRefName", "")
     for pre in ctx.prefixes:
         if head.startswith(pre):
@@ -301,19 +301,19 @@ def main():
 
     run(["git", "fetch", "--quiet", "--prune", "origin"], cwd=ctx.primary)
     marks = markers(ctx)
-    status_cmd = (f"python3 {WORKSPACE}/project-manager/skills/feature-breakdown/scripts/clickup_status.py "
+    status_cmd = (f"python3 {WORKSPACE}/project-manager/skills/feature-breakdown/scripts/tracker_status.py "
                   f"--context {ctx.path} --spec <spec> --only \"<title>\" --status "
                   f"{'staged' if ctx.staged else 'done'}")
     stages = ctx.flow.get("stages") or []
     watching = "delivery-watch" in stages
 
-    # ---- ClickUp snapshot
+    # ---- tracker snapshot (normalised by trackers/; `none` yields {})
     tasks = {}
     try:
-        tok = ctx.cu_token(); tasks = ctx.cu_tasks(tok)
+        tasks = ctx.tracker().tasks()
     except Exception as e:  # noqa: BLE001 - report, keep watching the rest
-        errors.append(f"ClickUp: {e}"); tok = None
-    stat = lambda tid: ((tasks.get(tid) or {}).get("status") or {}).get("status", "?").lower()
+        errors.append(f"{ctx.f.get('tracker', 'tracker')}: {e}")
+    stat = lambda tid: ((tasks.get(tid) or {}).get("status") or "?").lower()
     title_of = {v["id"]: (slug, k) for slug, (_, m) in marks.items() for k, v in m.items()
                 if not k.startswith("_") and isinstance(v, dict)}
 
@@ -430,7 +430,7 @@ def main():
             if moves:
                 act(f"merged-pr{n}", "MERGED", f"{where} was merged (this project has no deploy signal)",
                     f"Spawn VanPM: set each ticket below to `{target}` (the board's `{ctx.st.get(target)}`; one "
-                    f"clickup_status.py --only call each). Only tickets of this Flow's Assignee filter "
+                    f"tracker_status.py --only call each). Only tickets of this Flow's Assignee filter "
                     f"(`{ctx.flow.get('assignee_filter')}`) may be moved; list any other ticket for Van instead. "
                     f"Post one line in the channel. Ack after VanPM confirms.",
                     tickets=[{"id": i, "spec": sp and f"{ctx.specs}/{sp}.md", "title": t, "status": st} for i, sp, t, st in moves],
@@ -445,12 +445,12 @@ def main():
             builds = "; ".join(bdesc(b) for b in ok[1]["builds"])
             if moves:
                 act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}: {builds})",
-                    f"Spawn VanPM: set each ticket below to `staged` (the board's `{ctx.staged}`; one clickup_status.py --only call each), then post "
+                    f"Spawn VanPM: set each ticket below to `staged` (the board's `{ctx.staged}`; one tracker_status.py --only call each), then post "
                     "one line in the channel: what is ready for testing on staging. Ack after VanPM confirms.",
                     tickets=[{"id": i, "spec": s and f"{ctx.specs}/{s}.md", "title": t, "status": st} for i, s, t, st in moves],
                     command=status_cmd)
             elif not ids and ours:
-                act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}); no ClickUp ticket is linked",
+                act(f"deployed-pr{n}", "DEPLOYED", f"{where} is on staging (commit {ok[0][:10]}); no ticket is linked",
                     "Tell Van in one line (no ticket to move). Ack.")
             elif not ours:
                 notes.append(f"{where}: on staging (not ours; no action)")
@@ -498,22 +498,20 @@ def main():
         else:
             notes.append(f"{where}: build of {c[:10]} also failed, superseded by {reds[-1][0][:10]}")
 
-    # ---- ClickUp: rejected by QA, features completed
+    # ---- tracker: rejected by QA, features completed
     for tid, t in (tasks.items() if watching else []):
         st = stat(tid)
         if st in REJECTED:
-            upd = t.get("date_updated") or ""
+            upd = t.get("updated") or ""
             aid = f"rejected-{tid}-{upd}"
             if aid in state["acked"]:
                 continue
             comments = []
             try:
-                cs = ctx.cu_get(f"/task/{tid}/comment", tok).get("comments", [])
-                comments = [{"by": (c.get("user") or {}).get("username"), "text": (c.get("comment_text") or "")[:800]}
-                            for c in cs[:3]]
+                comments = ctx.tracker().comments(tid, 3)
             except Exception as e:  # noqa: BLE001
-                errors.append(f"ClickUp comments {tid}: {e}")
-            slug, title = title_of.get(tid, (None, t.get("name")))
+                errors.append(f"tracker comments {tid}: {e}")
+            slug, title = title_of.get(tid, (None, t.get("title")))
             branch_hint = f"bug/{slug}--{tid}" if slug else f"bug/{tid}"
             act(aid, "REJECTED", f"QA rejected ticket '{title}' ({t.get('url')})",
                 f"Tell Van in one line. Spawn VanPM to claim it (--claim moves it to `in progress`), then VanDev fixes "
