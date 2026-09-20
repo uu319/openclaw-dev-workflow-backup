@@ -87,7 +87,15 @@ def parse_spec(path):
             k, sep, v = lines[i].partition(":")
             if not sep:
                 break
-            t[k.strip().lower()] = v.strip()
+            # A value the author wrapped in quotes is the quotes' fault, not the title's:
+            # `title: "[Feature] Fix X"` created a ClickUp task literally named with the
+            # quotes, keyed the marker file by the quoted form, and so never matched the
+            # unquoted title in duplicate detection (2026-09-19). Strip one matched pair;
+            # a bracketed value like `tags: ["a", "b"]` is left alone.
+            val = v.strip()
+            if len(val) >= 2 and val[0] == val[-1] and val[0] in "\"'":
+                val = val[1:-1].strip()
+            t[k.strip().lower()] = val
             i += 1
         t["body"] = "\n".join(lines[i:]).strip()
         tickets.append(t)
