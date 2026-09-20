@@ -2,7 +2,7 @@
 """Push a feature-breakdown spec to ClickUp: one parent task + lane subtasks.
 
 Usage:
-  clickup_push.py --context PROJECT_CONTEXT.md --spec artifacts/specs/<feature>.md [--dry-run]
+  tracker_push.py --context PROJECT_CONTEXT.md --spec artifacts/specs/<feature>.md [--dry-run]
 
 Reads the list id, secret ref name and status names from PROJECT_CONTEXT.md,
 parses the spec (see reference/spec-format.md), dedupes by exact title against
@@ -11,6 +11,17 @@ links for depends_on. Tickets with `figma:`/`screenshots:` get their PNGs
 uploaded as ClickUp attachments and a generated `## Design` section (Figma
 links + embedded screenshots) at the top of the description. Writes
 <spec>.clickup.json as the completion marker. Standard library only (urllib).
+
+Tracker support: **ClickUp only, for now.** Creating tickets from a spec needs
+attachments (Figma screenshots), task-to-task dependency links, markdown
+descriptions and per-ticket estimates, and those are shaped very differently on
+Jira and Linear. Rather than half-create tickets and silently drop the parts it
+cannot do, this script refuses any other tracker and says so.
+
+A Jira or Linear project is not blocked by this: set `Ticket source: human` in
+its Flow (the default for `teammate` and `maintenance`), let the team write the
+tickets, and adopt them with `tracker_scan.py` + `existing_id:`. Status moves and
+reads already work on every tracker through `tracker_status.py`.
 """
 import argparse
 import difflib
@@ -62,7 +73,8 @@ def parse_context(path):
     if errors:
         die(f"{path} is invalid: " + "; ".join(errors) + f"  (run {VALIDATOR} {path})")
     has_figma = fields.get("figma_file", "none").lower().strip("<>") not in ("none", "")
-    return {"list_id": fields["list_id"], "secret_ref": fields["tracker_secret"],
+    return {"tracker": fields.get("tracker", "none"),
+            "list_id": fields["list_id"], "secret_ref": fields["tracker_secret"],
             "statuses": fields["statuses"], "create_status": fields["create_status"],
             "cancelled": (fields.get("status") or {}).get("cancelled") or "cancelled",
             "artifacts_dir": os.path.realpath(fields["artifacts_dir"]), "has_figma": has_figma}
@@ -438,6 +450,11 @@ def main():
     a = ap.parse_args()
 
     ctx = parse_context(a.context)
+    if ctx["tracker"] != "clickup":
+        die(f"this project's tracker is `{ctx['tracker']}`; creating tickets from a spec is "
+            f"implemented for ClickUp only. Set `Ticket source: human` in its Flow, let the team "
+            f"write the tickets, and adopt them with tracker_scan.py + `existing_id:`. "
+            f"tracker_status.py works on every tracker.", 4)
     tickets = parse_spec(a.spec)
     validate(tickets, ctx, a.spec)
 

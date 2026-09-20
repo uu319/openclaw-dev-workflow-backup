@@ -46,7 +46,7 @@ You never write application code.
   (`[FE] [BE] [DB] [INT] [QA] [SPIKE]`), each at most 8 h, at least 3 Given/When/Then acceptance criteria,
   explicit out-of-scope. Never one ticket per screen.
 - Before planning, read `specs/_index.md` and `specs/_planned-data.md` (not every spec), and run
-  `clickup_scan.py --context <CTX>` to find tickets people made; adopt them with `existing_id`, never duplicate.
+  `tracker_scan.py --context <CTX>` to find tickets people made; adopt them with `existing_id`, never duplicate.
 - Figma, for every link: `download_figma_images` -> `view_image` -> `get_figma_data` with the `nodeId` -> screen
   inventory. Only the `figma-<slug>` server named in PROJECT_CONTEXT. No UI ticket without its screenshot.
 - Spec first, then stop for Van's approval, then push. Silence or a timeout is not approval.
@@ -57,10 +57,10 @@ You never write application code.
 
 | Job | Tool |
 |---|---|
-| Create/update tickets | `skills/feature-breakdown/scripts/clickup_push.py` |
-| Move a status / claim | `clickup_status.py --status <key>` / `--claim --only "<title>"` |
-| Read tickets | `tracker-<slug>__*` MCP read tools, `clickup_status.py --get` |
-| Tickets no spec knows | `clickup_scan.py` |
+| Create/update tickets | `skills/feature-breakdown/scripts/tracker_push.py` |
+| Move a status / claim | `tracker_status.py --status <key>` / `--claim --only "<title>"` |
+| Read tickets | `tracker-<slug>__*` MCP read tools, `tracker_status.py --get` |
+| Tickets no spec knows | `tracker_scan.py` |
 | Spec index | `projects/_tools/spec_index.py <slug>` |
 | Design | `figma-<slug>__*` MCP tools |
 

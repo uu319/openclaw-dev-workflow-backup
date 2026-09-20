@@ -26,7 +26,7 @@ agent can build it without asking questions.
    name for the Tracker token, and a filled `## Stack` section. If invalid,
    stop and report the errors; never query the Tracker API to discover teams,
    spaces, or lists, and never patch the file with guesses.
-2. Confirm the token works with a read-only call: `clickup_status.py --context <CTX>
+2. Confirm the token works with a read-only call: `tracker_status.py --context <CTX>
    --spec <any pushed spec> --get` or `validate_context.py <CTX> --live`. A missing token
    makes them say `env var ... not set`: stop and report that. **Never** use the
    `secrets` tool's `list` action or `openclaw secrets store list`/`get`: they print
@@ -48,7 +48,7 @@ agent can build it without asking questions.
    - `<Internal Artifacts>/specs/_planned-data.md`: columns other tickets
      **plan** to add and which ticket owns each. Reuse them. The push script
      rejects a second ORM setup or a second `CREATE` of a table.
-   - `python3 {baseDir}/scripts/clickup_scan.py --context <CTX>`: tickets in the
+   - `python3 {baseDir}/scripts/tracker_scan.py --context <CTX>`: tickets in the
      tracker that no spec knows about (made by people, or outside the workflow).
      One that covers your work is adopted with `existing_id: <id>` in the
      ticket header, never duplicated. List the rest in your summary.
@@ -186,7 +186,7 @@ Then reply with a summary only:
 - subtask count per lane and total estimate in hours
 - any `[SPIKE]` and any open questions
 - cross-feature dependencies, and any change to `_planned-data.md`
-- tickets `clickup_scan.py` found that you adopted, and ones you left alone
+- tickets `tracker_scan.py` found that you adopted, and ones you left alone
 - decisions you made that the design did not state (so Van can overrule them)
 - the spec path
 
@@ -197,8 +197,8 @@ multiple links in `<>`.
 ## Step 5 · Push (only after approval)
 
 ```
-python3 {baseDir}/scripts/clickup_push.py --context /home/openclaw/.openclaw/workspace/projects/<project>/PROJECT_CONTEXT.md --spec /home/openclaw/.openclaw/workspace/projects/<project>/artifacts/specs/<feature-slug>.md --dry-run
-python3 {baseDir}/scripts/clickup_push.py --context /home/openclaw/.openclaw/workspace/projects/<project>/PROJECT_CONTEXT.md --spec /home/openclaw/.openclaw/workspace/projects/<project>/artifacts/specs/<feature-slug>.md
+python3 {baseDir}/scripts/tracker_push.py --context /home/openclaw/.openclaw/workspace/projects/<project>/PROJECT_CONTEXT.md --spec /home/openclaw/.openclaw/workspace/projects/<project>/artifacts/specs/<feature-slug>.md --dry-run
+python3 {baseDir}/scripts/tracker_push.py --context /home/openclaw/.openclaw/workspace/projects/<project>/PROJECT_CONTEXT.md --spec /home/openclaw/.openclaw/workspace/projects/<project>/artifacts/specs/<feature-slug>.md
 ```
 
 Run the dry run first and check it shows one parent and the expected lanes.
@@ -211,7 +211,7 @@ status (the workflow owns status). The script also protects other people:
   by hand since the last push. Read their edit, merge it into the spec, then
   re-push. Use `--overwrite-edits` only if Van says to discard it.
 - After a push it regenerates `specs/_index.md`. When a spec replaces another, cancel the old
-spec's tickets (`clickup_status.py --all --status cancelled`) and move the old
+spec's tickets (`tracker_status.py --all --status cancelled`) and move the old
 spec and its `.clickup.json` to `specs/_superseded/`.
 When the spec **rewrites** tickets that were pushed before (a `<feature-slug>.clickup.json`
 already exists), the dry run lists old tickets the new spec no longer has as
@@ -240,12 +240,12 @@ with `--only`, dry-run first for any write:
 
 ```
 # read-only: live status of every ticket in the spec (or one with --only)
-python3 {baseDir}/scripts/clickup_status.py --context <CTX> --spec <spec.md> --get
+python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --get
 # claim: prints SKIP if the ticket is already in progress / qa / complete, else sets in progress and prints GO
-python3 {baseDir}/scripts/clickup_status.py --context <CTX> --spec <spec.md> --claim --only "<exact title>"
+python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --claim --only "<exact title>"
 # any other move
-python3 {baseDir}/scripts/clickup_status.py --context <CTX> --spec <spec.md> --only "<exact title>" --status "<status>" --dry-run
-python3 {baseDir}/scripts/clickup_status.py --context <CTX> --spec <spec.md> --only "<exact title>" --status "<status>"
+python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --only "<exact title>" --status "<status>" --dry-run
+python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --only "<exact title>" --status "<status>"
 ```
 
 - Claim (`--claim`): VanDev starts a lane ticket, or picks up a ticket external QA
