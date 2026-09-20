@@ -1,6 +1,6 @@
 ---ticket
 lane: FEATURE
-title: "[Feature] DevOps: Fix backend staging deploy failure (content-type missing)"
+title: [Feature] DevOps: Fix backend staging deploy failure (content-type missing)
 tags: ["agent-created"]
 priority: high
 ---
@@ -41,7 +41,7 @@ As a developer, I want the backend App Engine deployment to succeed so that the 
 ---ticket
 lane: BE
 parent: "[Feature] DevOps: Fix backend staging deploy failure (content-type missing)"
-title: "[BE] Fix package-lock.json for App Engine deployment"
+title: [BE] Fix package-lock.json for App Engine deployment
 tags: ["agent-created", "BE"]
 estimate_hours: 4
 ---
