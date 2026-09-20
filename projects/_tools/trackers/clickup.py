@@ -49,6 +49,9 @@ class ClickUp(Tracker):
                 return out
             page += 1
 
+    def get_task(self, tid):
+        return self._task(self._get(f"/task/{tid}"))
+
     def comments(self, tid, limit=3):
         cs = self._get(f"/task/{tid}/comment").get("comments", [])
         return [{"by": (c.get("user") or {}).get("username"),
@@ -63,6 +66,34 @@ class ClickUp(Tracker):
     def set_status(self, tid, status):
         http_json(f"{API}/task/{tid}", self._h(),
                   data=json.dumps({"status": status}).encode(), method="PUT")
+
+    def update_task(self, tid, **fields):
+        body = {k: v for k, v in fields.items() if k != "parent" and v is not None}
+        if not body:
+            return {}
+        return http_json(f"{API}/task/{tid}", self._h(),
+                         data=json.dumps(body).encode(), method="PUT")
+
+    def link_tasks(self, tid, other):
+        http_json(f"{API}/task/{tid}/link/{other}", self._h(), data=b"{}")
+
+    def attach(self, tid, path, filename):
+        import mimetypes
+        import urllib.request
+        import uuid
+        boundary = uuid.uuid4().hex
+        ctype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        with open(path, "rb") as f:
+            content = f.read()
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"attachment\"; "
+                f"filename=\"{filename}\"\r\nContent-Type: {ctype}\r\n\r\n").encode() + content + \
+               f"\r\n--{boundary}--\r\n".encode()
+        req = urllib.request.Request(
+            f"{API}/task/{tid}/attachment", data=body, method="POST",
+            headers={"Authorization": self.token,
+                     "Content-Type": f"multipart/form-data; boundary={boundary}"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read().decode() or "{}")
 
     def create_task(self, title, description="", status=None, parent=None, **kw):
         body = {"name": title, "description": description}

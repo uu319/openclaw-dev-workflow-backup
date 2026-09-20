@@ -55,6 +55,10 @@ class Tracker:
         """-> {id: task dict} for the whole board, including closed ones."""
         return {}
 
+    def get_task(self, tid):
+        """-> one task dict, read live. Raises if the tracker cannot find it."""
+        raise NotImplementedError
+
     def comments(self, tid, limit=3):
         """-> [{'by': str, 'text': str}], newest first."""
         return []
@@ -73,6 +77,24 @@ class Tracker:
     def create_task(self, title, description="", status=None, parent=None, **kw):
         raise NotImplementedError(f"{self.kind} cannot create tasks")
 
+    def update_task(self, tid, **fields):
+        """Change title/description/tags/estimate. `parent` is never moved here."""
+        raise NotImplementedError(f"{self.kind} cannot update tasks")
+
+    # --- optional capabilities -------------------------------------------------
+    # A provider that cannot do one of these raises Unsupported, and the caller
+    # decides whether that is fatal. Silently doing nothing is not an option: a
+    # spec whose screenshots never uploaded must say so.
+    def link_tasks(self, tid, other):
+        raise Unsupported(f"{self.kind} cannot link tickets to each other yet")
+
+    def attach(self, tid, path, filename):
+        raise Unsupported(f"{self.kind} cannot upload attachments yet")
+
+
+class Unsupported(NotImplementedError):
+    """This provider does not implement an optional capability."""
+
 
 class NoTracker(Tracker):
     """A project with no ticket system. Every read is empty, every write refused."""
@@ -81,6 +103,9 @@ class NoTracker(Tracker):
 
     def board_info(self):
         return None, [], "no tracker"
+
+    def get_task(self, tid):
+        raise RuntimeError("this project has no tracker (Tracker: none); there is no ticket to read")
 
     def task_url(self, tid):
         return ""

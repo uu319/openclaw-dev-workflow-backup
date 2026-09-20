@@ -98,7 +98,7 @@
 - Every ticket body follows the template: Context · User story · In scope · Out of scope · Acceptance criteria (Given/When/Then, falsifiable) · Technical notes · Depends on/blocks · Test notes · Definition of done.
 - Tags: `agent-created` + lane tag. Priority: urgent=1, high=2, normal=3, low=4. Estimates in `time_estimate`.
 - Dependencies pushed as ClickUp task links. `[DB]` → `[BE]` → `[FE] wiring`; `[QA]` last.
-- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.clickup.json` next to it.
+- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.tracker.json` next to it.
 
 ## Artifact Routing
 - **Code (CWD):** `/home/openclaw/projects/<slug>`

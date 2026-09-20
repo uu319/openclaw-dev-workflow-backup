@@ -71,6 +71,11 @@ class Jira(Tracker):
             if start >= d.get("total", 0) or not d.get("issues"):
                 return out
 
+    def get_task(self, tid):
+        return self._task(http_json(
+            f"{self.base}/rest/api/3/issue/{tid}"
+            f"?fields=summary,status,assignee,parent,updated,description", self._h()))
+
     def comments(self, tid, limit=3):
         d = http_json(f"{self.base}/rest/api/3/issue/{tid}/comment?orderBy=-created&maxResults={limit}",
                       self._h())

@@ -85,6 +85,14 @@ class Linear(Tracker):
                 return out
             after = info.get("endCursor")
 
+    def get_task(self, tid):
+        d = self._q("query($id:String!){issue(id:$id){id identifier title url updatedAt description "
+                    "state{name type} assignee{name email} parent{identifier}}}", id=tid)
+        i = d.get("issue")
+        if not i:
+            raise RuntimeError(f"Linear issue '{tid}' not found")
+        return self._task(i)
+
     def comments(self, tid, limit=3):
         d = self._q("query($id:String!){issue(id:$id){comments(first:%d){nodes{body user{name}}}}}" % limit,
                     id=tid)

@@ -14,7 +14,7 @@ system eventually breaks because it has no proper architecture."*
 
 That is an accurate diagnosis. Evidence from this box, three weeks in:
 - 11 Python tools in 3 locations, plus 4 dead scripts (`fetch_figma.py`, `test.sh`, `write_specs*.py`, `update_mcp_skills.py`), 3 diagram files and an explainer in the agent workspace, 30 unreviewed skill-workshop proposals, 47 backup entries (31 MB), 5 loose `openclaw.json.bak*` copies.
-- Three tracker implementations existed at once (curl scripts, an MCP server, `clickup_push.py`), two Figma paths, two worktree mechanisms, two templates for `PROJECT_CONTEXT.md`, and a `TRACKER_`→`CLICKUP_` rename that only half happened.
+- Three tracker implementations existed at once (curl scripts, an MCP server, `tracker_push.py`), two Figma paths, two worktree mechanisms, two templates for `PROJECT_CONTEXT.md`, and a `TRACKER_`→`CLICKUP_` rename that only half happened.
 - Rules lived in six `AGENTS.md` files, four skills and a 1250-line guide, so every fix was a prompt edit that the next session did not see, and config settings crept back (`main.tools.deny` twice).
 - The framework directory is a git repo, but had 111 uncommitted paths: nobody could tell a deliberate file from garbage.
 
@@ -68,8 +68,8 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 | Figma access | `projects/_tools/figma_mcp.py` → MCP `figma-<slug>` | VanPM, VanDev | context + vault | REST calls, shared key |
 | Tracker adapters | `projects/_tools/trackers/` (`for_project(fields, token)` → clickup · jira · linear · none) | shared by every tracker caller | context + vault | a provider name outside this package; a second client for the same tracker |
 | Tracker read | `projects/_tools/clickup_mcp.py` → MCP `tracker-<slug>` (get only for VanPM) | VanPM | context + vault | discovery of boards by API |
-| Tracker write | `feature-breakdown/scripts/clickup_push.py`, `clickup_status.py` | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
-| Human-made tickets | `feature-breakdown/scripts/clickup_scan.py` | VanPM | tracker | creating a duplicate; adopt with `existing_id` |
+| Tracker write | `feature-breakdown/scripts/tracker_push.py`, `tracker_status.py` | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
+| Human-made tickets | `feature-breakdown/scripts/tracker_scan.py` | VanPM | tracker | creating a duplicate; adopt with `existing_id` |
 | Spec planning index | `projects/_tools/spec_index.py` → `specs/_index.md`, `specs/_planned-data.md` | VanPM | specs | hand edits of `_index.md` |
 | GitHub API | `projects/_tools/git_env.py <slug> -- gh …` | VanDev (main read-only) | context + vault | `gh auth login`, merges, a PR base other than the Flow PR base, raw commit-status writes |
 | Review result on GitHub | `git_env.py <slug> --review-status <pr>` → commit status `openclaw/review` on the PR head | VanReviewer | `reviews/*.md` (`Reviewed SHA` must equal the head) | any other status write; calling a PR ready while it is not green |
@@ -188,7 +188,7 @@ skill, no forks. The onboarding skill asks for the Flow answers as one checklist
 ### 4.3 Team mode (acting as Van among humans)
 When Profile is `teammate` or `maintenance`:
 - Only tickets whose assignee matches **Assignee filter**, or that Van hands over by name, are claimed. Every
-  other ticket is read-only. `clickup_scan.py` lists human tickets; they are adopted with `existing_id`, never recreated.
+  other ticket is read-only. `tracker_scan.py` lists human tickets; they are adopted with `existing_id`, never recreated.
 - Human tickets are never rewritten. VanPM adds a comment or a linked sub-ticket; the description stays theirs.
 - Branch from the project's PR base, rebase or merge it in before opening the PR when behind (`git fetch` +
   `git merge origin/<base>` in the worktree; never force-push a shared branch).
@@ -196,7 +196,7 @@ When Profile is `teammate` or `maintenance`:
   the ticket URL. Every agent comment on GitHub starts with `🤖 VanDev:`; human review comments are answered
   within one heartbeat (`PR_FEEDBACK`): fix, push, then VanReviewer reviews the new head (`openclaw/review`).
 - Nobody on the team merges, closes other people's PRs, edits other people's branches, or moves other
-  people's tickets. Status moves happen only on Van's tickets, only through `clickup_status.py`, only per the map.
+  people's tickets. Status moves happen only on Van's tickets, only through `tracker_status.py`, only per the map.
 - Opening a PR from a task branch is routine (the review happens on it). Messages to other people wait for Van's
   yes; silence is a NO. **Decided 2026-09-20 (Decision O):** on `teammate`/`maintenance` projects a reply to a human
   reviewer is such a message: VanDev fixes and pushes the code without asking, writes the reply as a draft, and it is
@@ -216,8 +216,8 @@ outside every workspace on purpose); sessions are isolated per task and `/new` a
 session (degenerate loops).
 
 **5.2 Ticket management.** Source: the tracker, mirrored by `specs/<feature>.md` + `.clickup.json` markers.
-Tools: `clickup_push.py` (create/update, dedupe by title, marker = idempotency), `clickup_status.py`
-(`--get`, `--claim`, `--status`), `clickup_scan.py` (human tickets). Rules: VanPM is the only writer; canonical
+Tools: `tracker_push.py` (create/update, dedupe by title, marker = idempotency), `tracker_status.py`
+(`--get`, `--claim`, `--status`), `tracker_scan.py` (human tickets). Rules: VanPM is the only writer; canonical
 statuses through the Status map; `staged` only from the delivery watcher (DEPLOYED, or MERGED when Deploy signal is
 `none` and the board maps `staged`); `done` only by external QA, a MERGED action on a board without `staged`, or
 VanPM closing a `[SPIKE]` whose findings note exists; tickets not created through VanPM are reported, not guessed. Fails as:
@@ -330,7 +330,7 @@ finished by the agent that wrote them.
 - **6. Flow profile** (`55be54f`): `## Flow` in the template and fms-studio; `validate_context.py` parses and
   validates it and infers `factory` + a status map when it is missing. Stage names: `spec tickets review
   internal-qa merge-gate delivery-watch` (`merge-gate` = step 5 "ready to merge" message, since Van's 13:04 flow
-  opens PRs right away). Tools use canonical statuses (`clickup_status.py --status staged`), the Flow PR base
+  opens PRs right away). Tools use canonical statuses (`tracker_status.py --status staged`), the Flow PR base
   (`worktree.py`, `git_env.py`, watcher), and the assignee filter (`--claim` SKIPs other people's tickets). The
   watcher gained MERGED (no deploy pipeline) and stage gating. Orchestration skill: stage table, team mode,
   branch models. Onboarding asks the Flow questions. Tested with a teammate fixture (custom board names) and a

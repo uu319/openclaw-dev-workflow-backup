@@ -439,7 +439,7 @@ Note on `figma-*` deny: it only **hides** the tools. OpenClaw still spawns every
 
 **VanPM tracker writes (2026-09-19):** that is why `project-manager` denies `tracker-*__clickup_update_task` and
 `tracker-*__clickup_create_task` (the linter checks these exact lists; `apply_patch` is not denied anywhere on the live box). It keeps `clickup_get_task` for reads; every write goes through
-`clickup_push.py` / `clickup_status.py`, which keep the spec markers in sync. A VanPM that had the MCP write tool
+`tracker_push.py` / `tracker_status.py`, which keep the spec markers in sync. A VanPM that had the MCP write tool
 moved three tickets to `qa`/`complete` on its own during the first live run.
 
 ### 5.5 MCP runtime
@@ -654,8 +654,8 @@ Skills owned by `main`: `project-orchestration` (8.1), `project-onboarding` (Sec
 - Step 0 always: read + validate PROJECT_CONTEXT. Never query the tracker to discover lists.
 - Figma: for every link, `download_figma_images` → `view_image` → `get_figma_data` (with `nodeId`, never a
   whole file) → screen inventory. No UI ticket without the screenshot.
-- Spec first → stop for Van's approval → push with `clickup_push.py` → verify by reading back. Statuses only with
-  `clickup_status.py` (`--get` read, `--claim` GO/SKIP, `--only … --status`), only when the orchestrator names the
+- Spec first → stop for Van's approval → push with `tracker_push.py` → verify by reading back. Statuses only with
+  `tracker_status.py` (`--get` read, `--claim` GO/SKIP, `--only … --status`), only when the orchestrator names the
   ticket and status per the table in 8.1. `staged` only for a watcher DEPLOYED/MERGED action, `done` only for a MERGED
   action on projects without a deploy signal, and for `[SPIKE]` tickets once their findings note exists. Never otherwise.
 - Never spawns agents. Never hand-written ClickUp calls. Never lists secrets (verify the token with `--get`).
@@ -722,13 +722,13 @@ Parameterised entirely by `CTX = workspace/projects/<slug>/PROJECT_CONTEXT.md`. 
 and name branches, never folders. The skill file is the source of truth; this is its shape.
 
 **The project's Flow decides which steps run** (`validate_context.py CTX --json` → `flow`, `status`): step 1 needs
-stages `spec`+`tickets` (off: VanPM adopts human tickets with `clickup_scan.py`), step 3 `review`, step 4
+stages `spec`+`tickets` (off: VanPM adopts human tickets with `tracker_scan.py`), step 3 `review`, step 4
 `internal-qa`, step 5 `merge-gate`, step 6 `delivery-watch`; step 2 always runs. Team profiles (`teammate`,
 `maintenance`) only claim tickets matching the Flow **Assignee filter**, never rewrite human tickets, follow the
 repo's PR conventions, and never touch other people's PRs, branches or tickets (architecture §4.3).
 
 **Statuses** use canonical keys (`todo doing staged rejected done cancelled hold`) that each project maps to its board
-through the Flow **Status map**; scripts take the key (`clickup_status.py --status staged`). Shown here with the
+through the Flow **Status map**; scripts take the key (`tracker_status.py --status staged`). Shown here with the
 fms-studio names (`staged` = `qa` = merged **and deployed to staging**, ready for external QA):
 
 | When | Who notices | Status |
@@ -772,8 +772,8 @@ that PR before Van hears "ready", and the PR body carries the ticket URL when a 
 ### 8.3 Specialist skills
 - `project-manager/skills/feature-breakdown/` — decomposition rules, ticket template, splitting patterns,
   spec validator (rejects > 8h, < 3 AC, non-GWT AC, filler phrases, missing out-of-scope), push **only** through
-  `scripts/clickup_push.py` (dedupe by title, similarity check, `<feature-slug>.clickup.json` marker next to the spec),
-  statuses through `scripts/clickup_status.py`, human tickets through `scripts/clickup_scan.py`. The MCP write tools
+  `scripts/tracker_push.py` (dedupe by title, similarity check, `<feature-slug>.clickup.json` marker next to the spec),
+  statuses through `scripts/tracker_status.py`, human tickets through `scripts/tracker_scan.py`. The MCP write tools
   are denied to VanPM (5.4); `tracker-<slug>__clickup_get_task` is for reads.
 - `developer/skills/agy-coding/` — how to launch the coding-agent backend (9.6) in the worktree
   `create` printed, in background, with a notification route; what "proof of delegation" means; when
@@ -1202,19 +1202,19 @@ they differ, re-copy it here. Labels are parsed by `validate_context.py`, `deliv
 - **Status flow** *(superseded the same day by 12.5d: `qa` = deployed to staging; the table in 8.1 is current)*:
   `to do` → `in progress` (VanPM claims) → `qa` (review APPROVED) → `complete` per ticket after the PR is **merged**,
   parent last; `on hold` if the spec is blocked.
-  `clickup_status.py` needs `--only "<title>"` or `--all`. Re-push never changes status.
+  `tracker_status.py` needs `--only "<title>"` or `--all`. Re-push never changes status.
 - **Planning in isolation caused duplicates and gaps** (two ORM setups, `albums` vs `events`, columns "added
   later" by no ticket, three umbrella specs over the same screens). Fixes, all project-agnostic:
   - `projects/_tools/spec_index.py <slug>` writes `specs/_index.md` (one line per feature; ~5 KB for 18). VanPM
     reads it instead of every spec. Finished specs move to `specs/_done/`, replaced ones to `specs/_superseded/`.
   - `specs/_planned-data.md` (template in `projects/_template/specs/`) = planned-not-built columns and their
     owning ticket; rows are deleted when the `[DB]` ticket merges. Built schema = **Schema file** in `## Stack`.
-  - `clickup_push.py` rejects: Figma-node overlap with an active spec, 2nd ORM setup / same `CREATE` table,
+  - `tracker_push.py` rejects: Figma-node overlap with an active spec, 2nd ORM setup / same `CREATE` table,
     unknown `Depends on (other feature)` titles, hedge words ("(or", "(if", "if missing", "assuming").
     Exit 3 on titles ≥ 82 % similar to any live ticket (`existing_id:` adopts, `--allow-similar` overrides).
     Skips tickets whose description changed in ClickUp since the last push (`desc_hash` in the marker;
     `--overwrite-edits` overrides). Regenerates the index after a push.
-  - `clickup_scan.py --context <CTX>` lists live tickets no spec knows about (made by people).
+  - `tracker_scan.py --context <CTX>` lists live tickets no spec knows about (made by people).
 - **Scale path:** markdown index to ~100 open features; then the same generator can emit SQLite; long term
   the tracker (custom fields: Figma node, tables) + real schema are the sources and specs are drafts.
 
@@ -1238,7 +1238,7 @@ What changed, and why:
   `pushed`/`pr_open` row (it used to mark a live PR `abandoned`).
 - **Review file carries the SHA**, one line per acceptance criterion; the PR head SHA must equal it (still true: it is
   what `--review-status` checks, 12.5e).
-- **Statuses:** `clickup_status.py --get` (read) and `--claim` (GO/SKIP) exist; parent and `[QA]`
+- **Statuses:** `tracker_status.py --get` (read) and `--claim` (GO/SKIP) exist; parent and `[QA]`
   move too; `on hold`/closed-PR exits defined; re-push never changes status (the `status:` header
   is create-only). Table in the project-orchestration skill.
 - **Nobody merges but Van.** Close-on-merge and failed Cloud Builds are checked by the heartbeat,

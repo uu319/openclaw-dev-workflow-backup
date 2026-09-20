@@ -34,7 +34,7 @@ Every project declares its own flow in CTX `## Flow` (`validate_context.py CTX -
 
 | Step | Stage | When the stage is off |
 |---|---|---|
-| 1 Spec + tickets | `spec`, `tickets` | Tickets already exist (made by people): VanPM runs `clickup_scan.py`, adopts them, pushes nothing |
+| 1 Spec + tickets | `spec`, `tickets` | Tickets already exist (made by people): VanPM runs `tracker_scan.py`, adopts them, pushes nothing |
 | 2 Build & PR | always | - |
 | 3 Review on GitHub | `review` | Tell Van the PR has no internal review before saying it is ready |
 | 4 Internal QA | `internal-qa` | Skip; go to step 5 after review |
@@ -58,7 +58,7 @@ approval needs a second GitHub account for VanReviewer.
 ## Team mode (Profile `teammate` or `maintenance`)
 
 Van is one developer on a human team that shares the repo and the board. Then:
-- Work only on tickets assigned to `flow.assignee_filter`, or ones Van names in chat. `clickup_status.py
+- Work only on tickets assigned to `flow.assignee_filter`, or ones Van names in chat. `tracker_status.py
   --claim` enforces the filter and prints SKIP otherwise. Every other ticket is read-only.
 - Never rewrite a human's ticket description; VanPM adds a comment or a linked sub-ticket.
 - Follow the repo's own rules: `flow.pr_conventions` (PR template, CONTRIBUTING), CODEOWNERS, commit style.
@@ -103,11 +103,11 @@ sets `complete` or `rejected`; agents never set `complete` (one exception: `[SPI
 | PR closed without merge | watcher `PR_CLOSED`, Van decides | the PR's tickets | `cancelled` or back to `in progress` |
 
 Only VanPM writes ticket statuses, always with
-`skills/feature-breakdown/scripts/clickup_status.py --context <CTX> --spec <spec> ...`.
+`skills/feature-breakdown/scripts/tracker_status.py --context <CTX> --spec <spec> ...`.
 `[SPIKE]` tickets produce a findings note (`<Internal Artifacts>/specs/<feature-slug>--spike.md`)
 instead of code; VanPM sets them `complete` when the note exists (nothing deploys).
 
-A ticket with no `.clickup.json` marker was not created through VanPM: report
+A ticket with no `.tracker.json` marker was not created through VanPM: report
 it to Van instead of guessing.
 
 ## 0. Resolve the project
@@ -134,29 +134,38 @@ hours, open questions) to the user **verbatim**. Wait for Van's explicit "go".
 No answer is not a go. On "go": `sessions_send` VanPM "approved, push". VanPM
 replies with ticket links; relay them.
 
-## 2. Build & PR (VanDev), one lane ticket at a time, in dependency order
+## 2. Build & PR (VanDev), one unit of work at a time, in dependency order
 
-Branch: **one branch per feature**, `<branch prefix>/<feature-slug>`
-(`bug/<slug>` for a bug-only feature). Lane tickets of one feature run **one at
-a time** (`[DB]` → `[BE]` → `[FE]` → `[INT]`), never in parallel: they share the
-branch, and two workers must never share a folder.
+Branch, from the Flow **Branch model**:
+- `feature-branch` (default): **one branch per feature**, `<branch prefix>/<feature-slug>`
+  (`bug/<slug>` for a bug-only feature). Its lane tickets run **one at a time**
+  (`[DB]` → `[BE]` → `[FE]` → `[INT]`), never in parallel: they share the branch,
+  and two workers must never share a folder.
+- `ticket-branch`: **one branch per ticket**, `<branch prefix>/<ticket id>-<short-slug>`.
+  Each ticket gets its own branch, worktree and PR, so there is no shared-branch
+  ordering constraint - but keep dependencies in order anyway.
 
-For each lane ticket:
+"Lane tickets" only exist when VanPM created them. With Ticket source `human` the
+units of work are whatever tickets the team already wrote, and with **no tracker**
+it is the single piece of work Van named - one branch, one PR, no claim step.
 
-1. Claim it. Spawn `project-manager`:
+For each unit of work:
+
+1. Claim it - **only when the project has a tracker.** Spawn `project-manager`:
 
    > Project `<slug>`. Context: `<CTX>`. Claim ticket `<exact ticket title>` from
-   > `<Internal Artifacts>/specs/<feature-slug>.md` with `clickup_status.py --claim --only`.
+   > `<Internal Artifacts>/specs/<feature-slug>.md` with `tracker_status.py --claim --only`.
    > Reply with the script's GO or SKIP line. If this is the feature's first claim,
-   > also set the `[Feature]` parent to `in progress`.
+   > also set the `[Feature]` parent to the board's `doing` status.
 
    SKIP → skip this ticket. GO → continue.
+   Tracker `none` → skip this step entirely; there is nothing to claim.
 
 2. Spawn `developer`:
 
    > Project `<slug>`. Context: `<CTX>`. Implement ticket `<exact ticket title>` from
    > `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>`
-   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<PR base>` using `git_env.py <slug> -- gh pr create --base <PR base>`. The PR body must list the ClickUp URL of the ticket. Reply with the PR URL and the commit SHA.
+   > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<PR base>` using `git_env.py <slug> -- gh pr create --base <PR base>`. The PR body must list the ticket's URL (skip when the project has no tracker). Reply with the PR URL and the commit SHA.
 
    `sessions_yield`. VanDev says the spec is wrong or impossible → VanPM sets
    the ticket `on hold`, go back to step 1 with the objection; never "fix" the
@@ -180,29 +189,42 @@ Spawn `code-reviewer`:
 
 This is our internal pre-merge check; it changes no ticket status. Spawn `qa-engineer`:
 
-> Project `<slug>`. Context: `<CTX>`. Run the `[QA]` ticket for `<feature-slug>` from
-> `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>` (your own worktree:
-> `create <branch> --agent qa-engineer`, then `finish <branch>`). Use only the
-> test commands in PROJECT_CONTEXT. Write `<Internal Artifacts>/qa/<feature-slug>.md`
-> with the tested SHA. Do not modify code, commit or push.
+> Project `<slug>`. Context: `<CTX>`. Verify `<feature-slug>` on branch `<branch>` against its
+> acceptance criteria (your own worktree: `create <branch> --agent qa-engineer`, then
+> `finish <branch>`). Use only the test commands in PROJECT_CONTEXT. Write
+> `<Internal Artifacts>/qa/<feature-slug>.md` with the tested SHA. Do not modify code,
+> commit or push.
+
+What VanQA tests against depends on what exists: the `[QA]` ticket's scenario plus the
+parent's criteria when VanPM wrote the spec; otherwise the human ticket's own acceptance
+criteria, or - with no tracker - the change Van described. Name the source in the spawn
+message. `internal-qa` without `tickets` is legitimate; do not invent a `[QA]` ticket.
 
 - Passed → step 5.
-- Defects → spawn VanPM: "add a `[FE]`/`[BE]`… bug ticket per defect **to the same
-  spec** `<feature-slug>.md`, under the same parent, and push it". Then step 2 for
-  each new ticket on the **same branch**, step 3, then step 4 again.
+- Defects, **with a tracker** → spawn VanPM: "add a bug ticket per defect **to the same
+  spec** `<feature-slug>.md`, under the same parent, and push it". Then step 2 for each new
+  ticket on the **same branch**, step 3, then step 4 again.
+- Defects, **no tracker** (or Ticket source `human`, where we do not write tickets) → relay
+  the QA report to Van with the defect list and let him decide; the fix then goes through
+  step 2 as its own unit of work.
 
 ## 5. Final Readiness Gate (User checks off on merge) — stage `merge-gate`
 
-Ask the user, with the PR URL and QA results:
-"Feature `<feature-slug>` passed GitHub PR review and QA. Everything is ready on the PR. Merging is yours."
+First verify, then send the message the Flow **Merge by** calls for.
 
 - Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid,statusCheckRollup`:
   the head SHA must equal the QA'd SHA, and `statusCheckRollup` must have `openclaw/review` = SUCCESS.
   Missing or red → the head was not reviewed: back to step 3, do not send the ready message. (An empty
   `statusCheckRollup` can also mean the token cannot read statuses; say so instead of calling it reviewed.)
-  Relay the PR link and say: "Merging is yours; tickets close when the merge is detected."
 
-Nobody in the team merges. Van merges on GitHub.
+- **Merge by `van`** (default): "Feature `<feature-slug>` passed review and QA. Everything is ready on
+  the PR. Merging is yours; tickets move when the merge is detected." Relay the PR link.
+- **Merge by `humans`** (team projects): the PR is not Van's to merge, so do not tell him it is. Say the
+  PR is ready for the team's reviewers, relay the link, and name anything they will look for that is not
+  done yet (the repo's PR template, CODEOWNERS approvals, required checks). Then stop: a reviewer's
+  comment comes back as `PR_FEEDBACK` in step 6.
+
+**Nobody on this team merges, in either case.** `git_env.py` refuses every merge; never work around it.
 
 ## 6. After the PR: the delivery watcher (heartbeat, every 15 min) — stage `delivery-watch`
 
@@ -234,7 +256,7 @@ An action you could not finish stays un-acked and comes back next heartbeat.
 - `FEATURE_COMPLETE`: spawn VanPM:
 
   > Project `<slug>`. Context: `<CTX>`. Every ticket of `<feature-slug>` is complete. Archive the
-  > feature: move `specs/<feature-slug>.md` and its `.clickup.json` to `specs/_done/`, delete
+  > feature: move `specs/<feature-slug>.md` and its `.tracker.json` marker to `specs/_done/`, delete
   > the rows its `[DB]` tickets own from `specs/_planned-data.md` (the Schema file now holds
   > them; set **Schema file** in PROJECT_CONTEXT if this was the first `[DB]` ticket), and run
   > `projects/_tools/spec_index.py <slug>`.

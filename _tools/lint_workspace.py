@@ -29,7 +29,7 @@ SHARED_TOOLS = ["tracker_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_e
 TRACKER_ADAPTERS = ["__init__.py", "clickup.py", "jira.py", "linear.py"]
 # one module per CI provider, behind ci.for_project() (architecture §2)
 CI_ADAPTERS = ["__init__.py", "cloud_build.py", "github_actions.py"]
-PM_SCRIPTS = ["clickup_push.py", "clickup_scan.py", "clickup_status.py"]
+PM_SCRIPTS = ["tracker_push.py", "tracker_scan.py", "tracker_status.py"]
 
 # ---- MANIFEST: allowed paths, relative to the workspace. Globs; ** matches any depth. ----
 ALLOWED = [

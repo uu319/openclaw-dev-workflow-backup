@@ -7,7 +7,7 @@ Usage:
 
 VanPM reads this index before planning instead of opening every spec, then opens
 only the specs that overlap. Generated from the spec files (the source of truth);
-never edit _index.md by hand. clickup_push.py regenerates it after every push.
+never edit _index.md by hand. tracker_push.py regenerates it after every push.
 
 Folders: specs/*.md = active, specs/_done/ = merged + complete (archived by the
 orchestrator's close-on-merge step), specs/_superseded/ = replaced and cancelled.
@@ -17,7 +17,7 @@ import datetime, importlib.util, json, os, re, sys
 
 WS = "/home/openclaw/.openclaw/workspace"
 VALIDATOR = f"{WS}/projects/_tools/validate_context.py"
-PUSH = f"{WS}/project-manager/skills/feature-breakdown/scripts/clickup_push.py"
+PUSH = f"{WS}/project-manager/skills/feature-breakdown/scripts/tracker_push.py"
 
 NODE_RX = re.compile(r"node-id=([0-9]+[-:][0-9]+)")
 ENDPOINT_RX = re.compile(r"\b(GET|POST|PATCH|PUT|DELETE)\s+(/api/[^\s`?,)]+)")
@@ -36,7 +36,9 @@ def load(path, name):
 def summarize(path, push):
     tickets = push.parse_spec(path)
     parent = tickets[0]
-    marker_path = path[:-3] + ".clickup.json"
+    # `.tracker.json` going forward; markers written before the rename still resolve.
+    marker_path = next((c for c in (path[:-3] + ".tracker.json", path[:-3] + ".clickup.json")
+                        if os.path.exists(c)), path[:-3] + ".tracker.json")
     marker = json.load(open(marker_path)) if os.path.exists(marker_path) else {}
     pid = (marker.get(parent.get("title"), {}) or {}).get("id") or parent.get("existing_id")
     lanes = {}
