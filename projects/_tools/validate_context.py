@@ -303,7 +303,11 @@ def parse(path):
     stack = re.search(r"## Stack\n(.*?)\n## ", text, re.S)
     if not stack:
         errors.append("missing '## Stack' section")
-    elif not re.search(r"\*\*[A-Za-z/]+:\*\*\s*[^<\n]", stack.group(1)):
+    # `\s*[^<\n]` looked right but backtracks: with `**Layout:** <placeholder>` the
+    # regex lets `\s*` match empty and `[^<\n]` match the SPACE, so every template
+    # passed and this check never once caught an unfilled Stack. Anchor on the first
+    # non-space character instead.
+    elif not re.search(r"\*\*[A-Za-z/]+:\*\*[ \t]*[^\s<]", stack.group(1)):
         errors.append("'## Stack' is unfilled (all placeholders). VanPM fills it by inspecting the repo.")
     # secret naming rule
     slug_upper = fields.get("slug", "").replace("-", "").upper()

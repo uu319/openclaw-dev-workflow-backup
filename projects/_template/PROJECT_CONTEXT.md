@@ -19,11 +19,12 @@
 
 ## Stack
 <!-- Filled by VanPM by inspecting the repo. No guesses: "unknown" is acceptable, an invented framework is not. -->
-- **Layout:** <monorepo tool / single app>
-- **frontend/**: <framework + version, test runner, where routes live>
-- **backend/**: <framework + version, test runner, where modules live>
+- **Layout:** <monorepo tool / single app / library / service>
+- **Runtime:** <language + version, package manager, test runner>
+- **Components:** <one line per deployable or package: name, framework + version, where its code lives.
+  A web app usually has two (frontend, backend); a library or CLI has one.>
 - **Database:** <ORM + engine, or "none yet">
-- **Schema file:** <path to the ORM schema in the repo (e.g. `backend/prisma/schema.prisma`), or "none yet">
+- **Schema file:** <path to the schema or migrations dir in the repo, or "none yet">
 - **Deploy:** <pipeline: trigger, config files, targets, how to check builds, e.g. `gcloud_env.py <slug> -- gcloud builds list`; or "none">
 - **Deploy checks:** `<check-a, check-b>` (the CI runs that must ALL succeed before the watcher says
   DEPLOYED: Cloud Build trigger names, or GitHub Actions workflow names. Delete this line when there is
@@ -63,11 +64,12 @@
 - **Create status:** `to do`
 - **Branch Prefixes:** `feature/`, `bug/`
 - **GitHub bots:** `<bot login>` (accounts whose PR comments are not review feedback, e.g. a PR-description bot; `*[bot]` accounts are always ignored; delete this line when none)
-- **Install command:** `<exact command run inside a fresh worktree, e.g. npm ci>`
+- **Install command:** `<exact command run inside a fresh worktree; e.g. npm ci, pip install -r
+  requirements.txt, poetry install, go mod download, cargo fetch>`
 - **Dev/QA Test Commands:** explicit, never inferred (inferring them hung QA 28 times on the old box). VanPM fills these during onboarding after running each one once in a worktree.
   - Tests: `<exact command that runs once and exits>`
   - Lint: `<exact command>`
-  - E2E: `<exact command, or "none yet: first feature carries [INT] Set up Playwright E2E runner">`
+  - E2E: `<exact command, or "none yet: first feature carries [INT] Set up an E2E runner">`
   - Forbidden: `<any watch-mode target>`
 - **Known repo issues:** <what an agent will hit in this repo, date found, "report and stop" or the workaround; mark Resolved with a date; or "none">
 

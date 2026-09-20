@@ -171,7 +171,8 @@ spawned agent cannot use a project path as cwd, it reads the repo by absolute pa
 
 > Onboarding `<slug>`. Fill the `## Stack` section of
 > `/home/openclaw/.openclaw/workspace/projects/<slug>/PROJECT_CONTEXT.md` by
-> inspecting the repo (package.json, nx.json, project.json, lockfiles; say
+> inspecting the repo (whichever manifest it has: package.json/nx.json/lockfiles, pyproject.toml,
+> requirements.txt, go.mod, Cargo.toml, pom.xml, Gemfile, composer.json; say
 > "none yet" or "unknown" rather than guessing). Fill **Install command** and the
 > **Dev/QA Test Commands** by running each candidate once in your own worktree
 > (`worktree.py <slug> create <prefix>/onboarding-check --agent project-manager`, then
