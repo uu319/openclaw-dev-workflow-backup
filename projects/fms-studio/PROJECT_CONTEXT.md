@@ -67,16 +67,20 @@
 - **Branch Prefixes:** `feature/`, `bug/`
 - **Install command:** `npm ci` (repo root, inside your own worktree; needed before any build or test).
 - **Dev/QA Test Commands:** do **not** infer these - inferring them is what hung VanQA 28 times.
-  - **Known broken (found 2026-09-19):** `npx nx test-ci <project>` fails with "The frontend:test-ci
-    task should only be run with Nx Cloud" (`nx.json` `@nx/vitest` `ciTargetName` atomizes tests for
-    Nx Cloud). A VanDev ticket is fixing `nx.json`; this line changes when it merges.
-  - Tests until then: `npx vitest run` from inside the project folder (`frontend/` or `backend/`),
-    run once, exits. As of 2026-09-19 `Development` has **no test files** in either project, so
-    "no tests" is the expected result; report it rather than treating it as a pass of the feature.
+  Every line below was re-verified by running it on `Development` @ f5e20b5 on 2026-09-21.
+  - Tests: `npx nx test <project>` (`frontend` or `backend`). Runs once and exits: `nx.json` now sets
+    `testMode: "run"` and both vitest configs set `watch: false`.
+  - **Verifying a fix (VanQA, and VanDev before saying done): `npx nx test <project> --skip-nx-cache`.**
+    Without it Nx replays a previous result - including one computed in *another agent's worktree* - so a
+    green line can mean nothing ran. If the output says `Cache: ... hit` or names a path that is not your
+    worktree, you have verified nothing. Report the command you actually ran.
+  - Test files DO exist (this said "none" until 2026-09-21 and was wrong): `backend/src/app/*.spec.ts`
+    and `frontend/{specs/index.spec.tsx,src/app/page.test.tsx}`. Both suites: 2 passed, 2 passed.
   - Lint: `npx nx lint <project>` (from the `@nx/eslint` plugin).
   - E2E: none yet (Playwright/Cypress packages are installed, no config in the repo).
-  - Forbidden: `npx nx test <project>` / `nx run <project>:test` (watch mode, `testMode: "watch"`
-    in `nx.json`; never exits in a TTY) and any `vitest` without `run`.
+  - Forbidden: `npx nx test-ci <project>` - the target no longer exists ("Cannot find configuration for
+    task <project>:test-ci"); it was the Nx Cloud atomized target and the `nx.json` fix removed it.
+    Also any `vitest` without `run`.
   - `package.json` has no `scripts`, so there is nothing to infer from there.
 
 ## Flow

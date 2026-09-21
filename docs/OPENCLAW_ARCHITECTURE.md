@@ -1,6 +1,6 @@
 # OpenClaw Dev Factory — Architecture and Self-Fix Runbook
 
-**Version:** 2.5 · **Date:** 2026-09-20 (2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Version:** 2.6 · **Date:** 2026-09-21 (2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 75 regression cases under `_tools/stress/`. 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
 **Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.6) stays the fresh-install reference (host, config keys, every incident).
 This document is shorter and answers a different question: **what is the architecture, why does the system
 keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
@@ -132,7 +132,8 @@ Every path, who creates it, who removes it, when. Anything else the linter flags
 │   ├── skills/<one skill dir each>            feature-breakdown / agy-coding / code-review / qa-verification
 │   └── DREAMS.md, memory/, media/             OpenClaw-generated; gitignored
 ~/.openclaw/skills/worktree-lifecycle/         shared skill, all agents; its own git repo. Anything else in ~/.openclaw/skills is a FIX
-~/projects/<slug>/                             CODE primary checkout: read-only for agents, on the default branch
+~/projects/<slug>/                             CODE primary checkout: read-only for agents, on the default branch,
+                                               fast-forwarded by delivery_watch each heartbeat (see 5.3a)
 ~/projects/.worktrees/<slug>/<branch>/         one per task; created by worktree.py create, removed by finish/sweep
 ~/.openclaw/openclaw.json, .last-good          PLATFORM; every other openclaw.json.* copy → ~/.openclaw/backups/config-history/
 ~/.openclaw/backups/<incident-date>/           one dated dir per incident, pruned to the last 5 config backups
@@ -269,8 +270,38 @@ statuses through the Status map; `staged` only from the delivery watcher (DEPLOY
 VanPM closing a `[SPIKE]` whose findings note exists; tickets not created through VanPM are reported, not guessed. Fails as:
 a second write path (curl, MCP update tool), or "ensure a ticket exists" sent to VanDev.
 
+**5.3a The primary checkout must be current, and must not be trampled.**
+`~/projects/<slug>` is what an agent reads when it needs to see project code: to diagnose a bug, answer a
+question about the codebase, or write a spec. It was described as "kept on the default branch" for weeks
+while nothing kept it there. `delivery_watch` fetches in it every heartbeat, but a plain fetch moves
+remote-tracking refs and leaves the working tree untouched, so `origin/<base>` was current while the FILES
+were whatever was checked out last.
+
+Found 2026-09-21, 15 commits and two days behind. The damage is silent and total: reading it produced a bug
+report for a test that had not failed in two days (the old file used a `TestingModule` and failed on
+decorator metadata; the current one constructs the controller directly and passes). A spec, three tickets, a
+branch and a PR were produced for a problem that did not exist. Every agent behaved correctly - the input
+was two days old and nothing said so.
+
+`delivery_watch.refresh_primary()` now fast-forwards it after the fetch. The refusals matter as much as the
+refresh: **read-only for agents** means anything uncommitted, any other branch, or any divergence is a
+person's work in progress, so each is reported in `errors` and left strictly alone - never reset, never
+switched. `--dry` reports staleness without moving, because silence there would hide the problem it exists
+to name. Regression: `_tools/stress/cases/t4_primary.py`, mutation-verified against the `git reset --hard`
+version that eats uncommitted work. One known side effect: the fast-forward moves code, not
+dependencies, so `node_modules` there can lag `package.json`. That is cosmetic - the primary exists to be
+READ, and agents build and test in their own worktree after running the project's Install command - but a
+tool run there can fail on a missing package until someone reinstalls.
+
+**A cached test result is not a test run.** Related, same root: verification means the command actually
+executed. Nx (and any caching build system) replays a previous result when the inputs match - including a
+result computed in *another agent's worktree*. A verification run must defeat the cache
+(`npx nx test <p> --skip-nx-cache`); an ordinary dev run should not. Found the same day, when a "green"
+verification turned out to be a 100% cache hit from VanDev's worktree with nothing executed locally.
+
 **5.3 Worktree management.** Source: `artifacts/worktrees.jsonl`. Tool: `worktree.py`. Rules: one task = one
-branch = one worktree = one PR; primary checkout read-only and on the default branch; `create` refuses a
+branch = one worktree = one PR; primary checkout read-only, on the default branch and kept current (5.3a);
+`create` refuses a
 branch another agent holds; `finish` refuses to drop local-only work (exit 2); `sweep` daily; handoffs pass
 slug + branch, never a path. Fails as: `sessions_spawn … worktree: true` (copies the settings repo), or a
 worktree under `~/projects/<slug>-agy-*`.
@@ -287,8 +318,19 @@ build by running it.
 PR base = the project's PR base, commit statuses only through `--review-status`; task branch pushed and PR
 opened directly by VanDev; never the default branch, never force. Review happens on the PR; its result is the
 commit status `openclaw/review` on the head SHA, set only when a saved review file names that SHA, so any push
-after a review needs a new review. **The merge-time check**: the review verdict is the commit status, and main checks it is green on the
-current head before saying a PR is ready (step 5). A GitHub ruleset on the PR base *requiring*
+after a review needs a new review. **The merge-time check**: `git_env.py <slug> --readiness <pr>` (not an agent eyeballing the PR). It reads
+the review status AND every workflow run on this exact head, exiting 2 with each blocker named, 3 when
+something could not be checked, 0 when ready. It exists because PR #39 was called ready while its CI was
+failing: the old path looked only for `openclaw/review`, and `statusCheckRollup` needs a `Checks` token
+permission this token does not have, so the gate could read nothing at all. Both facts are reachable
+without it — `/commits/{sha}/status` and `/actions/runs?head_sha=`.
+
+**It states what it actually verified.** With no PR CI configured, nothing runs on the head, so nothing can
+fail and the gate passes — and it used to announce "every check on this head is green" when no check
+existed. A gate built because of an unverified claim must not make one about itself; the verdict now says
+the review was checked and the code was not. The policy is deliberately unchanged: a project with no PR CI
+is still mergeable, because many legitimately have none. fms-studio is in exactly this state while its
+Cloud Build PR trigger is uncreated — its merge gate is review-only, and says so. A GitHub ruleset on the PR base *requiring*
 `openclaw/review` would have GitHub enforce it instead, and agents should not be able to change it (the token was minted without
 Administration permission; branch-protection reads return 403 — writes were not tested). The ruleset
 is per repo and Van's to set (team repos: the team's call, since it also gates human and bot PRs). Needs the
@@ -325,6 +367,34 @@ per incident; the framework repo is committed after every change and its `git st
 linter runs daily. Fails as: everything in §0.
 
 ---
+
+## 5.9 The regression suite (`_tools/stress/`)
+
+`python3 _tools/stress/run.py [--tier N] [--list]` — standard library only, no network, no credentials,
+and it never touches `projects/` (tools resolve their workspace through `OPENCLAW_WORKSPACE`, which exists
+so tests can point them at a sandbox; the heartbeat scans the real tree every 15 minutes).
+
+`soak.py --minutes N` runs the suite on a loop while sampling memory, `/tmp` and the session DB. Its first
+two minutes found the harness leaking 20 temp dirs per run — on a 1 GB RAM disk, where a full disk presents
+as "out of memory", never "out of disk".
+
+| Tier | What it covers |
+|---|---|
+| 1 | Validator parses that were wrong-but-accepted; adapter dispatch and link parsing; watcher build grouping |
+| 2 | Fault injection: 401/403/429/500, truncated JSON, an HTTP 200 carrying an error envelope |
+| 4 | State and concurrency: acks, ledger locking, marker agreement, the primary checkout |
+| 5 | The merge gate's verdicts |
+
+**Every case here is a bug that happened**, not a hypothetical. Three rules earned the hard way:
+
+1. **A test that cannot fail proves nothing.** Every case is mutation-verified: reintroduce the bug and
+   watch that exact case go red. Twice in one session a new case passed against the reintroduced bug —
+   the B1 guard (an empty board reads every status as `"?"`, which is not in `QA_FROM`, so removing the
+   guard changed nothing; the bug was the `or (not tasks and i)` clause) and the lint-owner case (it
+   called the helper directly, so reverting the *call site* left it green). Both now pin the real thing.
+2. **Assert the wiring, not just the helper.** A correct function nothing calls is worth nothing.
+3. **Every guard needs a positive control.** "Produces no actions" must sit next to "produces the right
+   actions", or a broken feature is indistinguishable from a working guard.
 
 ## 6. What to stop doing (the anti-patterns that produced the clutter)
 
@@ -422,8 +492,10 @@ defers it until in-flight agent turns finish. Backup: `openclaw.json.pre-heartbe
 
 ### Phase B — Step 10 offline half DONE 2026-09-19 night (live half open)
 Run in an isolated copy of the framework (scratchpad), not in `projects/`: the heartbeat runs the watcher for every
-`projects/<slug>` every 15 min and hands the daily LINT to the alphabetically first project, so a half-onboarded
-test project would have posted errors to Discord all night. `demo-teammate`: teammate, human tickets, ticket-branch,
+`projects/<slug>` every 15 min and hands the daily LINT to the first project whose context VALIDATES (2026-09-21;
+it was the alphabetically first, which meant a half-onboarded project captured the lint and then died in `Ctx()`
+before running it, silently stopping the lint for everyone), so a half-onboarded test project would still have
+posted errors to Discord all night. `demo-teammate`: teammate, human tickets, ticket-branch,
 Deploy signal none, a custom board (Backlog/In Dev/Staging/QA Failed/Blocked/Done/Won't do), no Figma/GCP/GitHub.
 - Fixed: the validator demanded a Figma secret for a project without Figma (now only when a Figma file is set);
   onboarding did not create `artifacts/runs`; stale worktree.py text.
