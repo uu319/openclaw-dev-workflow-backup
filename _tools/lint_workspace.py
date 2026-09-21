@@ -51,6 +51,7 @@ ALLOWED = [
     "projects/*/artifacts/specs/**", "projects/*/artifacts/patches/**", "projects/*/artifacts/reviews/**",
     "projects/*/artifacts/qa/**", "projects/*/artifacts/runs/**",
     "projects/*/artifacts/worktrees.jsonl", "projects/*/artifacts/worktrees.jsonl.lock",
+    "projects/*/artifacts/delivery_state.json.lock",
     "projects/*/artifacts/prs.md", "projects/*/artifacts/delivery_state.json",
 ]
 for a in AGENTS:

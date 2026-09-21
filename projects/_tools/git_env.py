@@ -8,6 +8,7 @@ Usage:
            git_env.py <slug> -- git push origin HEAD
   git_env.py <slug> --check            # verify the token works for this project's repo
   git_env.py <slug> --review-status <pr> [--dry]
+  git_env.py <slug> --readiness <pr>            # reviewed AND every check green?
                                        # VanReviewer, after saving its review file: sets the commit status
                                        # `openclaw/review` on the PR head (success = APPROVED, failure =
                                        # CHANGES REQUESTED) only if a review file names that exact head SHA
@@ -139,6 +140,93 @@ def review_for(reviews_dir, head_sha):
     return (best[1], best[2]) if best else (None, None)
 
 
+def readiness(fields, env, pr):
+    """Is this PR's CURRENT head actually ready? Prints a verdict and exits non-zero if not.
+
+    Step 5 used to ask an agent to eyeball `gh pr view --json statusCheckRollup`.
+    Two problems with that. It only ever looked for `openclaw/review`, so a RED CI
+    check was invisible to the one gate meant to catch exactly that (proven on
+    fms-studio PR #39: the PR Checks workflow failed and nothing in the pipeline
+    noticed). And `statusCheckRollup` needs the `Checks` token permission, which
+    this token does not have - the call returns "Resource not accessible", so the
+    gate could not read anything at all.
+
+    Both facts ARE reachable without that permission:
+      - commit statuses  -> /commits/{sha}/status      (Commit statuses: Read)
+      - workflow results -> /actions/runs?head_sha=... (Actions: Read)
+
+    A judgement made by a command, not by remembering to look.
+    """
+    import json
+    r = subprocess.run(["gh", "pr", "view", pr, "--json", "headRefOid,url,state,title"],
+                       env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if r.returncode != 0:
+        die(f"could not read PR {pr}: {r.stderr.strip()[:300]}")
+    info = json.loads(r.stdout)
+    head, repo = info["headRefOid"], fields["github_repo"]
+    print(f"PR {info['url']}  head {head[:12]}  state {info.get('state')}")
+
+    blockers, unknown = [], []
+
+    # --- the review stamp -----------------------------------------------------
+    st = subprocess.run(["gh", "api", f"repos/{repo}/commits/{head}/status"], env=env,
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if st.returncode != 0:
+        unknown.append(f"commit statuses unreadable ({st.stderr.strip()[:120]}); "
+                       f"the token needs 'Commit statuses: Read'")
+    else:
+        ctxs = {c["context"]: c["state"] for c in json.loads(st.stdout).get("statuses", [])}
+        state = ctxs.get(REVIEW_CONTEXT)
+        if state == "success":
+            print(f"  review   {REVIEW_CONTEXT}=success")
+        elif state is None:
+            blockers.append(f"{REVIEW_CONTEXT} is not set on this head - it has not been reviewed "
+                            f"(a push after a review is a new SHA and needs a new one)")
+        else:
+            blockers.append(f"{REVIEW_CONTEXT}={state}")
+        for c, v in sorted(ctxs.items()):
+            if c != REVIEW_CONTEXT:
+                print(f"  status   {c}={v}")
+                if v not in ("success",):
+                    blockers.append(f"commit status {c}={v}")
+
+    # --- CI on this exact head ------------------------------------------------
+    runs = subprocess.run(["gh", "api", f"repos/{repo}/actions/runs?head_sha={head}&per_page=50"],
+                          env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    if runs.returncode != 0:
+        unknown.append(f"workflow runs unreadable ({runs.stderr.strip()[:120]}); "
+                       f"the token needs 'Actions: Read'")
+    else:
+        wf = json.loads(runs.stdout).get("workflow_runs", [])
+        latest = {}
+        for w in wf:                      # newest attempt per workflow file
+            key = (w.get("path") or w.get("name") or "?").rsplit("/", 1)[-1]
+            if key not in latest or (w.get("created_at") or "") > (latest[key].get("created_at") or ""):
+                latest[key] = w
+        if not latest:
+            print("  ci       no workflow ran on this head")
+        for key, w in sorted(latest.items()):
+            concl = w.get("conclusion") or w.get("status")
+            print(f"  ci       {key}={concl}  {w.get('html_url')}")
+            if w.get("status") != "completed":
+                blockers.append(f"{key} is still {w.get('status')}")
+            elif concl not in ("success", "skipped", "neutral"):
+                blockers.append(f"{key}={concl}")
+
+    if unknown:
+        for u in unknown:
+            print(f"  UNKNOWN  {u}")
+    if blockers:
+        print("\nNOT READY:")
+        for b in blockers:
+            print(f"  - {b}")
+        sys.exit(2)
+    if unknown:
+        print("\nNOT READY: something could not be checked; say so rather than calling it ready")
+        sys.exit(3)
+    print("\nREADY: reviewed, and every check on this head is green")
+
+
 def review_status(fields, env, pr, dry=False):
     """Mirror the saved review of the PR's CURRENT head commit into the commit status REVIEW_CONTEXT."""
     import json
@@ -225,6 +313,11 @@ def main():
     ctx, fields = load_fields(slug)
     env = build_env(fields, read_token(ctx, fields))
 
+    if rest and rest[0] == "--readiness":
+        if len(rest) < 2 or rest[1].startswith("-"):
+            die("usage: git_env.py <slug> --readiness <pr number or URL>")
+        readiness(fields, env, rest[1])
+        return
     if rest and rest[0] == "--review-status":
         if len(rest) < 2 or rest[1].startswith("-"):
             die("usage: git_env.py <slug> --review-status <pr number or URL> [--dry]")

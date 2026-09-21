@@ -192,7 +192,8 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
 - GitHub-Native Reviews: VanDev pushes to the task branch and opens the PR directly.
   VanReviewer then reviews the code natively on the GitHub PR using `gh pr review` and marks the head
   commit with the `openclaw/review` status (`git_env.py <slug> --review-status`). A PR is "ready" only when
-  that status is green on its current head (project-orchestration step 5). The delivery watcher handles
+  `git_env.py <slug> --readiness <n>` exits 0 - that means the review stamp is green AND every CI check on
+  the current head is green. Never call a PR ready from the review stamp alone. The delivery watcher handles
   pulling feedback for VanDev to fix.
 - Tickets move for all work, not only the workflow: when a single-agent code
   request has a tracker ticket, spawn VanPM to set it `in progress` when VanDev

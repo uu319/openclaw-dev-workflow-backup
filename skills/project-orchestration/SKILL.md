@@ -212,10 +212,15 @@ message. `internal-qa` without `tickets` is legitimate; do not invent a `[QA]` t
 
 First verify, then send the message the Flow **Merge by** calls for.
 
-- Verify with `git_env.py <slug> -- gh pr view <n> --json state,headRefOid,statusCheckRollup`:
-  the head SHA must equal the QA'd SHA, and `statusCheckRollup` must have `openclaw/review` = SUCCESS.
-  Missing or red → the head was not reviewed: back to step 3, do not send the ready message. (An empty
-  `statusCheckRollup` can also mean the token cannot read statuses; say so instead of calling it reviewed.)
+- Verify with **`git_env.py <slug> --readiness <n>`**. It prints the review stamp and every check on
+  the PR's current head, and exits non-zero unless all of them are green. Do not eyeball this yourself:
+  the old instruction was to read `statusCheckRollup`, which only ever surfaced `openclaw/review`, so a
+  RED CI check was invisible to the one gate meant to catch it (fms-studio PR #39: the PR Checks
+  workflow failed and nothing in the pipeline noticed). It also needs a token permission we do not have.
+- Exit 0 → reviewed and green. Exit 2 → it prints `NOT READY:` and the blockers; relay them and stop.
+  Exit 3 → something could not be READ (a missing token permission); say exactly that rather than
+  calling it ready. Also confirm the head SHA is the one VanQA tested.
+- A red check is VanDev's to fix on the same branch, then the new head needs a new review (step 3).
 
 - **Merge by `van`** (default): "Feature `<feature-slug>` passed review and QA. Everything is ready on
   the PR. Merging is yours; tickets move when the merge is detected." Relay the PR link.

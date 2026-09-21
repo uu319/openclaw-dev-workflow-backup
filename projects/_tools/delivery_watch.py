@@ -44,7 +44,7 @@ Comments by `*[bot]` accounts and by the PROJECT_CONTEXT line `- **GitHub bots:*
 State: <Internal Artifacts>/delivery_state.json (watch_since, acked ids, seen feedback ids).
 PRs merged before watch_since (set on first run) are history and never acted on.
 """
-import argparse, datetime, glob, importlib.util, json, os, re, shutil, subprocess, sys, urllib.error, urllib.request
+import argparse, contextlib, datetime, fcntl, glob, importlib.util, json, os, re, shutil, subprocess, sys, urllib.error, urllib.request
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 VALIDATOR = os.path.join(TOOLS, "validate_context.py")
@@ -267,6 +267,54 @@ def bdesc(r):
 
 # ---------------------------------------------------------------- main
 
+# ---------------------------------------------------------------- watcher state
+# One file, two writers: the 15-minute watch run and the `--ack` the heartbeat
+# issues for what it carried out. Every write is lock + re-read + merge.
+
+@contextlib.contextmanager
+def state_lock(path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    fh = open(path + ".lock", "a")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(fh, fcntl.LOCK_UN)
+        fh.close()
+
+
+def read_state(path):
+    """-> (state, reason_it_was_unreadable_or_None). Missing is not an error."""
+    if not os.path.exists(path):
+        return {}, None
+    try:
+        return json.load(open(path)), None
+    except (OSError, ValueError) as e:
+        return {}, f"{type(e).__name__}: {e}"
+
+
+def write_state(path, state):
+    tmp = f"{path}.{os.getpid()}.tmp"      # per-process: a fixed name interleaves
+    json.dump(state, open(tmp, "w"), indent=1, sort_keys=True)
+    os.replace(tmp, path)
+
+
+def merge_state(disk, mine):
+    """What this run found, reconciled with anything written while it ran."""
+    out = dict(disk)
+    out["acked"] = {**mine.get("acked", {}), **disk.get("acked", {})}
+    out["seen_feedback"] = sorted(set(disk.get("seen_feedback") or [])
+                                  | set(mine.get("seen_feedback") or []))
+    # `pending` is this run's view, minus anything acked by either side
+    out["pending"] = {k: v for k, v in (mine.get("pending") or {}).items()
+                      if k not in out["acked"]}
+    out["watch_since"] = disk.get("watch_since") or mine.get("watch_since")
+    sweeps = [x for x in (disk.get("last_sweep"), mine.get("last_sweep")) if x]
+    if sweeps:
+        out["last_sweep"] = max(sweeps)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slug"); ap.add_argument("--json", action="store_true")
@@ -275,31 +323,52 @@ def main():
     a = ap.parse_args()
     ctx = Ctx(a.slug)
     state_path = os.path.join(ctx.art, "delivery_state.json")
-    try:
-        state = json.load(open(state_path))
-    except (OSError, ValueError):
-        state = {}
+    state, unreadable = read_state(state_path)
+    if unreadable:
+        # Silently starting from {} resets watch_since to NOW, which makes every past
+        # merge "history" and every waiting ticket stop moving, while the run prints a
+        # confident NO_ACTIONS. Say it instead.
+        errors.append(f"delivery state file unreadable ({unreadable}); "
+                      f"starting a fresh window - past merges will be treated as history")
     state.setdefault("watch_since", iso(now())); state.setdefault("acked", {})
     state.setdefault("pending", {}); state.setdefault("seen_feedback", [])
 
     def save():
-        if not a.dry:
-            tmp = state_path + ".tmp"
-            json.dump(state, open(tmp, "w"), indent=1, sort_keys=True); os.replace(tmp, state_path)
+        """Merge with what is on disk, under a lock.
+
+        A watch run loads state, spends a minute on network calls, then saves - and
+        the same heartbeat session issues `--ack` in that window. A plain write of
+        the stale copy silently LOSES the ack, so the action fires again next
+        heartbeat: a second VanDev spawned at the same build, or a duplicate bug
+        ticket. Proven in _tools/stress (tier 4).
+        """
+        if a.dry:
+            return
+        with state_lock(state_path):
+            disk, _ = read_state(state_path)
+            write_state(state_path, merge_state(disk, state))
 
     if a.ack:
-        unknown = [i for i in a.ack if i not in state["pending"] and i not in state["acked"]]
-        if unknown:
-            die(f"unknown action id(s) {unknown}: ack only the exact `ack:` ids the watcher printed "
-                f"(pending: {sorted(state['pending'])})")
-        for i in a.ack:
-            p = state["pending"].pop(i, None)
-            if p and p.get("feedback_ids"):
-                state["seen_feedback"] = sorted(set(state["seen_feedback"]) | set(p["feedback_ids"]))
-            if i.startswith("sweep-"):
-                state["last_sweep"] = iso(now())
-            state["acked"][i] = iso(now())
-        save(); print(f"acked {len(a.ack)}"); return
+        # Read-modify-write inside ONE lock: a watch run saving mid-ack would
+        # otherwise take a stale copy and drop what we just recorded.
+        with state_lock(state_path):
+            live, _ = read_state(state_path)
+            for k, d in (("acked", {}), ("pending", {}), ("seen_feedback", [])):
+                live.setdefault(k, d)
+            live.setdefault("watch_since", state["watch_since"])
+            unknown = [i for i in a.ack if i not in live["pending"] and i not in live["acked"]]
+            if unknown:
+                die(f"unknown action id(s) {unknown}: ack only the exact `ack:` ids the watcher "
+                    f"printed (pending: {sorted(live['pending'])})")
+            for i in a.ack:
+                p = live["pending"].pop(i, None)
+                if p and p.get("feedback_ids"):
+                    live["seen_feedback"] = sorted(set(live["seen_feedback"]) | set(p["feedback_ids"]))
+                if i.startswith("sweep-"):
+                    live["last_sweep"] = iso(now())
+                live["acked"][i] = iso(now())
+            write_state(state_path, live)
+        print(f"acked {len(a.ack)}"); return
 
     since = parse_t(a.since or state["watch_since"])
     actions, notes, errors = [], [], []

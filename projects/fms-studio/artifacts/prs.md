@@ -4,6 +4,7 @@
 
 | Branch | Status | PR | Opened by | Task | Updated |
 |---|---|---|---|---|---|
+| `feature/z94kydaw4w-pr-checks` | pr_open | https://github.com/symphco/fms-studio/pull/39 | qa-engineer | Implement GitHub Actions PR checks for ticket z94kydaw4w | 2026-09-21 |
 | `bug/staging-build-c2dceb854d` | merged_or_closed | https://github.com/symphco/fms-studio/pull/38 | developer | Address PR 38 feedback | 2026-09-20 |
 | `bug/pr-37` | active |  | code-reviewer |  | 2026-09-19 |
 | `bug/staging-build-e42bd2d4cb` | pr_open | https://github.com/symphco/fms-studio/pull/37 | developer | Fix lockfile for content-type | 2026-09-19 |
