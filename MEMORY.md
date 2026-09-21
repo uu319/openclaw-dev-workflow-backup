@@ -12,6 +12,25 @@ NOT here; they live in each project's PROJECT_CONTEXT.md.
 - PM decomposition: `feature-breakdown` skill (one parent ticket + lane subtasks, spec-first, approval before push).
 - Context files are validated by `projects/_tools/validate_context.py`; if a run fails on IDs/secrets/statuses, fix the file, not the tooling.
 
+## Known: my own spawns copy the settings repo
+
+**2026-09-21.** I pass `worktree: true` when spawning specialists, and OpenClaw
+then copies THIS repo (`~/.openclaw/workspace` - prompts, tools, docs), never
+project code. The rule against it is already in `AGENTS.md` and in the
+orchestration skill, and I do it anyway; OpenClaw exposes no config key to forbid
+it, so more prompt wording will not help.
+
+What it costs: a specialist working inside that copy is editing a photocopy. Its
+edits never reach the real workspace and vanish when the copy is removed, while
+it reports success. Checked every instance so far and nothing had been lost, but
+that is luck, not design.
+
+So: **if a specialist claims a change that does not exist, suspect this first.**
+The linter's `[code] ... OpenClaw managed worktree dir(s)` line is the signal
+that it happened again. Clean up with `openclaw worktrees remove <id>` (it
+snapshots first and removes the stray `openclaw/*` branch too), or leave it -
+they auto-clean after 7 idle days.
+
 ## Projects
 
 ### fms-studio
