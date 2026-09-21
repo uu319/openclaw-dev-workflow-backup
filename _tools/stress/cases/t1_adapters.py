@@ -114,6 +114,50 @@ def error_bodies_never_leak_the_request():
        "only the known message field may be surfaced, never the whole body")
 
 
+def actions_pages_until_the_watch_window_is_covered():
+    """One page is not enough on a repo with steady CI traffic.
+
+    It used to be a single request capped at 100. Once more than that many runs
+    piled up on the base branch, a merge commit's run fell off the end, the
+    watcher saw a merge that had apparently never built, and waited until
+    NO_BUILD_AFTER_MIN - the 2026-09-19 stall by another route. fms-studio had 19
+    runs from dependabot alone. Proven live 2026-09-21: page_size=2 over 6 runs
+    issued 4 requests and returned the same commits as one big page.
+    """
+    runs = [{"head_sha": f"sha{i}", "path": ".github/workflows/checks.yml",
+             "status": "completed", "conclusion": "success", "id": i,
+             "created_at": f"2026-09-{21 - i:02d}T00:00:00Z"} for i in range(5)]
+
+    class Host:
+        def __init__(self):
+            self.pages = []
+
+        def gh(self, *a):
+            per = int(next(x for x in a if str(x).startswith("per_page=")).split("=")[1])
+            page = int(next(x for x in a if str(x).startswith("page=")).split("=")[1])
+            self.pages.append(page)
+            return {"workflow_runs": runs[(page - 1) * per: page * per]}
+
+    F = {"flow": {"deploy_signal": "github-actions"}, "github_repo": "o/r"}
+
+    h = Host()
+    got = ci.for_project(F, h).runs("main", since="2020-01-01T00:00:00Z", page_size=2)
+    eq(h.pages, [1, 2, 3], "5 runs at 2 per page is 3 requests, stopping on the short page")
+    eq([r["commit"] for r in got], [f"sha{i}" for i in range(5)],
+       "every page must be collected - a dropped run reads as 'never built'")
+
+    # A window already covered must NOT keep paging: this runs every 15 minutes.
+    h2 = Host()
+    ci.for_project(F, h2).runs("main", since="2026-09-20T00:00:00Z", page_size=2)
+    if len(h2.pages) >= 3:
+        raise AssertionError(f"paging must stop once runs are older than `since`, got {h2.pages}")
+
+    # And with no window at all, the old single-request behaviour is unchanged.
+    h3 = Host()
+    ci.for_project(F, h3).runs("main")
+    eq(h3.pages, [1], "without `since` it must stay one request")
+
+
 def ci_dispatch_picks_the_declared_provider():
     class Host:
         def gh(self, *a):
@@ -280,6 +324,7 @@ CASES = [
     ("jira issue type discovered", jira_issue_type_is_discovered_from_the_project),
     ("jira closed via statusCategory", jira_closed_uses_status_category_not_an_english_word_list),
     ("actions keys on the workflow file", actions_keys_on_the_workflow_file_not_the_run_name),
+    ("actions pages to cover the window", actions_pages_until_the_watch_window_is_covered),
     ("ci dispatch", ci_dispatch_picks_the_declared_provider),
     ("no-ci reports no runs", no_ci_reports_no_runs),
 ]

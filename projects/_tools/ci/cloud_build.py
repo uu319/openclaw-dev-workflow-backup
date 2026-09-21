@@ -10,7 +10,10 @@ INFLIGHT = {"QUEUED", "WORKING", "PENDING", "STATUS_UNKNOWN"}
 class CloudBuild(CI):
     kind = "cloud-build"
 
-    def runs(self, branch, limit=60):
+    def runs(self, branch, limit=60, since=None, page_size=None):
+        # `since` is accepted for interface parity. gcloud has no cursor here, so
+        # the ceiling is --limit; a window needing more than that is not covered.
+        # Untested against a real overflow, unlike the Actions path - see 5.9.
         if not self.f.get("gcp_project_id"):
             return []
         builds = self.host.gcloud(

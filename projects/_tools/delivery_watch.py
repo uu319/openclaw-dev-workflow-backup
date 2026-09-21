@@ -140,8 +140,8 @@ class Ctx:
             self._ci = ci.for_project(self.f, self)
         return self._ci
 
-    def ci_runs(self, limit=60):
-        return self.ci().runs(self.branch, limit)
+    def ci_runs(self, limit=60, since=None):
+        return self.ci().runs(self.branch, limit, since=since)
 
     # ---- tracker (read-only; token from env, else the vault, like the other launchers) ----
     def tracker(self):
@@ -548,7 +548,7 @@ def main():
       except RuntimeError as e:
         errors.append(str(e)); prs = []
     try:
-        commits = commits_from_runs(ctx, ctx.ci_runs()) if watching and ctx.flow.get("deploy_signal") != "none" else {}
+        commits = commits_from_runs(ctx, ctx.ci_runs(since=iso(since))) if watching and ctx.flow.get("deploy_signal") != "none" else {}
     except RuntimeError as e:
         errors.append(str(e)); commits = {}
 

@@ -31,8 +31,12 @@ class CI:
         self.f = fields
         self.host = host
 
-    def runs(self, branch, limit=60):
-        """-> [normalised run] for the given branch, newest first-ish."""
+    def runs(self, branch, limit=60, since=None, page_size=None):
+        """-> [normalised run] for the given branch, newest first-ish.
+
+        `since` (ISO8601) lets a provider page far enough back to cover the
+        watch window instead of guessing with a fixed count.
+        """
         return []
 
 

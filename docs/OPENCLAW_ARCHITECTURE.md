@@ -293,6 +293,14 @@ dependencies, so `node_modules` there can lag `package.json`. That is cosmetic -
 READ, and agents build and test in their own worktree after running the project's Install command - but a
 tool run there can fail on a missing package until someone reinstalls.
 
+**CI reads must cover the watch window, not a fixed count.** The Actions adapter made ONE request capped at
+100 runs (default 60). On a repo with steady CI traffic - fms-studio has 19 runs from dependabot alone - a merge
+commit's run falls off the end, the watcher sees a merge that apparently never built, and waits until
+`NO_BUILD_AFTER_MIN`: the 12.5f stall reached by another route. It now pages until the runs are older than
+`watch_since`, bounded by `MAX_RUNS = 500`, with the page size injectable so a test can force multi-page paging
+without 60 real runs. Proven live 2026-09-21: page_size=2 over 6 runs issued 4 requests and returned the same
+commits as one page. Cloud Build has the same shape (`--limit`) and no cursor; it is untested against an overflow.
+
 **A cached test result is not a test run.** Related, same root: verification means the command actually
 executed. Nx (and any caching build system) replays a previous result when the inputs match - including a
 result computed in *another agent's worktree*. A verification run must defeat the cache

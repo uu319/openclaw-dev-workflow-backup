@@ -859,7 +859,16 @@ How to mint each:
 - **Figma:** Figma → Settings → Security → Personal access tokens, scopes `file_content:read`, `file_dev_resources:read`.
 - **GitHub fine-grained PAT:** GitHub → Settings → Developer settings → Fine-grained tokens. Resource owner = the org,
   Repository access = **only this repo**, permissions: Contents read/write, Pull requests read/write, **Commit statuses
-  read/write** (the `openclaw/review` status), Metadata read. No Administration: agents must not be able to change rulesets.
+  read/write** (the `openclaw/review` status), **Actions read**, **Workflows read/write**, Metadata read.
+  No Administration: agents must not be able to change rulesets.
+  The last two were missing from this list until 2026-09-21 and both were proven necessary on a real repo:
+  - **Actions: read** — every CI read goes through `/actions/runs`. Without it the API returns
+    `403 Resource not accessible by personal access token`, so the merge gate can read no check at all and
+    `--readiness` reports UNKNOWN rather than a verdict. fms-studio's token still lacks it.
+  - **Workflows: read/write** — GitHub refuses a fine-grained PAT that creates or edits anything under
+    `.github/workflows/`, with `refusing to allow a Personal Access Token to create or update workflow ...
+    without workflow scope`. `Contents: write` is NOT enough. VanDev adding a CI workflow (fms-studio PR #39
+    did exactly that) fails at push time without it, and the error reads like a bug rather than a missing scope.
   Expiry ≤ 90 days; put the expiry date in PROJECT_CONTEXT. If the org requires approval, an org owner must approve
   it before `git_env.py <slug> --check` passes.
 - **GitHub deploy key:** `ssh-keygen -t ed25519 -f ~/.ssh/<slug>_ed25519`, add as a deploy key with write access,
