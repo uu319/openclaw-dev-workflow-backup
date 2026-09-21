@@ -38,7 +38,8 @@ As a <role>, I want <goal>, so that <benefit>.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
-- [ ] Unit tests for this lane added and green (the project's **Tests** command)
+- [ ] Unit tests for this lane added and green (the project's **Tests** command, run with the
+      project's no-cache flag - a cached pass is not a run)
 - [ ] Lint clean (the project's **Lint** command)
 - [ ] PR opened from the branch this project's Flow **Branch model** gives, and reviewed
 - [ ] Status moved to the board's `staged` status once the change is on staging (the delivery
