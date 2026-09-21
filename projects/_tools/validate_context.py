@@ -54,7 +54,7 @@ REQUIRED = {
 }
 OPTIONAL = {
     # --- tracker (required together when Tracker is not `none`) ---
-    "tracker": r"\*\*Tracker:\*\*\s*`?([A-Za-z-]+)`?\s*$",
+    "tracker": r"\*\*Tracker:\*\*\s*(.+)$",
     "board_id": r"\*\*Tracker Board ID:\*\*\s*`?([^`\n]+?)`?\s*$",
     "board_name": r"\*\*Tracker Board name:\*\*\s*(.+)",
     "tracker_mcp_server": r"\*\*Tracker MCP server:\*\*\s*`([^`]+)`",
@@ -83,7 +83,7 @@ OPTIONAL = {
 LEGACY = {
     "board_id": r"\*\*ClickUp List ID:\*\*\s*`?([^`\n]+?)`?\s*$",
     "board_name": r"\*\*ClickUp List name:\*\*\s*(.+)",
-    "tracker": r"\*\*Tracker Tool:\*\*\s*`?([A-Za-z-]+)`?\s*$",
+    "tracker": r"\*\*Tracker Tool:\*\*\s*(.+)$",   # ClickUp-only name
     "deploy_checks": r"\*\*Deploy triggers:\*\*\s*(.+)",   # Cloud Build-only name
 }
 
@@ -132,8 +132,24 @@ CHOICES = {"ticket_source": {"agent", "human", "both"}, "branch_model": {"featur
 
 
 def _ticks(v):
+    """Every item on a list-valued line: backticked if any, else comma-split."""
     t = re.findall(r"`([^`]*)`", v)
     return t if t else [x.strip() for x in v.split(",") if x.strip()]
+
+
+def _one(v):
+    r"""The single value on a line, ignoring any parenthetical aside.
+
+    `_ticks(...)[0]` used to do this, which meant a backtick ANYWHERE on the line
+    won - so `Deploy signal: none (was \`cloud-build\`)` parsed as `cloud-build`,
+    and `PR base: main (never \`develop\`)` sent every PR at `develop`. The value
+    is what the line starts with; a parenthetical is prose.
+    """
+    v = (v or "").strip()
+    m = re.match(r"`([^`]*)`", v)
+    if m:
+        return m.group(1).strip()
+    return re.split(r"\s*[(<]", v, 1)[0].strip().strip("`").strip()
 
 
 def parse_flow(text, fields, errors):
@@ -144,12 +160,12 @@ def parse_flow(text, fields, errors):
     if sec:
         for key, label in FLOW_LABELS.items():
             m = re.search(r"^- \*\*" + re.escape(label) + r":\*\*\s*(.+)$", sec.group(1), re.M)
-            if m and not PLACEHOLDER.fullmatch(_ticks(m.group(1).strip())[0] if _ticks(m.group(1).strip()) else ""):
+            if m and not PLACEHOLDER.fullmatch(_one(m.group(1))):
                 raw[key] = m.group(1).strip()      # an unfilled `<placeholder>` means "use the default"
     else:
         fields.setdefault("warnings", []).append(
             "no '## Flow' section: using the `factory` profile and a status map inferred from Statuses")
-    profile = _ticks(raw["profile"])[0] if raw.get("profile") else "factory"
+    profile = _one(raw["profile"]) if raw.get("profile") else "factory"
     if profile not in PRESETS:
         errors.append(f"Flow Profile must be one of {sorted(PRESETS)}: {profile}")
         profile = "factory"
@@ -158,7 +174,7 @@ def parse_flow(text, fields, errors):
         flow["stages"] = _ticks(raw["stages"])
     for k in ("ticket_source", "assignee_filter", "branch_model", "merge_by", "deploy_signal", "chat_channel", "pr_conventions", "pr_base"):
         if raw.get(k):
-            flow[k] = _ticks(raw[k])[0]
+            flow[k] = _one(raw[k])
     flow.setdefault("pr_base", None); flow.setdefault("chat_channel", None); flow.setdefault("pr_conventions", "none")
     if not flow.get("pr_base"):
         flow["pr_base"] = fields.get("default_branch")
@@ -223,9 +239,16 @@ def parse(path):
     text = open(path, encoding="utf-8").read()
     fields, errors = {}, []
     for key, rx in {**REQUIRED, **OPTIONAL}.items():
-        m = re.search(rx, text, re.M)
-        if m:
-            fields[key] = m.group(1).strip()
+        found = [x.strip() for x in re.findall(rx, text, re.M)]
+        if not found:
+            continue
+        fields[key] = found[0]
+        # First-match-wins used to be silent, so a "corrected" line appended below
+        # the original was ignored - in the one file that is meant to be the single
+        # source of truth for this project.
+        if len({x for x in found if x}) > 1:
+            errors.append(f"{key} is declared more than once with different values: {found}; "
+                          f"keep one line")
     for key, rx in LEGACY.items():          # old ClickUp labels fill what the new ones did not
         if key not in fields:
             m = re.search(rx, text, re.M)
@@ -234,7 +257,10 @@ def parse(path):
 
     # Which tracker, if any. Stated explicitly, else inferred from a pre-rename
     # file, else `none` - a repo with PRs and no ticket system is a real project.
-    tracker = (fields.get("tracker") or "").lower().strip("` ")
+    # `_one` so a trailing aside ("`jira` (moved from ClickUp)") does not break the
+    # match and fall through to the inference below, which would hand a Jira project
+    # a ClickUp adapter.
+    tracker = _one(fields.get("tracker") or "").lower()
     if not tracker:
         tracker = "clickup" if (fields.get("board_id") or fields.get("tracker_secret")) else "none"
     if tracker not in TRACKER_CHOICES:
@@ -266,7 +292,9 @@ def parse(path):
         errors.append(f"slug must be lowercase letters, digits, hyphens: {fields['slug']}")
     if has_tracker and fields.get("board_id") and not PLACEHOLDER.search(fields["board_id"]):
         spec = TRACKERS[tracker]
-        if not re.fullmatch(spec["board_rx"], fields["board_id"]):
+        if len(fields["board_id"]) > 128:
+            errors.append(f"Tracker Board ID is {len(fields['board_id'])} characters; that is not a board id")
+        elif not re.fullmatch(spec["board_rx"], fields["board_id"]):
             errors.append(f"Tracker Board ID is not a {tracker} {spec['board_kind']}: {fields['board_id']}")
     if tracker == "jira" and not fields.get("tracker_base_url"):
         errors.append("Tracker is `jira`, so '**Tracker Base URL:** `https://<site>.atlassian.net`' is required")
@@ -281,17 +309,25 @@ def parse(path):
         if k in fields and not re.fullmatch(r"[A-Z0-9_]+", fields[k]):
             errors.append(f"{k} must be UPPER_SNAKE: {fields[k]}")
     if "branch_prefixes" in fields:
-        fields["branch_prefixes"] = re.findall(r"`([^`]+)`", fields["branch_prefixes"])
+        # Written without backticks this used to parse as [], which disables the
+        # worktree prefix guard AND makes is_ours() claim every PR on the base.
+        fields["branch_prefixes"] = _ticks(fields["branch_prefixes"])
     if "deploy_checks" in fields:
         # `a, b` and `a`, `b` and bare a, b all mean the same list. Backticks left in
         # here become trigger names that match nothing, which wedges the watcher on
         # "still building" forever (2026-09-19), so split them out and drop placeholders.
         raw = fields["deploy_checks"]
-        fields["deploy_checks"] = [] if PLACEHOLDER.search(raw) else [
-            t for part in _ticks(raw) for t in (x.strip() for x in part.split(",")) if t]
+        # One unfilled placeholder used to empty the WHOLE list, and an empty
+        # expected set makes a commit count as deployed on a single green run.
+        # Drop the placeholders, keep the real names.
+        fields["deploy_checks"] = [
+            t for part in _ticks(raw) for t in (x.strip() for x in part.split(","))
+            if t and not PLACEHOLDER.fullmatch(t)]
         fields["deploy_triggers"] = fields["deploy_checks"]   # bridge for unconverted callers
     if "statuses" in fields:
-        fields["statuses"] = [s.strip(" `") for s in fields["statuses"].split(",") if s.strip(" `")]
+        # Backticked statuses win, so a board status literally named "Done, verified"
+        # survives; only an unbackticked line is comma-split.
+        fields["statuses"] = [x.strip(" `") for x in _ticks(fields["statuses"]) if x.strip(" `")]
     # The tracker MCP server is per project, exactly like the Figma one:
     # mcp.servers["tracker-<slug>"] -> projects/_tools/tracker_mcp.py <slug>
     if has_tracker and "slug" in fields and fields.get("tracker_mcp_server") != f"tracker-{fields['slug']}":
@@ -357,6 +393,10 @@ def parse(path):
     if has_gh:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", fields["github_repo"]):
             errors.append(f"GitHub Repo must be <owner>/<repo>: {fields['github_repo']}")
+        elif any(part in (".", "..") for part in fields["github_repo"].split("/")):
+            # `acme/..` collapses the path in every API URL it is built into
+            errors.append(f"GitHub Repo is not an owner/repo name: {fields['github_repo']} "
+                          f"(a `.` or `..` segment collapses the API path)")
         if not fields.get("git_secret"):
             errors.append("GitHub Repo is set, so a 'GitHub Token:' SecretRef line is required")
         elif not re.fullmatch(r"[A-Z0-9_]+", fields["git_secret"]):

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """ClickUp. Board = a list id (digits). Auth = the raw token, not Bearer."""
 import json
+import os
 import re
 
 from . import Tracker, http_json
 
-API = "https://api.clickup.com/api/v2"
+# Overridable so tests can point at a local mock; unset, this is the real API.
+API = os.environ.get("CLICKUP_API_BASE", "https://api.clickup.com/api/v2")
 
 
 class ClickUp(Tracker):

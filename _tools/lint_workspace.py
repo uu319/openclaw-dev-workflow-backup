@@ -39,6 +39,7 @@ ALLOWED = [
     "DREAMS.md",                       # written by OpenClaw's dreaming feature (see Decision G)
     "memory/**", ".clawhub/**", "media/**", ".git/**",
     "_tools/validate_team.py", "_tools/lint_workspace.py", "_tools/framework_offbox.py",
+    "_tools/stress/**",                 # the stress suite (runner, harness, cases, mocks)
     "docs/*.md",                       # the architecture doc and the guide (~/OPENCLAW_*.md are symlinks here)
     "skills/project-onboarding/**", "skills/project-orchestration/**",
     "credentials/gcp/*.json",

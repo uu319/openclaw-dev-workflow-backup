@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Tier 1 - PROJECT_CONTEXT parsing.
+
+Every case here is a WRONG-BUT-ACCEPTED parse: the validator returns success and
+a value that is not what the file says. Those are worse than errors, because the
+wrong value flows into `git_env.py`'s enforced PR base, the watcher's branch, or
+a ticket-moving decision.
+
+Cases assert the CORRECT outcome, so a case that fails is a defect that is still
+open - not a broken test.
+"""
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from harness import contains, eq, not_contains, parsed  # noqa: E402
+
+TITLE = "validator: wrong-but-accepted parses"
+
+
+def _flow(fields, key):
+    return (fields.get("flow") or {}).get(key)
+
+
+# --- backticks in a parenthetical steal the value ---------------------------
+
+def backtick_hijack_deploy_signal():
+    """A parenthetical is prose, not the value. Same class as the 12.5f bug."""
+    f, errs = parsed(("- **Deploy signal:** `none`",
+                      "- **Deploy signal:** none (was `cloud-build`)"))
+    eq(_flow(f, "deploy_signal"), "none",
+       "a backticked aside must not become the Deploy signal")
+
+
+def backtick_hijack_pr_base():
+    """PR base flows into git_env.py's enforced --base, so a wrong value is a wrong merge target."""
+    f, errs = parsed(("- **Merge by:** `van`",
+                      "- **Merge by:** `van`\n- **PR base:** main (never `develop`)"))
+    eq(_flow(f, "pr_base"), "main",
+       "a backticked aside must not become the PR base")
+
+
+# --- whole sections silently ignored ----------------------------------------
+
+def crlf_flow_section_is_not_silently_dropped():
+    """`## Flow` is matched with a bare \\n, so a CRLF file falls back to defaults."""
+    f, errs = parsed(("- **Profile:** `factory`", "- **Profile:** `teammate`"))
+    base_profile = _flow(f, "profile")
+    eq(base_profile, "teammate", "sanity: the LF file parses its profile")
+
+    crlf = open(
+        __import__("harness").context(("- **Profile:** `factory`", "- **Profile:** `teammate`")),
+        encoding="utf-8").read().replace("\n", "\r\n")
+    import harness
+    f2, errs2 = __import__("harness").load(
+        "vc_crlf", os.path.join(harness.TOOLS, "validate_context.py")).parse(
+        harness.context(base=crlf))
+    got = (f2.get("flow") or {}).get("profile")
+    if got != "teammate":
+        # falling back silently is the bug; an explicit error would also be acceptable
+        contains([w for w in f2.get("warnings", [])] + errs2, "flow",
+                 "a CRLF file must not silently lose its whole ## Flow section")
+        raise AssertionError(
+            "CRLF silently reverted the Flow profile to 'factory' (warning only). "
+            "Either parse \\r\\n or make it a hard error.")
+
+
+# --- unanchored patterns pick up prose --------------------------------------
+
+def prose_cannot_hijack_the_tracker_secret():
+    """`Tracker:\\s*`X`` has no `**` and no anchor, so any sentence matching it wins."""
+    f, errs = parsed(("## Workflow Rules",
+                      "## Workflow Rules\n<!-- If the Tracker: `WRONG_NAME_FROM_PROSE` is stale, re-store it. -->"))
+    eq(f.get("tracker_secret"), "CLICKUP_API_TOKEN_HARNESS",
+       "a commented sentence must not become the vault key name")
+
+
+# --- a placeholder silently empties a list ----------------------------------
+
+def placeholder_must_not_silently_empty_deploy_checks():
+    """An empty expected set makes a commit 'green' on ONE passing check."""
+    f, errs = parsed(("- **Deploy checks:** `deploy-fe`, `deploy-be`",
+                      "- **Deploy checks:** `deploy-fe`, <the backend one, TBD>"))
+    checks = f.get("deploy_checks")
+    if checks == []:
+        raise AssertionError(
+            "one unfilled placeholder silently emptied Deploy checks, so every commit "
+            "is judged deployed on a single green run; expected ['deploy-fe'] or an error")
+    eq(checks, ["deploy-fe"], "the filled check must survive a placeholder beside it")
+
+
+def branch_prefixes_without_backticks_is_not_silently_empty():
+    """Empty prefixes disable the worktree guard AND make is_ours() claim every PR."""
+    f, errs = parsed(("- **Branch Prefixes:** `feature/`, `bug/`",
+                      "- **Branch Prefixes:** feature/, bug/"))
+    got = f.get("branch_prefixes")
+    if got in ([], None):
+        raise AssertionError(
+            "prefixes written without backticks parsed as empty; that disables the "
+            "worktree prefix guard and the PR-ownership fallback. Expected them parsed or an error.")
+    eq(got, ["feature/", "bug/"], "prefixes should parse with or without backticks")
+
+
+# --- duplicates and shapes ---------------------------------------------------
+
+def a_duplicated_label_is_reported():
+    """First match wins silently, so a 'corrected' line below the original is ignored."""
+    f, errs = parsed(("- **Create status:** `to do`",
+                      "- **Create status:** `to do`\n- **Create status:** `in progress`"))
+    contains(errs, "declared more than once",
+             "a field declared twice with different values must be reported, not silently first-wins")
+
+
+def github_repo_must_not_allow_path_traversal():
+    """`owner/..` collapses the API path in every gh call built from it."""
+    f, errs = parsed(("- **GitHub Repo:** `acme/harness`", "- **GitHub Repo:** `acme/..`"))
+    contains(errs, "github repo", "owner/.. must be refused as a repo name")
+
+
+def a_status_containing_a_comma_is_not_split():
+    f, errs = parsed(("- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`",
+                      "- **Statuses:** `to do`, `done, verified`, `in progress`, `cancelled`"),
+                     )
+    st = f.get("statuses") or []
+    if "done" in st and "verified" in st:
+        raise AssertionError(
+            "a backticked status containing a comma was split into two; "
+            f"expected 'done, verified' to survive intact, got {st}")
+
+
+# --- inference that guesses wrong --------------------------------------------
+
+def an_unparseable_tracker_line_does_not_silently_become_clickup():
+    """Trailing content breaks the match, and the fallback infers clickup from a board id."""
+    f, errs = parsed(("- **Tracker:** `clickup`", "- **Tracker:** `jira` (moved from ClickUp)"))
+    if f.get("tracker") == "clickup" and not errs:
+        raise AssertionError(
+            "a Tracker line the regex could not read silently inferred `clickup` from the "
+            "board id - so a Jira project would be given a ClickUp adapter. Expected `jira` or an error.")
+    eq(f.get("tracker"), "jira", "the declared tracker must win")
+
+
+def board_id_has_a_sane_length_cap():
+    """An unbounded id is concatenated straight into an API URL."""
+    f, errs = parsed(("- **Tracker Board ID:** `1100770000001008`",
+                      "- **Tracker Board ID:** `" + "9" * 4000 + "`"))
+    if not errs:
+        raise AssertionError("a 4000-digit board id was accepted and would be sent to the tracker API")
+
+
+CASES = [
+    ("backtick aside hijacks Deploy signal", backtick_hijack_deploy_signal),
+    ("backtick aside hijacks PR base", backtick_hijack_pr_base),
+    ("CRLF silently drops the Flow section", crlf_flow_section_is_not_silently_dropped),
+    ("prose hijacks the Tracker SecretRef", prose_cannot_hijack_the_tracker_secret),
+    ("placeholder empties Deploy checks", placeholder_must_not_silently_empty_deploy_checks),
+    ("branch prefixes without backticks", branch_prefixes_without_backticks_is_not_silently_empty),
+    ("duplicated label accepted silently", a_duplicated_label_is_reported),
+    ("github repo path traversal", github_repo_must_not_allow_path_traversal),
+    ("status name containing a comma", a_status_containing_a_comma_is_not_split),
+    ("unparseable Tracker line infers clickup", an_unparseable_tracker_line_does_not_silently_become_clickup),
+    ("board id length cap", board_id_has_a_sane_length_cap),
+]

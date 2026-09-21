@@ -5,11 +5,13 @@ Linear calls a status a workflow state, and states belong to the team, so a move
 resolves the state name against that team's states.
 """
 import json
+import os
 import re
 
 from . import Tracker, http_json
 
-API = "https://api.linear.app/graphql"
+# Overridable so tests can point at a local mock; unset, this is the real API.
+API = os.environ.get("LINEAR_API_URL", "https://api.linear.app/graphql")
 CLOSED_TYPES = {"completed", "canceled"}
 
 
