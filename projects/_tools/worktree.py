@@ -382,9 +382,24 @@ def cmd_finish(p, branch, pr):
           f"recorded in {p.prs_md}")
 
 
+ASK_FAILED = "ask-failed"   # GitHub could not be asked - NOT the same as "no PR"
+
+
 def pr_for(p, branch):
-    """Latest GitHub PR for a head branch via git_env.py -> dict(state, headRefOid, url) or None.
-    Returns None when the project has no GitHub token or GitHub cannot be reached."""
+    """Latest GitHub PR for a head branch, via git_env.py.
+
+    Three distinct answers, because sweep deletes on some of them:
+      None        this project has no GitHub configured - nothing to ask
+      ASK_FAILED  GitHub could not be reached or the token is not working
+      {}          GitHub answered: there is no PR for this branch
+      {...}       the PR
+
+    These used to collapse into None, so an expired PAT looked identical to "no
+    PR" - and the fallback path then removed the worktree and deleted the local
+    branch. `git push` uses the SSH deploy key while `gh` uses the PAT, so the
+    token expiring (the guide caps them at 90 days) leaves git working while the
+    API goes dark: exactly the state in which that deletion is unsafe.
+    """
     if not p.github:
         return None
     launcher = os.path.join(os.path.dirname(os.path.abspath(__file__)), "git_env.py")
@@ -392,8 +407,11 @@ def pr_for(p, branch):
                         "--state", "all", "--limit", "1", "--json", "state,headRefOid,url,number"],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=p.primary)
     if r.returncode != 0:
-        return None
-    rows = json.loads(r.stdout or "[]")
+        return ASK_FAILED
+    try:
+        rows = json.loads(r.stdout or "[]")
+    except ValueError:
+        return ASK_FAILED
     return rows[0] if rows else {}
 
 
@@ -420,6 +438,12 @@ def cmd_sweep(p):
                 led.upsert(b, status="merged_or_closed", worktree=None, event="sweep: no worktree, no branch")
                 continue
             pr = pr_for(p, b)
+            if pr is ASK_FAILED:
+                # Never delete on an unanswered question: keep it and say so.
+                report.append(f"KEPT   {b}: origin/{b} is gone but GitHub could not be asked about "
+                              f"its PR (token expired or unreachable) - not removing anything; "
+                              f"check `git_env.py {p.slug} --check`")
+                continue
             if pr and pr.get("state") in ("MERGED", "CLOSED"):
                 verified = pr.get("headRefOid") == tip
                 how = f"PR #{pr.get('number')} {pr['state'].lower()}"

@@ -91,10 +91,47 @@ def prs_md_is_written_atomically():
             "so an interrupted render leaves a half-written file that agents then read.")
 
 
+def sweep_never_deletes_when_github_could_not_be_asked():
+    """`git push` uses the SSH key; `gh` uses the PAT. A PAT expiring (capped at 90
+    days) leaves git working while the API goes dark. In that state "no PR" and
+    "could not ask" must not look the same, because one of them deletes.
+    """
+    wt = harness.load("wt_stress", os.path.join(harness.TOOLS, "worktree.py"))
+    eq(hasattr(wt, "ASK_FAILED"), True,
+       "pr_for must have a distinct answer for 'GitHub could not be asked'")
+
+    src = open(os.path.join(harness.TOOLS, "worktree.py"), encoding="utf-8").read()
+    i = src.find("pr = pr_for(p, b)")
+    window = src[i:]
+    a, b_ = window.find("ASK_FAILED"), window.find('r["pushed_sha"] == tip')
+    if a < 0:
+        raise AssertionError("sweep does not branch on the could-not-ask answer at all")
+    if b_ < 0:
+        raise AssertionError("could not locate the git-only fallback to compare against")
+    if a > b_:
+        raise AssertionError("the could-not-ask check comes AFTER the git-only fallback that "
+                             "deletes the worktree and branch - it must come first")
+    contains(window[max(0, a - 200):a + 500], "KEPT",
+             "an unanswered question must KEEP the worktree, not remove it")
+
+
+def pr_for_separates_its_three_answers():
+    wt = harness.load("wt_stress2", os.path.join(harness.TOOLS, "worktree.py"))
+
+    class NoGitHub:
+        github = False
+    eq(wt.pr_for(NoGitHub(), "feature/x"), None,
+       "a project with no GitHub configured returns None, not the failure sentinel")
+    if wt.ASK_FAILED is None or wt.ASK_FAILED == {}:
+        raise AssertionError("ASK_FAILED must be distinguishable from None and from {}")
+
+
 CASES = [
     ("malformed ledger line fails clearly", a_malformed_ledger_line_fails_clearly_and_does_not_hang),
     ("lock released after a ledger error", the_lock_is_released_after_a_ledger_error),
     ("healthy ledger still lists", a_healthy_ledger_still_lists),
     ("ledger temp file is per-process", the_ledger_temp_file_is_not_a_fixed_name),
     ("prs.md written atomically", prs_md_is_written_atomically),
+    ("sweep keeps when GitHub cannot be asked", sweep_never_deletes_when_github_could_not_be_asked),
+    ("pr_for separates its three answers", pr_for_separates_its_three_answers),
 ]
