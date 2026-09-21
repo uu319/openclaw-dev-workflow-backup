@@ -27,7 +27,7 @@ rest of the document is those learnings turned into a setup.
   no longer name a vendor. PM scripts renamed `tracker_push/status/scan.py`. (6, 9.1, 9.2, 9.4, 9.5, 10)
 - **CI is a provider** (Decision R): `cloud-build | github-actions | none`, behind
   `projects/_tools/ci/`. `Deploy triggers` → `Deploy checks`. (9.4, 10)
-- **Still ClickUp-only:** `tracker_push.py` (spec → tickets) needs attachments and dependency links;
+- **All trackers (2026-09-21):** `tracker_push.py` (spec → tickets) runs on ClickUp, Jira and Linear;
   it refuses other trackers and names the alternative. Status reads/writes work everywhere.
 - **Bug:** the "`## Stack` is unfilled" check never worked - `\s*[^<\n]` backtracks so the space after
   the colon satisfied it. Every unfilled template passed. Fixed. (9.8)

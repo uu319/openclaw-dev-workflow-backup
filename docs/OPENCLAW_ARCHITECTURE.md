@@ -78,7 +78,7 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 | Tracker adapters | `projects/_tools/trackers/` (`for_project(fields, token)` → clickup · jira · linear · none) | shared by every tracker caller | context + vault | a provider name outside this package; a second client for the same tracker |
 | Board discovery | `projects/_tools/tracker_probe.py` → the board's real name, statuses and a proposed Status map | main (onboarding step 3d) | the tracker + vault | typing a board's statuses from memory; assuming another project's mapping |
 | Tracker read | `projects/_tools/tracker_mcp.py` → MCP `tracker-<slug>` (tools `tracker_get_task` / `tracker_create_task` / `tracker_update_task`; reads only for VanPM) | VanPM | context + vault | discovery of boards by API; a vendor in a tool name |
-| Tracker write | `feature-breakdown/scripts/tracker_status.py` (any tracker), `tracker_push.py` (**ClickUp only**: spec → tickets needs attachments and dependency links) | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
+| Tracker write | `feature-breakdown/scripts/tracker_status.py` and `tracker_push.py` (**any tracker**: spec → tickets, via the adapters) | VanPM only | context + the env var OpenClaw provides for the env-kind secret + spec markers | curl, MCP update tool, any other agent |
 | Human-made tickets | `feature-breakdown/scripts/tracker_scan.py` | VanPM | tracker | creating a duplicate; adopt with `existing_id` |
 | Spec planning index | `projects/_tools/spec_index.py` → `specs/_index.md`, `specs/_planned-data.md` | VanPM | specs | hand edits of `_index.md` |
 | GitHub API | `projects/_tools/git_env.py <slug> -- gh …` | VanDev (main read-only) | context + vault | `gh auth login`, merges, a PR base other than the Flow PR base, raw commit-status writes |
@@ -204,11 +204,26 @@ Adapters, not branches in the callers: `projects/_tools/trackers/` and
 no tool above the adapter names a vendor. What a provider cannot do raises
 `Unsupported` rather than silently doing nothing.
 
-**Where it is not finished:** `tracker_push.py` (spec -> tickets) is ClickUp only,
-because it needs attachments and task-to-task dependency links. It refuses any
-other tracker and names the alternative (`Ticket source: human` + `tracker_scan.py`
-with `existing_id:`), which is how team projects already work. Status reads and
-writes work on every tracker.
+**Finished 2026-09-21:** `tracker_push.py` (spec -> tickets) runs on ClickUp,
+Jira and Linear. It used to carry its own ClickUp REST client - the only reason
+it refused the others - and now goes through the adapters, which gained
+`attach`, `link_tasks`, `update_task` and `attachments` for the purpose. Each
+was verified against the real service and read back from the server.
+
+Porting it surfaced four bugs, every one of them an assumption about ClickUp's
+shapes: the duplicate guard crashed on a plain status string; the verify step
+counted `parent["subtasks"]`, which only ClickUp returns, and so printed VERIFY
+MISMATCH for a Jira push that had in fact created both subtasks; the cross-spec
+scan died if any marker-bearing spec in the folder was unparseable, blocking
+every later push on that project; and Jira and Linear `create_task` ignored
+`tags`, which would have dropped lane labels silently on exactly the trackers
+being opened up. That last one is the shape to watch for - the tickets exist and
+look right, and only the labels the spec index depends on are missing.
+
+Jira needs one thing the others do not: its v3 API takes Atlassian Document
+Format, not markdown, so `md_to_adf` converts headings, bullets, checkboxes,
+fenced code and inline marks. A body posted as a plain string arrives as one
+unreadable paragraph.
 
 `validate_context.py` parses these. Every line is optional: Profile defaults to `factory`, Stages is required only
 for `custom`, `teammate`/`maintenance` need an Assignee filter, and the Status map must resolve `todo doing done
@@ -435,7 +450,7 @@ Prompts and config both enforce scope; tracker and CI are adapter packages; the 
 requires a ClickUp list of every project. Proven offline on three fixtures - Django+Jira+GitHub
 Actions on a fully custom board, Linear with no CI, and a repo with no tracker - none of which could
 be onboarded before. fms-studio re-verified live end to end after every step. What is still open:
-`tracker_push.py` (spec → tickets) is ClickUp-only by design (§4.1b), and Step 10's *live* half still
+Step 10's *live* half still
 needs a real second project.
 
 **Status 2026-09-19 night: Steps 1-9 are DONE** (linter went from 18 OK / 10 FIX to 22 OK / 0 FIX after Step 5). Step 10 is open; phase A below is done on the box and waits for two GitHub settings.
@@ -550,7 +565,7 @@ orchestration skill skips `spec`, `tickets`, `internal-qa`. Then delete it (cont
 | O | Team projects: replies to human PR comments are drafted by VanDev, posted only after Van's yes (code fixes still go out at once) | applied 2026-09-20 |
 | N | Ruleset requiring `openclaw/review`: **not now** (the stamp shows; main checks it before "ready") | Van, 2026-09-20 |
 | P | **Development only.** No general-assistant mode and no fallback to one. Enforced in prompts (main's AGENTS/SOUL/USER) *and* config (`skills.allowBundled`, non-dev plugins removed), not prompts alone | Van, 2026-09-20; applied |
-| Q | Trackers: **ClickUp, Jira, Linear, or none**, behind `projects/_tools/trackers/`. Spec→ticket creation stays ClickUp-only and refuses loudly elsewhere | Van, 2026-09-20; applied |
+| Q | Trackers: **ClickUp, Jira, Linear, or none**, behind `projects/_tools/trackers/`. Spec→ticket creation was ClickUp-only; opened to Jira and Linear 2026-09-21, each verified live | Van, 2026-09-20; applied |
 | R | CI: **Cloud Build, GitHub Actions, or none**, behind `projects/_tools/ci/`. GitHub stays the only git host | Van, 2026-09-20; applied |
 | S | Evolve the toolchain seam rather than rebuild the pipeline: the process layer (5 agents, Flow, worktrees, gates, watcher) is kept as-is | Van, 2026-09-20 |
 | K | Review check at merge time: `openclaw/review` status + a ruleset that requires it (replaces the PR-create gate) | tooling done; token permission + ruleset are Van's |
