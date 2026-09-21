@@ -1,0 +1,23 @@
+{
+  "[Feature] DevOps: Fix backend unit test DI failure": {
+    "id": "z94kydaytm",
+    "url": "https://app.clickup.com/t/z94kydaytm",
+    "lane": "FEATURE",
+    "attachments": {},
+    "desc_hash": "8547c3b1f7d19e09"
+  },
+  "[BE] Fix DI in app.controller.spec.ts": {
+    "id": "z94kydaytn",
+    "url": "https://app.clickup.com/t/z94kydaytn",
+    "lane": "BE",
+    "attachments": {},
+    "desc_hash": "6e0253aa2e77032e"
+  },
+  "[QA] Verify backend unit tests pass": {
+    "id": "z94kydaytp",
+    "url": "https://app.clickup.com/t/z94kydaytp",
+    "lane": "QA",
+    "attachments": {},
+    "desc_hash": "b33276108d7a2b24"
+  }
+}
