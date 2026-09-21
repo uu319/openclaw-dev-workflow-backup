@@ -177,8 +177,26 @@ class Ledger:
         fcntl.flock(self.lock, fcntl.LOCK_EX)
         self.rows = []
         if os.path.isfile(self.p.ledger):
+            # Parse INSIDE a try: this runs after the lock is taken, and a `with`
+            # block only calls __exit__ when __enter__ returned - so an exception
+            # here skips the unlock. The process dying releases it, but the user
+            # got a traceback about json instead of being told which line is bad
+            # in the file that decides who holds which branch.
+            bad = []
             with open(self.p.ledger) as fh:
-                self.rows = [json.loads(l) for l in fh if l.strip()]
+                for n, line in enumerate(fh, 1):
+                    if not line.strip():
+                        continue
+                    try:
+                        self.rows.append(json.loads(line))
+                    except ValueError as e:
+                        bad.append(f"line {n}: {e}")
+            if bad:
+                fcntl.flock(self.lock, fcntl.LOCK_UN)
+                self.lock.close()
+                die(f"{self.p.ledger} is damaged and was not touched - "
+                    + "; ".join(bad[:3])
+                    + ". Fix or remove those lines; every other line is still valid.")
         return self
 
     def get(self, branch):
@@ -201,7 +219,7 @@ class Ledger:
 
     def __exit__(self, *exc):
         if exc[0] is None:
-            tmp = self.p.ledger + ".tmp"
+            tmp = f"{self.p.ledger}.{os.getpid()}.tmp"
             with open(tmp, "w") as fh:
                 for r in self.rows:
                     fh.write(json.dumps(r, sort_keys=True) + "\n")
@@ -223,8 +241,10 @@ class Ledger:
             lines.append("| `{}` | {} | {} | {} | {} | {} |".format(
                 r["branch"], r.get("status", "?"), r.get("pr_url", ""), r.get("agent", ""),
                 (r.get("task") or "").replace("|", "/")[:80], r.get("updated_at", "")[:10]))
-        with open(self.p.prs_md, "w") as fh:
+        tmp = f"{self.p.prs_md}.{os.getpid()}.tmp"
+        with open(tmp, "w") as fh:
             fh.write("\n".join(lines) + "\n")
+        os.replace(tmp, self.p.prs_md)      # never leave a half-written table behind
 
 
 # ---------------------------------------------------------------- commands

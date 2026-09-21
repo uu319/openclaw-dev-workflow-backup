@@ -127,3 +127,49 @@ def parsed(*edits, base=BASE):
     """-> (fields, errors) from the real validator."""
     vc = load("vc_stress", os.path.join(TOOLS, "validate_context.py"))
     return vc.parse(context(*edits, base=base))
+
+def project_sandbox(slug="demo-state", tracker="none"):
+    """A minimal project tree under OPENCLAW_WORKSPACE that the tools resolve by slug.
+
+    Returns (root, ctx_path, artifacts_dir). Nothing here touches the live tree,
+    which matters: the heartbeat scans the real projects/ every 15 minutes.
+    """
+    import subprocess
+    root = tempfile.mkdtemp(prefix="stress-proj-")
+    # Symlink the REAL tools in: the point is to exercise the shipped code, and the
+    # tools resolve the validator and each other relative to OPENCLAW_WORKSPACE.
+    os.makedirs(os.path.join(root, "projects"), exist_ok=True)
+    for rel in ("projects/_tools", "projects/_template", "_tools", "project-manager"):
+        src, dst = os.path.join(WS, rel), os.path.join(root, rel)
+        if os.path.exists(src) and not os.path.exists(dst):
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.symlink(src, dst)
+    art = os.path.join(root, "projects", slug, "artifacts")
+    os.makedirs(os.path.join(art, "specs"), exist_ok=True)
+    code = os.path.join(root, "code")
+    os.makedirs(code, exist_ok=True)
+    subprocess.run(["git", "init", "-q", "-b", "main", code], check=True)
+    subprocess.run(["git", "-C", code, "-c", "user.email=t@t", "-c", "user.name=t",
+                    "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+    body = (BASE
+            .replace("`harness`", f"`{slug}`")
+            .replace("- **Tracker:** `clickup`", f"- **Tracker:** `{tracker}`")
+            .replace("- **Tracker Board ID:** `1100770000001008`\n", "")
+            .replace("- **Tracker MCP server:** `tracker-harness`\n", "")
+            .replace("  - Tracker: `CLICKUP_API_TOKEN_HARNESS`\n", "")
+            .replace("- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`\n", "")
+            .replace("- **Create status:** `to do`\n", "")
+            .replace("- **Profile:** `factory`", "- **Profile:** `custom`\n- **Stages:** `review`, `merge-gate`")
+            .replace("/tmp/harness-code", code)
+            .replace("/tmp/harness-artifacts/", art + "/"))
+    ctx = os.path.join(root, "projects", slug, "PROJECT_CONTEXT.md")
+    open(ctx, "w", encoding="utf-8").write(body)
+    return root, ctx, art
+
+
+def tool(root, name, *args, timeout=60):
+    """Run a shared tool against a sandbox. -> CompletedProcess."""
+    import subprocess
+    return subprocess.run([sys.executable, os.path.join(TOOLS, name), *args],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                          env=dict(os.environ, OPENCLAW_WORKSPACE=root), timeout=timeout)

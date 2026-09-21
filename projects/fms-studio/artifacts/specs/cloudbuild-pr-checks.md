@@ -1,7 +1,7 @@
-# Spec: GitHub Actions PR checks
+# Spec: Cloud Build PR checks
 
 ---ticket
-title: [Feature] CI/CD: GitHub Actions PR checks
+title: [Feature] CI/CD: Cloud Build PR checks
 lane: FEATURE
 priority: high
 
@@ -12,21 +12,22 @@ Parent: this is the parent · Lane: FEATURE
 As a developer, I want pull requests to run lint typecheck and build checks automatically, so that errors are caught before merging instead of breaking Cloud Build later.
 
 ## In scope
-- GitHub Actions workflow triggering on pull requests to the `Development` branch.
-- Caching for `node_modules`.
+- Cloud Build trigger config for pull requests to the `Development` branch using the `node:24` image.
 - Commands: `npm ci`, `npx nx run-many -t lint`, `npx tsc -p frontend/tsconfig.json --noEmit`, `npx tsc -p backend/tsconfig.json --noEmit`, `npx nx run-many -t build`.
+- Adding a clear note that creating the Cloud Build TRIGGER is a manual step for Van in the GCP console (a pull-request trigger on symphco/fms-studio pointing at the new yaml).
 
 ## Out of scope (do NOT build)
-- Touching the Cloud Build pipeline or `.cloudbuild/` configs.
+- Touching existing `.cloudbuild/` configs.
 - Adding any test jobs.
 
 ## Acceptance criteria
-- Given a pull request targeting `Development`, when it is opened or updated, then the GitHub Actions workflow triggers automatically.
+- Given a pull request targeting `Development`, when it is opened or updated, then the Cloud Build trigger runs automatically.
 - Given the workflow runs, when it reaches the check steps, then it executes `npm ci`, `npx nx run-many -t lint`, `npx tsc -p frontend/tsconfig.json --noEmit`, `npx tsc -p backend/tsconfig.json --noEmit` and `npx nx run-many -t build`.
-- Given the workflow runs on subsequent commits, when the cache is hit, then `node_modules` is restored from the cache to speed up the run.
+- Given a failing check (e.g. lint or build fails), when the workflow finishes, then the PR is blocked from merging.
 
 ## Technical notes
-- Files/paths: `.github/workflows/pr-checks.yml`
+- Files/paths: `.cloudbuild/cloudbuild-pr-checks.yaml`
+- Use the `node:24` image for the steps.
 
 ## Depends on / blocks
 - Depends on: none
@@ -40,36 +41,35 @@ As a developer, I want pull requests to run lint typecheck and build checks auto
 ---end
 
 ---ticket
-title: [INT] PR Checks: Create GitHub Actions workflow
+title: [INT] PR Checks: Create Cloud Build configuration
 lane: INT
-parent: [Feature] CI/CD: GitHub Actions PR checks
+parent: [Feature] CI/CD: Cloud Build PR checks
 priority: high
 estimate_hours: 4
 
 ## Context
-Parent: [Feature] CI/CD: GitHub Actions PR checks · Lane: INT
+Parent: [Feature] CI/CD: Cloud Build PR checks · Lane: INT
 
 ## User story
-As a developer, I want a GitHub Actions YAML file that runs all required checks, so that the PR process enforces quality automatically.
+As a developer, I want a Cloud Build YAML file that runs all required checks, so that the PR process enforces quality automatically.
 
 ## In scope
-- Creating `.github/workflows/pr-checks.yml`.
-- Configuring triggers for PRs against `Development`.
-- Adding actions/checkout, actions/setup-node, and cache setup.
-- Adding run steps for install, lint, typecheck and build.
+- Creating `.cloudbuild/cloudbuild-pr-checks.yaml`.
+- Adding run steps for install, lint, typecheck and build using the `node:24` image.
 
 ## Out of scope (do NOT build)
 - Test steps.
-- Modifying Cloud Build pipelines.
+- Modifying existing Cloud Build pipelines.
 
 ## Acceptance criteria
-- Given the PR workflow file, when committed, then it defines an `on: pull_request` trigger for the `Development` branch.
+- Given the Cloud Build file, when committed, then it defines steps that use the `node:24` image.
 - Given the workflow steps, when it executes, then it runs `npx nx run-many -t lint` successfully across the workspace.
 - Given the workflow steps, when it executes, then it runs `npx tsc -p frontend/tsconfig.json --noEmit` and `npx tsc -p backend/tsconfig.json --noEmit`.
 - Given the workflow steps, when it executes, then it runs `npx nx run-many -t build` successfully.
 
 ## Technical notes
-- Setup Node action must use Node 24. This matches the Cloud Build builder (see `.cloudbuild/cloudbuild-frontend-staging.yaml` and `-backend-staging.yaml`). CI must build on Node 24 to match the builder; otherwise, on Node 22 a PR could pass while Cloud Build fails.
+- The step image must be `node:24`. This matches the Cloud Build builder (see `.cloudbuild/cloudbuild-frontend-staging.yaml` and `-backend-staging.yaml`).
+- Creating the Cloud Build TRIGGER is a manual step for Van in the GCP console (a pull-request trigger on symphco/fms-studio pointing at the new yaml).
 
 ## Depends on / blocks
 - Depends on: none
@@ -88,18 +88,18 @@ As a developer, I want a GitHub Actions YAML file that runs all required checks,
 ---ticket
 title: [QA] PR Checks: Verify workflow triggers and passes
 lane: QA
-parent: [Feature] CI/CD: GitHub Actions PR checks
+parent: [Feature] CI/CD: Cloud Build PR checks
 estimate_hours: 2
-depends_on: [INT] PR Checks: Create GitHub Actions workflow
+depends_on: [INT] PR Checks: Create Cloud Build configuration
 
 ## Context
-Parent: [Feature] CI/CD: GitHub Actions PR checks · Lane: QA
+Parent: [Feature] CI/CD: Cloud Build PR checks · Lane: QA
 
 ## User story
 As an orchestrator, I want to ensure the PR checks actually run and block or pass PRs correctly, so that broken code does not get merged.
 
 ## In scope
-- Verifying the GitHub Actions workflow in a live PR.
+- Verifying the Cloud Build workflow in a live PR.
 
 ## Out of scope (do NOT build)
 - Writing code or fixing the pipeline.
@@ -107,13 +107,13 @@ As an orchestrator, I want to ensure the PR checks actually run and block or pas
 ## Acceptance criteria
 - Given a test PR opened against `Development`, when viewed in GitHub, then the PR checks workflow is triggered and visible in the Checks tab.
 - Given the running workflow, when it completes without code errors, then it reports a green success status for lint, typecheck, and build steps.
-- Given a second commit pushed to the same PR, when the workflow runs again, then the setup step shows that `node_modules` was restored from cache.
+- Given a test PR with a deliberate lint or build failure, when the workflow runs, then the check fails and blocks the PR.
 
 ## Technical notes
 - Needs an active PR to test. A draft PR is sufficient for QA.
 
 ## Depends on / blocks
-- Depends on: [INT] PR Checks: Create GitHub Actions workflow
+- Depends on: [INT] PR Checks: Create Cloud Build configuration
 - Blocks: none
 
 ## Test notes (how QA verifies)

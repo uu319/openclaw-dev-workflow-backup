@@ -1,23 +1,23 @@
 {
-  "[Feature] CI/CD: GitHub Actions PR checks": {
+  "[Feature] CI/CD: Cloud Build PR checks": {
     "id": "z94kydaw4v",
     "url": "https://app.clickup.com/t/z94kydaw4v",
     "lane": "FEATURE",
     "attachments": {},
-    "desc_hash": "b96e2ca5d21e8ffa"
+    "desc_hash": "e8c36cd129757f93"
   },
-  "[INT] PR Checks: Create GitHub Actions workflow": {
+  "[INT] PR Checks: Create Cloud Build configuration": {
     "id": "z94kydaw4w",
     "url": "https://app.clickup.com/t/z94kydaw4w",
     "lane": "INT",
     "attachments": {},
-    "desc_hash": "fe94238cfebf1cf4"
+    "desc_hash": "4f224a5e66c404e2"
   },
   "[QA] PR Checks: Verify workflow triggers and passes": {
     "id": "z94kydaw4x",
     "url": "https://app.clickup.com/t/z94kydaw4x",
     "lane": "QA",
     "attachments": {},
-    "desc_hash": "6bc2df8626297bed"
+    "desc_hash": "d2532f06a836b7e6"
   }
 }
