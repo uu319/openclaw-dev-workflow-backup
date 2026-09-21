@@ -21,6 +21,7 @@ from harness import contains, eq  # noqa: E402
 TITLE = "watcher state: concurrent runs and acks"
 
 WATCH = os.path.join(harness.TOOLS, "delivery_watch.py")
+dw = harness.load("dw_state", WATCH)
 
 
 def _sandbox():
@@ -76,7 +77,6 @@ def an_ack_survives_a_concurrent_watch_run():
     eq("deployed-pr9" in json.load(open(path))["acked"], True, "sanity: the ack was written")
 
     # process A now saves the copy it loaded before the ack
-    dw = harness.load("dw_state", WATCH)
     with dw.state_lock(path):
         disk, _ = dw.read_state(path)
         dw.write_state(path, dw.merge_state(disk, stale))
@@ -107,7 +107,40 @@ def a_corrupt_state_file_does_not_silently_reset_the_window():
     contains(out, "state", "an unreadable state file must be reported, not silently reset")
 
 
+def a_new_comment_cannot_reuse_an_acked_id():
+    """The ack id used to be the last 40 chars of the joined comment ids.
+
+    The slice is anchored at the END, so a batch that gains a comment whose id
+    sorts first keeps the same tail and therefore the same ack id. Once the
+    earlier batch is acked, the new one is suppressed as already-handled: the
+    reviewer's comment never reaches VanDev, and nothing says so.
+
+    The ids below are realistic - GitHub review ("r") and inline ("i") comment
+    ids are separate number spaces, so a genuinely new comment sorting before
+    existing ones is ordinary, not contrived.
+    """
+    batch = ["i10000000001", "r10000000001", "r10000000002", "r10000000003"]
+    plus_one = ["i00000000001"] + batch          # one NEW comment, sorts first
+
+    old = lambda ids: "feedback-pr7-" + "-".join(sorted(ids))[-40:]   # noqa: E731
+    eq(old(batch), old(plus_one),
+       "documents the old scheme: these two different batches shared one ack id")
+
+    a, b = dw.feedback_ack_id(7, batch), dw.feedback_ack_id(7, plus_one)
+    if a == b:
+        raise AssertionError(
+            f"a batch with an extra comment must get its own ack id, got {a} for both; "
+            "otherwise the new comment is silently dropped as already acked")
+
+    # Stability matters just as much: acking works by matching this id later.
+    eq(dw.feedback_ack_id(7, list(reversed(batch))), a,
+       "the same set of ids in any order must produce the same ack id")
+    if dw.feedback_ack_id(8, batch) == a:
+        raise AssertionError("the PR number must still be part of the ack id")
+
+
 CASES = [
+    ("new comment cannot reuse an acked id", a_new_comment_cannot_reuse_an_acked_id),
     ("ack survives a concurrent watch run", an_ack_survives_a_concurrent_watch_run),
     ("corrupt state file is reported", a_corrupt_state_file_does_not_silently_reset_the_window),
 ]

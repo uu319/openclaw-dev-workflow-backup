@@ -44,7 +44,7 @@ Comments by `*[bot]` accounts and by the PROJECT_CONTEXT line `- **GitHub bots:*
 State: <Internal Artifacts>/delivery_state.json (watch_since, acked ids, seen feedback ids).
 PRs merged before watch_since (set on first run) are history and never acted on.
 """
-import argparse, contextlib, datetime, fcntl, glob, importlib.util, json, os, re, shutil, subprocess, sys, urllib.error, urllib.request
+import argparse, contextlib, datetime, fcntl, glob, hashlib, importlib.util, json, os, re, shutil, subprocess, sys, urllib.error, urllib.request
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 VALIDATOR = os.path.join(TOOLS, "validate_context.py")
@@ -315,6 +315,58 @@ def merge_state(disk, mine):
     return out
 
 
+_VC = None
+
+
+def validator():
+    """The context validator, loaded once."""
+    global _VC
+    if _VC is None:
+        spec = importlib.util.spec_from_file_location("vc_shared", VALIDATOR)
+        _VC = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_VC)
+    return _VC
+
+
+def lint_owner(projects):
+    """Which project reports the global daily lint: the first one that VALIDATES.
+
+    Owning it by name alone was fragile in a way that hid itself. `Ctx()` dies on
+    a context with errors, so a half-onboarded project sorting before the others
+    captured the lint and then died before ever running it. The other projects
+    skipped it because they were not first, and the daily lint simply stopped -
+    no error, nothing to notice. Adding a project is exactly when a half-written
+    context exists, which is exactly when the lint is most worth having.
+    """
+    for slug in projects:
+        path = f"{WORKSPACE}/projects/{slug}/PROJECT_CONTEXT.md"
+        if not os.path.isfile(path):
+            continue
+        try:
+            _, errs = validator().parse(path)
+        except Exception:  # noqa: BLE001 - an unparseable context cannot own the lint
+            continue
+        if not errs:
+            return slug
+    return None
+
+
+def feedback_ack_id(pr_number, ids):
+    """A stable, collision-free ack id for one batch of PR feedback.
+
+    This used to be the LAST 40 characters of the joined id list. The slice is
+    anchored at the end, so a batch that gains a comment whose id sorts first
+    keeps the same tail - and therefore the same ack id. If the earlier batch was
+    acked, the new one is suppressed as already-handled and the comment never
+    reaches VanDev. Silent, and the reviewer has no way to tell.
+
+    A digest of the whole set is stable for the same set (which is what acking
+    needs) and different for a different one (which is what was missing).
+    """
+    key = "-".join(sorted(ids))
+    return f"feedback-pr{pr_number}-" + hashlib.sha1(key.encode()).hexdigest()[:12]
+
+
 def qa_moves_for(ids, tasks, tasks_ok, title_of, marks, staged_name):
     """[(ticket id, spec slug, title, current status)] that should go to qa, parents included.
 
@@ -513,7 +565,7 @@ def main():
                    and not (x[2] or "").lstrip().startswith(AGENT_MARK)
                    and not (x[1] or "").endswith("[bot]") and (x[1] or "") not in ctx.bots]
             if new:
-                aid = f"feedback-pr{n}-" + "-".join(sorted(x[0] for x in new))[-40:]
+                aid = feedback_ack_id(n, [x[0] for x in new])
                 act(aid, "PR_FEEDBACK", f"{where}: {len(new)} new comment(s)/review(s)",
                     f"sessions_send/spawn VanDev: pull the review feedback directly from the PR using `gh pr view {pr.get('url')} --comments`, address the feedback on branch `{head}` (own worktree: "
                     f"`create {head}`), push to the same branch, then reply on the PR "
@@ -660,7 +712,7 @@ def main():
     # ---- daily architecture lint (reported once, from the first project only: the check is global)
     projects = sorted(d for d in os.listdir(f"{WORKSPACE}/projects") if not d.startswith("_")
                       and os.path.isdir(f"{WORKSPACE}/projects/{d}"))
-    if projects and ctx.slug == projects[0]:
+    if ctx.slug == lint_owner(projects):
         aid = f"lint-{now():%Y%m%d}"
         if aid not in state["acked"]:
             rc, out, err = run([sys.executable, f"{WORKSPACE}/_tools/lint_workspace.py", "--json"])
