@@ -75,7 +75,7 @@ def parse_context(path):
     if errors:
         die(f"{path} is invalid: " + "; ".join(errors) + f"  (run {VALIDATOR} {path})")
     has_figma = fields.get("figma_file", "none").lower().strip("<>") not in ("none", "")
-    return {"tracker": fields.get("tracker", "none"),
+    return {"tracker": fields.get("tracker", "none"), "fields": fields,
             "list_id": fields["list_id"], "secret_ref": fields["tracker_secret"],
             "statuses": fields["statuses"], "create_status": fields["create_status"],
             "cancelled": (fields.get("status") or {}).get("cancelled") or "cancelled",
@@ -172,8 +172,19 @@ def other_specs(spec_path):
         for f in sorted(os.listdir(d)):
             full = os.path.join(d, f)
             if f.endswith(".md") and not f.startswith("_") and full != me \
-                    and os.path.exists(full[:-3] + ".clickup.json"):
-                yield os.path.join(sub, f) if sub else f, parse_spec(full), active
+                    and any(os.path.exists(full[:-3] + s)
+                            for s in (".tracker.json", ".clickup.json")):
+                try:
+                    parsed = parse_spec(full)
+                except SystemExit:
+                    # This scan exists to warn about duplicate titles across specs.
+                    # One unparseable spec elsewhere in the folder must not block
+                    # the push of THIS one - it used to die here, so a single
+                    # malformed file stopped every later push on the project.
+                    print(f"note: skipping unreadable spec {f} in the duplicate check",
+                          file=sys.stderr)
+                    continue
+                yield os.path.join(sub, f) if sub else f, parsed, active
 
 
 def cross_spec_errors(tickets, spec_path):
@@ -219,18 +230,21 @@ def similar_tickets(title, live, skip_ids):
     for task in live:
         if task["id"] in skip_ids or task["name"] == title:
             continue
-        if (task.get("status") or {}).get("status", "").lower() in ("cancelled", "closed"):
+        # The adapters normalise a ticket to `closed` + a plain `status` string;
+        # this used to read ClickUp's raw `{"status": {"status": ...}}` shape.
+        if task.get("closed"):
             continue
         r = difflib.SequenceMatcher(None, mine, " ".join(norm_title(task["name"]))).ratio()
         if r >= SIMILAR:
-            tags = {x.get("name") for x in task.get("tags") or []}
+            raw = task.get("tags") or []
+            tags = {x.get("name") if isinstance(x, dict) else str(x) for x in raw}
             who = "agent" if "agent-created" in tags else "a person"
             out.append(f"{task['id']} '{task['name']}' (by {who}, {r:.0%} similar)")
     return out
 
 
 def desc_hash(task):
-    d = task.get("markdown_description") or task.get("description") or ""
+    d = task.get("markdown_description") or task.get("description") or ""  # adapter uses `description`
     return hashlib.sha256(d.strip().encode()).hexdigest()[:16]
 
 
@@ -310,95 +324,94 @@ def deps_of(t):
     return [d.strip() for d in t.get("depends_on", "").split(",") if d.strip()]
 
 
-# ---------- ClickUp ----------
+# ---------- the board, through the shared tracker adapters ----------
 
-class ClickUp:
-    def __init__(self, token, dry):
-        self.token = token
-        self.dry = dry
+class Board:
+    """The spec push expressed in terms any tracker adapter can answer.
 
-    def _req(self, method, path, body=None, query=None):
-        url = f"{API}{path}"
-        if query:
-            url += "?" + urllib.parse.urlencode(query, doseq=True)
-        data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request(url, data=data, method=method,
-                                     headers={"Authorization": self.token,
-                                              "Content-Type": "application/json"})
-        try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return json.loads(r.read().decode() or "{}")
-        except urllib.error.HTTPError as e:
-            die(f"{method} {path} -> {e.code}: {e.read().decode()[:500]}")
+    This script used to carry its own ClickUp REST client, which is the only
+    reason it was ClickUp-only. Everything now goes through
+    projects/_tools/trackers, so a project on Jira or Linear can run the full
+    `factory` flow - spec in, tickets out - instead of being told to have humans
+    write the tickets by hand.
 
-    def get_list(self, list_id):
-        return self._req("GET", f"/list/{list_id}")
+    Dry-run stays in the shim rather than the adapters: the adapters are shared
+    with the watcher and the MCP server, and a tracker that quietly does nothing
+    is exactly what they must never be.
+    """
 
-    def list_tasks(self, list_id):
-        tasks, page = [], 0
-        while True:
-            r = self._req("GET", f"/list/{list_id}/task",
-                          query={"include_closed": "true", "subtasks": "true", "page": page})
-            tasks += r.get("tasks", [])
-            if r.get("last_page", True) or not r.get("tasks"):
-                return tasks
-            page += 1
+    def __init__(self, tk, dry):
+        self.tk, self.dry = tk, dry
 
-    def create(self, list_id, payload):
+    def statuses(self):
+        return self.tk.board_info()[1] or []
+
+    def list_tasks(self):
+        """Live tickets as the push loop wants them: `name` is the dedupe key."""
+        return [dict(v, name=v.get("title")) for v in self.tk.tasks().values()]
+
+    def create(self, payload):
         if self.dry:
-            print(f"DRY-RUN create: {json.dumps(payload, indent=2)[:1200]}")
-            return {"id": f"dry-{abs(hash(payload['name'])) % 10**6}", "url": "(dry-run)"}
-        return self._req("POST", f"/list/{list_id}/task", payload)
+            print(f"DRY-RUN create: {payload['title']}  status={payload.get('status')!r} "
+                  f"tags={payload.get('tags')} parent={payload.get('parent')}")
+            return {"id": f"dry-{abs(hash(payload['title'])) % 10**6}", "url": "(dry-run)"}
+        t = self.tk.create_task(payload["title"],
+                                description=payload.get("description", ""),
+                                status=payload.get("status"),
+                                parent=payload.get("parent"),
+                                tags=payload.get("tags"),
+                                estimate_hours=payload.get("estimate_hours"),
+                                priority=payload.get("priority"))
+        return {"id": t["id"], "url": t.get("url", "")}
 
-    def update(self, task_id, payload):
-        payload = {k: v for k, v in payload.items() if k != "parent"}  # parent is immutable via PUT
+    def update(self, tid, payload):
+        fields = {k: v for k, v in payload.items() if k in ("title", "description", "tags")}
         if self.dry:
-            print(f"DRY-RUN update {task_id}: {json.dumps(payload, indent=2)[:1200]}")
-            return {"id": task_id, "url": "(dry-run)"}
-        return self._req("PUT", f"/task/{task_id}", payload)
+            print(f"DRY-RUN update {tid}: {sorted(fields)}")
+            return {"id": tid, "url": "(dry-run)"}
+        self.tk.update_task(tid, **fields)
+        return {"id": tid, "url": self.tk.task_url(tid)}
 
-    def link(self, task_id, links_to):
+    def link(self, tid, other):
         if self.dry:
-            print(f"DRY-RUN link {task_id} -> {links_to}")
+            print(f"DRY-RUN link {tid} -> {other}")
             return
-        self._req("POST", f"/task/{task_id}/link/{links_to}", {})
-
-    def get_task(self, task_id, markdown=False):
-        q = {"include_subtasks": "true"}
-        if markdown:
-            q["include_markdown_description"] = "true"
-        return self._req("GET", f"/task/{task_id}", query=q)
-
-    def upload(self, task_id, path, filename):
-        if self.dry:
-            print(f"DRY-RUN upload {task_id} <- {filename} ({os.path.getsize(path)} bytes)")
-            return {"url": f"(dry-run)/{filename}", "title": filename}
-        boundary = uuid.uuid4().hex
-        ctype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-        with open(path, "rb") as f:
-            content = f.read()
-        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"attachment\"; "
-                f"filename=\"{filename}\"\r\nContent-Type: {ctype}\r\n\r\n").encode() + content + \
-               f"\r\n--{boundary}--\r\n".encode()
-        req = urllib.request.Request(f"{API}/task/{task_id}/attachment", data=body, method="POST",
-                                     headers={"Authorization": self.token,
-                                              "Content-Type": f"multipart/form-data; boundary={boundary}"})
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                return json.loads(r.read().decode() or "{}")
-        except urllib.error.HTTPError as e:
-            die(f"POST /task/{task_id}/attachment ({filename}) -> {e.code}: {e.read().decode()[:500]}")
+            self.tk.link_tasks(tid, other)
+        except Exception as e:  # noqa: BLE001
+            # A dependency link is worth reporting, never worth losing the push over:
+            # the tickets exist and the marker is about to be written.
+            print(f"WARNING: could not link {tid} -> {other}: {e}", file=sys.stderr)
+
+    def get_task(self, tid, markdown=False):
+        return self.tk.get_task(tid)
+
+    def attachments(self, tid):
+        try:
+            return self.tk.attachments(tid)
+        except Exception:  # noqa: BLE001 - absent is the same as none for idempotency
+            return []
+
+    def upload(self, tid, path, filename):
+        if self.dry:
+            print(f"DRY-RUN upload {tid} <- {filename} ({os.path.getsize(path)} bytes)")
+            return {"url": f"(dry-run)/{filename}", "title": filename}
+        return self.tk.attach(tid, path, filename)
 
 
-def resolve_status(wanted, list_obj, fallback):
-    names = [s["status"] for s in list_obj.get("statuses", [])]
+def resolve_status(wanted, names, fallback):
+    """The board's own spelling of the status a new ticket starts in.
+
+    `names` is the plain list the adapter's board_info() returns, so this is the
+    same check on ClickUp, Jira and Linear.
+    """
     for w in (wanted, fallback):
         if not w:
             continue
         for n in names:
             if n.lower() == w.lower():
                 return n
-    die(f"status '{wanted or fallback}' not in list statuses {names}; fix PROJECT_CONTEXT.md")
+    die(f"status '{wanted or fallback}' not in board statuses {names}; fix PROJECT_CONTEXT.md")
 
 
 def attachment_name(raw):
@@ -425,14 +438,14 @@ def build_payload(t, status, parent_id=None):
     lane = t["lane"]
     tags = ["agent-created", lane.lower()] + [x.strip() for x in t.get("tags", "").split(",") if x.strip()]
     p = {
-        "name": t["title"],
-        "markdown_content": t["body"],
+        "title": t["title"],
+        "description": t["body"],
         "status": status,
         "tags": sorted(set(tags)),
-        "priority": PRIORITY[t.get("priority", "normal").lower()],
+        "priority": t.get("priority", "normal").lower(),
     }
     if t.get("estimate_hours"):
-        p["time_estimate"] = int(float(t["estimate_hours"]) * 3600 * 1000)
+        p["estimate_hours"] = float(t["estimate_hours"])
     if parent_id:
         p["parent"] = parent_id
     return p
@@ -452,20 +465,24 @@ def main():
     a = ap.parse_args()
 
     ctx = parse_context(a.context)
-    if ctx["tracker"] != "clickup":
-        die(f"this project's tracker is `{ctx['tracker']}`; creating tickets from a spec is "
-            f"implemented for ClickUp only. Set `Ticket source: human` in its Flow, let the team "
-            f"write the tickets, and adopt them with tracker_scan.py + `existing_id:`. "
-            f"tracker_status.py works on every tracker.", 4)
+    if ctx["tracker"] == "none":
+        die("this project has `Tracker: none`; there is no board to create tickets on.", 4)
     tickets = parse_spec(a.spec)
     validate(tickets, ctx, a.spec)
 
     token = os.environ.get(ctx["secret_ref"])
     if not token and not a.dry_run:
         die(f"token not found in env: {ctx['secret_ref']} (the Tracker SecretRef in {a.context})")
-    cu = ClickUp(token or "dry", a.dry_run)
+    sys.path.insert(0, os.path.dirname(VALIDATOR))
+    import trackers                                        # noqa: E402
+    cu = Board(trackers.for_project(ctx["fields"], token), a.dry_run)
 
-    marker_path = re.sub(r"\.md$", "", a.spec) + ".clickup.json"
+    # The marker keeps whichever name it already has; a new one uses the
+    # provider's own suffix (ClickUp keeps `.clickup.json` so live specs are
+    # never orphaned).
+    base = re.sub(r"\.md$", "", a.spec)
+    marker_path = next((base + s for s in (".tracker.json", ".clickup.json")
+                        if os.path.exists(base + s)), base + cu.tk.marker_suffix)
     marker = json.load(open(marker_path)) if os.path.exists(marker_path) else {}
 
     if a.dry_run and not token:
@@ -473,9 +490,8 @@ def main():
         status = ctx["create_status"] or "to do"
         existing, live_tasks = {}, []
     else:
-        list_obj = cu.get_list(ctx["list_id"])
-        status = resolve_status(ctx["create_status"], list_obj, "to do")
-        live_tasks = cu.list_tasks(ctx["list_id"])
+        status = resolve_status(ctx["create_status"], cu.statuses(), "to do")
+        live_tasks = cu.list_tasks()
         existing = {t["name"]: t for t in live_tasks}
 
     print(f"list={ctx['list_id']} status='{status}' tickets={len(tickets)} existing_in_list={len(existing)}")
@@ -509,7 +525,7 @@ def main():
             if desc_hash(cu.get_task(target, markdown=True)) != prev_hash:
                 ids[t["title"]] = target
                 skipped.append(t["title"])
-                print(f"skipped  {t['lane']:7} {target:14} {t['title']} (description edited in ClickUp since "
+                print(f"skipped  {t['lane']:7} {target:14} {t['title']} (description edited on the board since "
                       f"the last push; merge the edit into the spec, or re-run with --overwrite-edits)")
                 continue
         if target:
@@ -520,14 +536,14 @@ def main():
             updated += 1
             action = "updated"
         else:
-            r = cu.create(ctx["list_id"], payload)
+            r = cu.create(payload)
             created += 1
             action = "created"
         ids[t["title"]] = r["id"]
         prev = marker.get(t["title"], {})
         done = dict(prev.get("attachments", {}))  # attachment name -> url (idempotency)
         if not a.dry_run and target:
-            for att in (cu.get_task(r["id"]).get("attachments") or []):
+            for att in cu.attachments(r["id"]):
                 if att.get("title") and att.get("url"):
                     done.setdefault(att["title"], att["url"])
         shots = []
@@ -540,7 +556,7 @@ def main():
             shots.append((name, done[name]))
         if split_list(t.get("figma")) or shots:
             body = design_section(t, shots) + strip_design(t["body"])
-            cu.update(r["id"], {"markdown_content": body})
+            cu.update(r["id"], {"description": body})
         marker[t["title"]] = {"id": r["id"], "url": r.get("url", ""), "lane": t["lane"],
                               "attachments": {n: u for n, u in done.items() if n in dict(shots)}}
         if not a.dry_run:  # fingerprint what ClickUp now holds, to detect later hand edits
@@ -568,17 +584,26 @@ def main():
     if not a.dry_run:
         with open(marker_path, "w", encoding="utf-8") as f:
             json.dump(marker, f, indent=2)
-        parent = cu.get_task(ids[tickets[0]["title"]])
-        found = len(parent.get("subtasks", []))
+        # Count children by asking which tickets NAME this parent, rather than
+        # reading a provider-specific `subtasks` array. ClickUp returns one,
+        # Jira puts it under fields.subtasks and Linear calls them sub-issues, so
+        # the old read found 0 on Jira and printed MISMATCH for a push that had
+        # in fact created both subtasks correctly. A false failure is worse than
+        # no check.
+        parent_id = ids[tickets[0]["title"]]
+        parent = cu.get_task(parent_id)
+        found = sum(1 for t2 in tickets[1:]
+                    if (cu.get_task(ids[t2["title"]]).get("parent") or "") == parent_id)
         expected = len(tickets) - 1
         ok = "OK" if found >= expected else "MISMATCH"
-        print(f"VERIFY {ok}: parent {parent['id']} {parent.get('url','')} subtasks found={found} expected={expected}")
+        print(f"VERIFY {ok}: parent {parent.get('id', parent_id)} {parent.get('url','')} "
+              f"children found={found} expected={expected}")
         for t in tickets:
             names = [attachment_name(raw) for raw, _ in screenshot_paths(t, ctx)]
             if not names and not split_list(t.get("figma")):
                 continue
             live = cu.get_task(ids[t["title"]], markdown=True)
-            have = {x.get("title") for x in (live.get("attachments") or [])}
+            have = {x.get("title") for x in cu.attachments(ids[t["title"]])}
             desc = live.get("markdown_description") or live.get("description") or ""
             missing = [n for n in names if n not in have]
             links_ok = all(u in desc for u in split_list(t.get("figma")))
