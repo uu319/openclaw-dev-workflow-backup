@@ -340,6 +340,42 @@ def check_host():
         (ok if gb <= 1.0 else fix)("host", f"/tmp is tmpfs sized {size}", "" if gb <= 1.0 else "cap at 1G as root (OPENCLAW_ARCHITECTURE.md step 4)")
     else:
         ok("host", "/tmp is on disk")
+
+    # Size is not the risk; FULLNESS is. On a tmpfs every byte is RAM, so a full
+    # /tmp presents as "out of memory", never "out of disk" - the shape of this
+    # box's own OOM incident.
+    rc, out = run(["df", "--output=pcent,avail", "/tmp"])
+    pct = (out.splitlines()[-1].split()[0].rstrip("%") if out and len(out.splitlines()) > 1 else "")
+    if pct.isdigit():
+        avail_mb = int(out.splitlines()[-1].split()[1]) // 1024
+        (ok if int(pct) < 75 else fix)(
+            "host", f"/tmp {pct}% used ({avail_mb} MB free)",
+            "" if int(pct) < 75 else
+            "on a RAM disk this presents as out-of-memory: du -sh /tmp/* | sort -rh | head")
+
+    # Nx (and other node tooling) leaves a tmp-<pid>-<rand>/node_modules behind on
+    # exit - ~67 MB each, and one per test run. Orphans are the ones whose owning
+    # process is gone: safe to delete, and nothing else reclaims them.
+    orphans, mb = [], 0
+    for d in glob.glob("/tmp/tmp-*-*"):
+        parts = os.path.basename(d).split("-")
+        if len(parts) < 3 or not parts[1].isdigit() or not os.path.isdir(d):
+            continue
+        try:
+            os.kill(int(parts[1]), 0)          # owner alive -> leave it alone
+        except ProcessLookupError:
+            orphans.append(d)
+            rc2, o2 = run(["du", "-sm", d])
+            mb += int(o2.split()[0]) if o2 and o2.split()[0].isdigit() else 0
+        except PermissionError:
+            pass
+    (ok if not orphans else fix)(
+        "host", f"{len(orphans)} orphaned node tmp dir(s) in /tmp" + (f" ({mb} MB)" if mb else "")
+        if orphans else "no orphaned node tmp dirs in /tmp",
+        "" if not orphans else
+        "each is a dead process's node_modules; reclaim: for d in /tmp/tmp-*-*; do "
+        "p=$(basename $d|cut -d- -f2); kill -0 $p 2>/dev/null || rm -rf $d; done")
+
     rc, pid = run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "openclaw-gateway.service"])
     if pid.strip().isdigit() and pid.strip() != "0":
         try:
