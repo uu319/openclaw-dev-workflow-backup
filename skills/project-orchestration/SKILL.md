@@ -237,9 +237,12 @@ Van merges on GitHub. From then on nothing waits for a person: every heartbeat r
 
     python3 /home/openclaw/.openclaw/workspace/projects/_tools/delivery_watch.py <slug>
 
-for each project. It only reads GitHub, Cloud Build and ClickUp and prints ACTIONs,
-each with what to do and an `--ack <id>` command. Carry out each action, then ack it.
-An action you could not finish stays un-acked and comes back next heartbeat.
+for each project. It only reads GitHub, the project's tracker and its CI provider, and
+prints ACTIONs, each with what to do and an `--ack <id>` command. Carry out each action,
+then ack it. An action you could not finish stays un-acked and comes back next heartbeat.
+
+Where an action says to post in the project's Flow **Chat channel**, use that channel; a
+project that sets none gets the line in the channel the heartbeat is already running in.
 
 - `PR_FEEDBACK`: new comments/reviews on an open PR. `sessions_send` (or spawn) VanDev with the feedback;
   VanDev fixes it in its own worktree and pushes to the same branch; then VanReviewer reviews the new head
@@ -249,8 +252,8 @@ An action you could not finish stays un-acked and comes back next heartbeat.
   - `teammate` / `maintenance` (other people read it): VanDev returns the draft text instead. Relay it to Van
     verbatim and ask for a yes; silence is a NO. On yes, `sessions_send` VanDev "approved, post this reply".
     Ack the action only once the reply is posted or Van says not to send one.
-- `DEPLOYED`: spawn VanPM with the listed tickets → `staged`; post one line in the channel:
-  what is on staging, ready for testing.
+- `DEPLOYED`: spawn VanPM with the listed tickets → `staged`; post one line in the project's
+  Flow **Chat channel**: what is on staging, ready for testing.
 - `BUILD_FAILED`: one line to Van with build id and log link; VanPM files a bug ticket
   (the PR's spec, or a new `staging-build-<sha>` spec); then the normal flow for it. The
   original tickets move to `qa` by themselves once a later build containing them succeeds.
@@ -267,7 +270,7 @@ An action you could not finish stays un-acked and comes back next heartbeat.
   > `projects/_tools/spec_index.py <slug>`.
 
   Then run `worktree.py <slug> sweep`, append the feature to MEMORY.md (step 7) and post
-  one line in the channel.
+  one line in the project's Flow **Chat channel**.
 - `MERGED` (projects with Deploy signal `none`): spawn VanPM, tickets → `staged` or `done` as the action says;
   on team projects only Van's tickets.
 - `LINT` (daily, first project only): post the listed lines in one message; never fix files from a heartbeat.

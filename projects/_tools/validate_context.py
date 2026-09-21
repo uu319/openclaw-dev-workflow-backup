@@ -208,8 +208,13 @@ def parse_flow(text, fields, errors):
         errors.append("Flow Deploy signal `cloud-build` needs **GCP Project ID:** (the watcher reads Cloud Build)")
     if flow["deploy_signal"] == "github-actions" and not fields.get("github_repo"):
         errors.append("Flow Deploy signal `github-actions` needs **GitHub Repo:** (the watcher reads check runs)")
-    if "delivery-watch" in flow["stages"] and not fields.get("github_repo"):
-        errors.append("Flow Stages include `delivery-watch` but **GitHub Repo:** is not set")
+    # review, merge-gate and delivery-watch all act on pull requests, so each of
+    # them needs a repo to act on. Only delivery-watch used to be checked, so a
+    # project could ask for a review stage it had no way to run.
+    pr_stages = [s for s in ("review", "merge-gate", "delivery-watch") if s in flow["stages"]]
+    if pr_stages and not fields.get("github_repo"):
+        errors.append(f"Flow Stages include {', '.join('`'+s+'`' for s in pr_stages)}, which act on "
+                      "pull requests, but **GitHub Repo:** is not set")
     if flow.get("pr_base") and not re.fullmatch(r"[A-Za-z0-9._/-]+", flow["pr_base"]):
         errors.append(f"Flow PR base is not a branch name: {flow['pr_base']}")
     # status map: explicit entries, then inference from Statuses

@@ -117,6 +117,32 @@ def github_repo_must_not_allow_path_traversal():
     contains(errs, "github repo", "owner/.. must be refused as a repo name")
 
 
+def pr_stages_need_a_repo_to_act_on():
+    """review, merge-gate and delivery-watch all operate on pull requests.
+
+    Only delivery-watch used to be checked, so a project could declare a review
+    stage with no repo behind it: onboarding passed, then step 3 had nothing to
+    open a PR against. Each stage must be named in the error so the fix is obvious.
+    """
+    for stage in ("review", "merge-gate", "delivery-watch"):
+        f, errs = parsed(("- **Profile:** `factory`",
+                          f"- **Profile:** `custom`\n- **Stages:** `{stage}`"),
+                         ("- **GitHub Repo:** `acme/harness`\n", ""))
+        contains(errs, "GitHub Repo",
+                 f"stage `{stage}` acts on PRs, so a missing repo must be refused")
+        contains(errs, stage, f"the error must name `{stage}` as the stage that needs it")
+
+    # ...and a stage set that needs no repo must still onboard without one.
+    # The GitHub Token SecretRef goes too: it requires a repo on its own, which
+    # is a separate (correct) rule and would mask what this case is checking.
+    f, errs = parsed(("- **Profile:** `factory`",
+                      "- **Profile:** `custom`\n- **Stages:** `spec`, `tickets`"),
+                     ("- **GitHub Repo:** `acme/harness`\n", ""),
+                     ("  - GitHub Token: `GITHUB_TOKEN_HARNESS`\n", ""))
+    if any("act on" in e for e in errs):
+        raise AssertionError(f"spec+tickets act on no PR, so need no repo, but got: {errs}")
+
+
 def a_status_containing_a_comma_is_not_split():
     f, errs = parsed(("- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`",
                       "- **Statuses:** `to do`, `done, verified`, `in progress`, `cancelled`"),
@@ -194,6 +220,7 @@ CASES = [
     ("placeholder empties Deploy checks", placeholder_must_not_silently_empty_deploy_checks),
     ("branch prefixes without backticks", branch_prefixes_without_backticks_is_not_silently_empty),
     ("duplicated label accepted silently", a_duplicated_label_is_reported),
+    ("PR stages need a repo", pr_stages_need_a_repo_to_act_on),
     ("github repo path traversal", github_repo_must_not_allow_path_traversal),
     ("status name containing a comma", a_status_containing_a_comma_is_not_split),
     ("unparseable Tracker line infers clickup", an_unparseable_tracker_line_does_not_silently_become_clickup),
