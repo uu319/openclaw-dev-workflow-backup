@@ -1,0 +1,1380 @@
+{
+ "minutes": 59.3,
+ "iterations": 79,
+ "failures": [
+  {
+   "n": 19,
+   "line": "  - first valid project owns the lint: with both valid, the first by name still owns it"
+  }
+ ],
+ "delta_kb": {
+  "mem_available_kb": 8440,
+  "tmp_used_kb": -80788,
+  "main_db_kb": -1572,
+  "main_wal_kb": 0,
+  "swap_used_kb": 628,
+  "stress_tmp_dirs": 1
+ },
+ "db_growth_mb_per_hour": -1.6,
+ "tmp_peak_kb": 480884,
+ "tmp_total_kb": 1048576,
+ "mem_low_kb": 4788076,
+ "samples": [
+  {
+   "t": 1790019873.8098319,
+   "mem_available_kb": 4973032,
+   "swap_used_kb": 525148,
+   "tmp_used_kb": 480880,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16128
+  },
+  {
+   "t": 1790019874.4244263,
+   "mem_available_kb": 4937036,
+   "swap_used_kb": 525148,
+   "tmp_used_kb": 480884,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790019920.0179665,
+   "mem_available_kb": 4962700,
+   "swap_used_kb": 525148,
+   "tmp_used_kb": 480884,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790019965.9533257,
+   "mem_available_kb": 4955000,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 480884,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020011.631794,
+   "mem_available_kb": 5063684,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020057.26585,
+   "mem_available_kb": 5055500,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020102.9359574,
+   "mem_available_kb": 5019400,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020148.50622,
+   "mem_available_kb": 5050716,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020194.087744,
+   "mem_available_kb": 5012768,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020239.6870685,
+   "mem_available_kb": 5003800,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399768,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020285.3448312,
+   "mem_available_kb": 5003628,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020330.9512918,
+   "mem_available_kb": 4978728,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399764,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020376.7099771,
+   "mem_available_kb": 4909464,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399808,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020422.3643878,
+   "mem_available_kb": 5023736,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399804,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020467.964635,
+   "mem_available_kb": 4788076,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399812,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020513.564182,
+   "mem_available_kb": 4810244,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399860,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020559.1245522,
+   "mem_available_kb": 4891896,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399964,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020604.7546945,
+   "mem_available_kb": 4917328,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399964,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020650.4442313,
+   "mem_available_kb": 4829184,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 399968,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 0,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020696.0617306,
+   "mem_available_kb": 4906376,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400004,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020741.758523,
+   "mem_available_kb": 4879408,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020787.3885422,
+   "mem_available_kb": 5005728,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020832.9768298,
+   "mem_available_kb": 5011252,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020878.5947394,
+   "mem_available_kb": 5037592,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020924.2586813,
+   "mem_available_kb": 5076016,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790020969.8757427,
+   "mem_available_kb": 5039856,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939068,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021015.5346596,
+   "mem_available_kb": 5049108,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021061.1716664,
+   "mem_available_kb": 5061940,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021106.8762572,
+   "mem_available_kb": 5082640,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021152.4985325,
+   "mem_available_kb": 5076300,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021198.14448,
+   "mem_available_kb": 5074272,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021243.7536368,
+   "mem_available_kb": 5078480,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021289.3703713,
+   "mem_available_kb": 5087032,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021334.993173,
+   "mem_available_kb": 5072688,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400044,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021380.59046,
+   "mem_available_kb": 4853292,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400052,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021426.1819007,
+   "mem_available_kb": 4954092,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400056,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021471.7725935,
+   "mem_available_kb": 4985216,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021517.40393,
+   "mem_available_kb": 4974028,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021563.01733,
+   "mem_available_kb": 4980008,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021608.6589942,
+   "mem_available_kb": 4971560,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021654.2417736,
+   "mem_available_kb": 4979728,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021699.8265336,
+   "mem_available_kb": 5082580,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021745.4985394,
+   "mem_available_kb": 5067892,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021791.0809216,
+   "mem_available_kb": 5074300,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021836.6896913,
+   "mem_available_kb": 5077384,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021882.3409576,
+   "mem_available_kb": 5076952,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021927.9747643,
+   "mem_available_kb": 5076740,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790021973.5666566,
+   "mem_available_kb": 5069656,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022019.202368,
+   "mem_available_kb": 5066836,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022064.8487525,
+   "mem_available_kb": 5080988,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022110.474679,
+   "mem_available_kb": 5071164,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022156.059842,
+   "mem_available_kb": 5081928,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022201.662762,
+   "mem_available_kb": 5080628,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022247.2656074,
+   "mem_available_kb": 5069804,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400060,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 939124,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022292.8601222,
+   "mem_available_kb": 4910400,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022338.4656768,
+   "mem_available_kb": 4963504,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022384.0948498,
+   "mem_available_kb": 4985580,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022429.704548,
+   "mem_available_kb": 4983756,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022475.3196254,
+   "mem_available_kb": 4991508,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022520.9017365,
+   "mem_available_kb": 4998320,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022566.5323422,
+   "mem_available_kb": 5072356,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022612.2397697,
+   "mem_available_kb": 5087464,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022657.853615,
+   "mem_available_kb": 5087320,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022703.5262632,
+   "mem_available_kb": 5076504,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022749.1482084,
+   "mem_available_kb": 5089604,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022794.7517679,
+   "mem_available_kb": 5092488,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937412,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022840.4081497,
+   "mem_available_kb": 5078768,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022886.0147529,
+   "mem_available_kb": 5092164,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022931.6153207,
+   "mem_available_kb": 5088904,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790022977.2240384,
+   "mem_available_kb": 5081488,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023022.8777933,
+   "mem_available_kb": 5085768,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023068.5211334,
+   "mem_available_kb": 5086452,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023114.1007817,
+   "mem_available_kb": 5087212,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400076,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023159.7511325,
+   "mem_available_kb": 4867412,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400084,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023205.4113219,
+   "mem_available_kb": 4972212,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023251.0091033,
+   "mem_available_kb": 4973096,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023296.6089458,
+   "mem_available_kb": 4978900,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023342.2264755,
+   "mem_available_kb": 4978156,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023387.8262014,
+   "mem_available_kb": 4984472,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  },
+  {
+   "t": 1790023433.457865,
+   "mem_available_kb": 4981472,
+   "swap_used_kb": 525776,
+   "tmp_used_kb": 400092,
+   "tmp_total_kb": 1048576,
+   "main_db_kb": 937496,
+   "main_wal_kb": 28811,
+   "stress_tmp_dirs": 1,
+   "soak_rss_kb": 16440
+  }
+ ],
+ "runs": [
+  {
+   "n": 1,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 2,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 3,
+   "ok": true,
+   "seconds": 0.9,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 4,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 5,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 6,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 7,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 8,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 9,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 10,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "49 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 11,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "58 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 12,
+   "ok": true,
+   "seconds": 0.8,
+   "line": "58 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 13,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "58 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 14,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "58 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 15,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "59 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 16,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "61 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 17,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "61 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 18,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "61 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 19,
+   "ok": false,
+   "seconds": 0.6,
+   "line": "  - first valid project owns the lint: with both valid, the first by name still owns it"
+  },
+  {
+   "n": 20,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 21,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 22,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 23,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 24,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 25,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 26,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 27,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 28,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 29,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 30,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 31,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 32,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 33,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 34,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 35,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 36,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 37,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 38,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 39,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 40,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 41,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 42,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 43,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 44,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 45,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 46,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 47,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 48,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 49,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 50,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 51,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 52,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 53,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 54,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 55,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 56,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 57,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 58,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 59,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 60,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 61,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 62,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 63,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 64,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 65,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 66,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 67,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 68,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 69,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 70,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 71,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 72,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 73,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 74,
+   "ok": true,
+   "seconds": 0.7,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 75,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 76,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 77,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 78,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  },
+  {
+   "n": 79,
+   "ok": true,
+   "seconds": 0.6,
+   "line": "64 passed, 0 failed, 0 skipped"
+  }
+ ]
+}

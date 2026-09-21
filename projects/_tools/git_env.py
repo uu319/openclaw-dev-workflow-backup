@@ -167,6 +167,7 @@ def readiness(fields, env, pr):
     print(f"PR {info['url']}  head {head[:12]}  state {info.get('state')}")
 
     blockers, unknown = [], []
+    latest = {}                 # workflow file -> newest run on this head
 
     # --- the review stamp -----------------------------------------------------
     st = subprocess.run(["gh", "api", f"repos/{repo}/commits/{head}/status"], env=env,
@@ -198,7 +199,6 @@ def readiness(fields, env, pr):
                        f"the token needs 'Actions: Read'")
     else:
         wf = json.loads(runs.stdout).get("workflow_runs", [])
-        latest = {}
         for w in wf:                      # newest attempt per workflow file
             key = (w.get("path") or w.get("name") or "?").rsplit("/", 1)[-1]
             if key not in latest or (w.get("created_at") or "") > (latest[key].get("created_at") or ""):
@@ -224,7 +224,14 @@ def readiness(fields, env, pr):
     if unknown:
         print("\nNOT READY: something could not be checked; say so rather than calling it ready")
         sys.exit(3)
-    print("\nREADY: reviewed, and every check on this head is green")
+    if latest:
+        print("\nREADY: reviewed, and every check on this head is green")
+    else:
+        # Saying "every check is green" when NO check ran is the confident-wrong
+        # claim this gate exists to prevent. With no PR CI configured, this gate
+        # verifies the review and nothing else - so it has to say that.
+        print("\nREADY: reviewed - but NO CI ran on this head, so this gate checked "
+              "the review ONLY. Nothing here verified that the code builds or passes tests.")
 
 
 def review_status(fields, env, pr, dry=False):
