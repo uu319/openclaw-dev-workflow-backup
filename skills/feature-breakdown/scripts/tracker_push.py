@@ -59,7 +59,8 @@ def die(msg, code=1):
 
 # ---------- parsing ----------
 
-VALIDATOR = "/home/openclaw/.openclaw/workspace/projects/_tools/validate_context.py"
+WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
+VALIDATOR = os.path.join(WORKSPACE, "projects/_tools/validate_context.py")
 
 
 def parse_context(path):
@@ -587,7 +588,7 @@ def main():
                   f"figma_links_in_description={'yes' if links_ok else 'NO'} screenshots_referenced_in_description={embedded}/{len(names)}")
         print(f"marker written: {marker_path}")
         slug = os.path.basename(os.path.dirname(os.path.realpath(a.context)))
-        subprocess.run([sys.executable, "/home/openclaw/.openclaw/workspace/projects/_tools/spec_index.py", slug])
+        subprocess.run([sys.executable, os.path.join(WORKSPACE, "projects/_tools/spec_index.py"), slug])
     if skipped:
         print(f"SKIPPED (edited by someone in ClickUp): {len(skipped)}: " + "; ".join(skipped))
     print(f"done: created={created} updated={updated}")

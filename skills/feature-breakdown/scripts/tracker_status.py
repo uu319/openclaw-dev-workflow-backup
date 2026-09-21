@@ -25,7 +25,8 @@ import os
 import re
 import sys
 
-TOOLS = "/home/openclaw/.openclaw/workspace/projects/_tools"
+WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
+TOOLS = os.path.join(WORKSPACE, "projects/_tools")
 VALIDATOR = os.path.join(TOOLS, "validate_context.py")
 sys.path.insert(0, TOOLS)
 import trackers  # noqa: E402
