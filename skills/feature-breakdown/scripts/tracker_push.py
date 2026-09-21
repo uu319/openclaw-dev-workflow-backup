@@ -10,7 +10,8 @@ the list, creates the parent first, then subtasks with `parent`, then task
 links for depends_on. Tickets with `figma:`/`screenshots:` get their PNGs
 uploaded as ClickUp attachments and a generated `## Design` section (Figma
 links + embedded screenshots) at the top of the description. Writes
-<spec>.clickup.json as the completion marker. Standard library only (urllib).
+<spec>.clickup.json as the completion marker (ClickUp's declared marker suffix;
+`.tracker.json` is read too, so a spec never needs migrating). Standard library only.
 
 Tracker support: **ClickUp only, for now.** Creating tickets from a spec needs
 attachments (Figma screenshots), task-to-task dependency links, markdown

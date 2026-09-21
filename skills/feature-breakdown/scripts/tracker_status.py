@@ -36,16 +36,26 @@ def die(m):
 
 
 def marker_for(spec_path):
-    """The spec's marker, new name first, then the pre-rename one, then _done/."""
+    """The spec's marker.
+
+    Search order must match delivery_watch.markers() exactly - live specs before
+    archived ones, `.tracker.json` before the pre-rename `.clickup.json`. The two
+    used to disagree (this tool checked both locations of one suffix before trying
+    the other), so with a stale marker in `_done/` they could resolve to different
+    files and act on different ticket ids.
+    """
     base = re.sub(r"\.md$", "", spec_path)
-    for cand in (base + ".tracker.json", base + ".clickup.json"):
-        if os.path.exists(cand):
-            return cand
-        done = os.path.join(os.path.dirname(cand), "_done", os.path.basename(cand))
-        if os.path.exists(done):
-            return done
-    die(f"no marker for {spec_path} (.tracker.json or .clickup.json, here or in _done/); "
-        f"tickets were never pushed")
+    d, name = os.path.dirname(base), os.path.basename(base)
+    cands = [os.path.join(d, name + sfx) for sfx in (".tracker.json", ".clickup.json")]
+    cands += [os.path.join(d, "_done", name + sfx) for sfx in (".tracker.json", ".clickup.json")]
+    found = [c for c in cands if os.path.exists(c)]
+    if not found:
+        die(f"no marker for {spec_path} (.tracker.json or .clickup.json, here or in _done/); "
+            f"tickets were never pushed")
+    if len(found) > 1:
+        print(f"WARNING: {len(found)} markers for this spec; using {found[0]}. "
+              f"Others: {found[1:]} - delete the stale ones.", file=sys.stderr)
+    return found[0]
 
 
 def assigned_to(task, who):
