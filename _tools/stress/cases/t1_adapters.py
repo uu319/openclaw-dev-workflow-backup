@@ -6,6 +6,8 @@ provider is chosen, how a PR body is turned into ticket ids, what shape a task
 has, and whether a provider that cannot do something says so instead of
 returning a plausible-looking nothing.
 """
+import inspect
+import json
 import os
 import re
 import sys
@@ -223,6 +225,71 @@ def jira_closed_uses_status_category_not_an_english_word_list():
     eq(t2["closed"], False, "with no category, an unknown name falls back to not-closed")
 
 
+def linear_queries_use_the_types_the_api_declares():
+    """`team(id:)` is String!, not ID!.
+
+    `tasks()` asked for `$id:ID!` and Linear rejected every call with HTTP 400:
+    'Variable "$id" of type "ID!" used in position expecting type "String!"'.
+    Offline this is invisible - nothing validates a query string against a schema
+    - and it meant the Linear adapter could not list a board at all. Found on the
+    first live call, 2026-09-21.
+    """
+    import trackers.linear as L
+    src = inspect.getsource(L.Linear.tasks)
+    if "$id:ID!" in src:
+        raise AssertionError("team(id:) takes String!, not ID! - Linear rejects the query with HTTP 400")
+    contains(src, "$id:String!", "the team id variable must be declared String!")
+
+
+def linear_page_size_is_injectable():
+    """Proven live 2026-09-21: page_size=2 over 5 issues issued 3 requests and
+    returned the same ids as one page. Stubbed here so it stays true."""
+    import trackers.linear as L
+    rows = [f"TES-{n}" for n in range(1, 6)]
+    seen = []
+
+    def fake(url, headers, data=None, method=None, timeout=None):
+        body = json.loads(data.decode())
+        n = body["variables"].get("n")
+        after = body["variables"].get("after")
+        seen.append(n)
+        start = int(after) if after else 0
+        chunk = rows[start:start + n]
+        nxt = start + n
+        return {"data": {"team": {"issues": {
+            "pageInfo": {"hasNextPage": nxt < len(rows), "endCursor": str(nxt)},
+            "nodes": [{"id": f"u{k}", "identifier": k, "title": k, "url": "",
+                       "state": {"name": "Todo", "type": "unstarted"}} for k in chunk]}}}}
+
+    tk = trackers.for_project(LINEAR, "tok")
+    tk._team = {"key": "TES", "id": "team-uuid", "name": "T", "states": {"nodes": []}}
+    real, L.http_json = L.http_json, fake
+    try:
+        out = tk.tasks(page_size=2)
+    finally:
+        L.http_json = real
+    eq(sorted(out), rows, "every page must be collected")
+    eq(seen, [2, 2, 2], "5 rows at 2 per page is 3 requests")
+
+
+def linear_task_url_carries_the_workspace():
+    """These links go in PR bodies. The workspace slug is not optional.
+
+    It built `https://linear.app/issue/<id>` with no workspace. That could not be
+    checked by fetching it: linear.app is a single-page app and answers 200 for
+    every path, including `NOPE-1` and a workspace that does not exist - so a
+    status code proves nothing. The API knows the slug; ask it.
+    """
+    import trackers.linear as L
+    tk = trackers.for_project(LINEAR, "tok")
+    real, L.http_json = L.http_json, lambda *a, **k: {"data": {"organization": {"urlKey": "acme-co"}}}
+    try:
+        eq(tk.task_url("TES-1"), "https://linear.app/acme-co/issue/TES-1",
+           "the issue URL must carry the workspace slug the API reports")
+    finally:
+        L.http_json = real
+
+
 def actions_keys_on_the_workflow_file_not_the_run_name():
     """A run's display name is NOT stable, so it cannot be the check key.
 
@@ -323,6 +390,9 @@ CASES = [
     ("jira page size injectable, no total", jira_page_size_is_injectable_and_never_needs_total),
     ("jira issue type discovered", jira_issue_type_is_discovered_from_the_project),
     ("jira closed via statusCategory", jira_closed_uses_status_category_not_an_english_word_list),
+    ("linear uses declared API types", linear_queries_use_the_types_the_api_declares),
+    ("linear page size injectable", linear_page_size_is_injectable),
+    ("linear task_url has the workspace", linear_task_url_carries_the_workspace),
     ("actions keys on the workflow file", actions_keys_on_the_workflow_file_not_the_run_name),
     ("actions pages to cover the window", actions_pages_until_the_watch_window_is_covered),
     ("ci dispatch", ci_dispatch_picks_the_declared_provider),

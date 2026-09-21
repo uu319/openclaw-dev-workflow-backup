@@ -21,6 +21,7 @@ class Linear(Tracker):
     def __init__(self, fields, token=None):
         super().__init__(fields, token)
         self._team = None
+        self._urlkey = None
 
     def _h(self):
         return {"Authorization": self.token, "Content-Type": "application/json"}
@@ -71,14 +72,21 @@ class Linear(Tracker):
         t = self.team()
         return t["name"], [s["name"] for s in (t.get("states") or {}).get("nodes", [])], "Linear"
 
-    def tasks(self):
+    def tasks(self, page_size=100):
+        """Every issue on the team, cursor-paged.
+
+        `page_size` is injectable so a test can force real multi-page paging
+        without creating 100 issues - the same reason it exists on the Jira
+        adapter. Silent truncation at one page is the failure mode that made the
+        old Jira `/search` endpoint dangerous.
+        """
         t, out, after, page = self.team(), {}, None, (
-            "query($id:ID!,$after:String){team(id:$id){issues(first:100,after:$after,"
+            "query($id:String!,$after:String,$n:Int!){team(id:$id){issues(first:$n,after:$after,"
             "includeArchived:true){pageInfo{hasNextPage endCursor}"
             "nodes{id identifier title url updatedAt description "
             "state{name type} assignee{name email} parent{identifier}}}}}")
         while True:
-            d = self._q(page, id=t["id"], after=after)
+            d = self._q(page, id=t["id"], after=after, n=page_size)
             iss = ((d.get("team") or {}).get("issues") or {})
             for i in iss.get("nodes", []):
                 out[i["identifier"]] = self._task(i)
@@ -103,7 +111,25 @@ class Linear(Tracker):
                 for c in nodes[:limit]]
 
     def task_url(self, tid):
-        return f"https://linear.app/issue/{tid}"
+        """The canonical issue URL, workspace slug included.
+
+        This used to build `https://linear.app/issue/<id>`, without the
+        workspace. Linear's own `url` field always carries the slug
+        (`https://linear.app/<urlKey>/issue/<id>/<title-slug>`), and these links
+        go into PR bodies and ticket comments where a human clicks them. The
+        short form could not be verified: linear.app is a single-page app and
+        returns HTTP 200 for every path, including issues that do not exist, so
+        a status check proves nothing either way. Asking the API for the slug
+        removes the guess.
+        """
+        if self._urlkey is None:
+            try:
+                self._urlkey = ((self._q("{organization{urlKey}}").get("organization") or {})
+                                .get("urlKey") or "")
+            except Exception:  # noqa: BLE001 - a link is not worth failing a status move over
+                self._urlkey = ""
+        return (f"https://linear.app/{self._urlkey}/issue/{tid}" if self._urlkey
+                else f"https://linear.app/issue/{tid}")
 
     def links_in_text(self, text):
         text = text or ""
