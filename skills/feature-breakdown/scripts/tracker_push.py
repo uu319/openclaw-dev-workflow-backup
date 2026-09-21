@@ -13,7 +13,7 @@ links + embedded screenshots) at the top of the description. Writes
 <spec>.clickup.json as the completion marker (ClickUp's declared marker suffix;
 `.tracker.json` is read too, so a spec never needs migrating). Standard library only.
 
-Tracker support: **ClickUp only, for now.** Creating tickets from a spec needs
+Tracker support: **ClickUp, Jira and Linear** (2026-09-21). Creating tickets from a spec needs
 attachments (Figma screenshots), task-to-task dependency links, markdown
 descriptions and per-ticket estimates, and those are shaped very differently on
 Jira and Linear. Rather than half-create tickets and silently drop the parts it
