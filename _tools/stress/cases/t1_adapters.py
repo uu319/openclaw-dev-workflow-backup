@@ -7,6 +7,7 @@ has, and whether a provider that cannot do something says so instead of
 returning a plausible-looking nothing.
 """
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -206,6 +207,61 @@ def actions_keys_on_the_workflow_file_not_the_run_name():
     eq(runs[0]["display"], "Deploy by van for PR #41",
        "the per-run name is kept for humans, just not used as the key")
 
+def jira_page_size_is_injectable_and_never_needs_total():
+    """Paging must be driven by the cursor alone, at any page size.
+
+    Proven live 2026-09-21 on a 4-issue board: page_size=2 issued 2 requests and
+    returned the same 4 ids as the single-page call. The stub below keeps that
+    honest without an account, and pins `maxResults` to the caller's value so a
+    test can force real multi-page paging.
+    """
+    import trackers.jira as J
+    seen, rows = [], [f"KAN-{n}" for n in range(1, 6)]
+
+    def fake(url, headers, data=None, method=None, timeout=None):
+        seen.append(url)
+        size = int(re.search(r"maxResults=(\d+)", url).group(1))
+        start = (len(seen) - 1) * size
+        chunk = rows[start:start + size]
+        page = {"issues": [{"key": k, "fields": {"summary": k, "status": {"name": "To Do"}}}
+                           for k in chunk]}
+        if start + size < len(rows):                 # no `total` anywhere, by design
+            page["nextPageToken"] = f"CUR{len(seen)}"
+        else:
+            page["isLast"] = True
+        return page
+
+    real, J.http_json = J.http_json, fake
+    try:
+        out = trackers.for_project(JIRA, "e:t").tasks(page_size=2)
+    finally:
+        J.http_json = real
+
+    eq(sorted(out), rows, "every page must be collected, not just the first")
+    eq(len(seen), 3, "5 rows at 2 per page is 3 requests")
+    contains(seen[0], "maxResults=2", "the caller's page size must reach the request")
+
+
+def jira_issue_type_is_discovered_from_the_project():
+    """"Sub-task" 400s on a team-managed project, which calls it "Subtask".
+
+    Confirmed live 2026-09-21: the real board offers Epic/Subtask/Task/Story/
+    Feature/Bug, and a subtask created with the discovered name landed under its
+    parent. Both spellings are checked here because sites carry either.
+    """
+    import trackers.jira as J
+    for spelling in ("Subtask", "Sub-task"):
+        tk = trackers.for_project(JIRA, "e:t")
+        real, J.http_json = J.http_json, lambda *a, **k: {"issueTypes": [
+            {"name": "Epic", "subtask": False}, {"name": spelling, "subtask": True},
+            {"name": "Task", "subtask": False}, {"name": "Story", "subtask": False}]}
+        try:
+            eq(tk.issue_type(subtask=True), spelling,
+               f"a project that calls it {spelling!r} must get {spelling!r}")
+            eq(tk.issue_type(subtask=False), "Task", "a plain issue must not become a subtask type")
+        finally:
+            J.http_json = real
+
 
 CASES = [
     ("tracker dispatch", dispatch_picks_the_declared_provider),
@@ -220,6 +276,8 @@ CASES = [
     ("ApiError carries the reason", api_errors_carry_the_providers_reason),
     ("error bodies never leak the request", error_bodies_never_leak_the_request),
     ("jira uses /search/jql + cursor paging", jira_uses_the_current_search_endpoint_and_cursor_pages),
+    ("jira page size injectable, no total", jira_page_size_is_injectable_and_never_needs_total),
+    ("jira issue type discovered", jira_issue_type_is_discovered_from_the_project),
     ("jira closed via statusCategory", jira_closed_uses_status_category_not_an_english_word_list),
     ("actions keys on the workflow file", actions_keys_on_the_workflow_file_not_the_run_name),
     ("ci dispatch", ci_dispatch_picks_the_declared_provider),

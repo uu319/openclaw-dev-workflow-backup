@@ -65,7 +65,7 @@ class Jira(Tracker):
                     names.append(st["name"])
         return proj.get("name"), names, f"Jira site {self.base}"
 
-    def tasks(self):
+    def tasks(self, page_size=100):
         """Every issue on the project, paged.
 
         `/rest/api/3/search` was REMOVED by Jira Cloud (HTTP 410, CHANGE-2046).
@@ -81,7 +81,7 @@ class Jira(Tracker):
         while True:
             params = {
                 "jql": f"project = {self.board_id} ORDER BY created ASC",
-                "maxResults": 100,
+                "maxResults": page_size,   # small values let a test force real multi-page paging
                 "fields": "summary,status,assignee,parent,updated,description",
             }
             if cursor:
