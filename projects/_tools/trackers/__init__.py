@@ -82,6 +82,9 @@ def http_json(url, headers, data=None, method=None, timeout=TIMEOUT):
     return json.loads(body) if body.strip() else {}
 
 
+PRIORITY_RANK = {"urgent": 1, "high": 2, "normal": 3, "low": 4}
+
+
 class Tracker:
     """Base class. A provider overrides what it can actually do."""
 

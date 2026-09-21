@@ -252,6 +252,10 @@ class Linear(Tracker):
         inp = {"teamId": t["id"], "title": title, "description": description or ""}
         if status:
             inp["stateId"] = self._state_id(status)
+        if kw.get("tags"):
+            inp["labelIds"] = self._label_ids(kw["tags"])
+        if kw.get("estimate_hours"):
+            inp["estimate"] = max(1, round(float(kw["estimate_hours"])))
         if parent:
             puuid = self._q("query($id:String!){issue(id:$id){id}}", id=parent).get("issue", {}).get("id")
             if puuid:

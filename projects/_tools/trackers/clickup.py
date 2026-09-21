@@ -4,7 +4,7 @@ import json
 import os
 import re
 
-from . import Tracker, http_json
+from . import PRIORITY_RANK, Tracker, http_json
 
 # Overridable so tests can point at a local mock; unset, this is the real API.
 API = os.environ.get("CLICKUP_API_BASE", "https://api.clickup.com/api/v2")
@@ -108,7 +108,13 @@ class ClickUp(Tracker):
             body["status"] = status
         if parent:
             body["parent"] = parent
-        for k in ("tags", "priority", "time_estimate", "assignees"):
+        if kw.get("tags") is not None:
+            body["tags"] = list(kw["tags"])
+        if kw.get("estimate_hours"):
+            body["time_estimate"] = int(float(kw["estimate_hours"]) * 3600 * 1000)
+        if kw.get("priority"):
+            body["priority"] = PRIORITY_RANK.get(str(kw["priority"]).lower(), 3)
+        for k in ("time_estimate", "assignees"):            # still accepted raw
             if kw.get(k) is not None:
                 body[k] = kw[k]
         return self._task(http_json(f"{API}/list/{self.board_id}/task", self._h(),

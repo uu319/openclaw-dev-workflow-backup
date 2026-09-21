@@ -275,6 +275,8 @@ class Jira(Tracker):
         f = {"project": {"key": self.board_id}, "summary": title,
              "issuetype": {"name": kw.get("issue_type") or self.issue_type(subtask=bool(parent))},
              "description": md_to_adf(description)}
+        if kw.get("tags"):
+            f["labels"] = [str(x).replace(" ", "-") for x in kw["tags"]]
         if parent:
             f["parent"] = {"key": parent}
         it = http_json(f"{self.base}/rest/api/3/issue", self._h(),
