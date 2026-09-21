@@ -8,7 +8,7 @@ Usage:
   delivery_watch.py <slug>                 # print pending actions (and remember them)
   delivery_watch.py <slug> --json          # same, machine-readable
   delivery_watch.py <slug> --ack <id> ...  # mark actions handled (after doing them)
-  delivery_watch.py <slug> --dry --since 2026-09-18T00:00:00Z   # test on history, writes nothing
+  delivery_watch.py <slug> --dry --since 2026-09-18T00:00:00Z   # test on history; writes no state and prunes no refs
 
 The flow it drives (statuses are the project's; see the project-orchestration skill):
   PR open + new GitHub comment/review  -> PR_FEEDBACK   (VanDev fixes, internal review, push, reply)
@@ -306,7 +306,10 @@ def main():
             return
         actions.append({"id": aid, "kind": kind, "summary": summary, "do": do, **data})
 
-    run(["git", "fetch", "--quiet", "--prune", "origin"], cwd=ctx.primary)
+    # `--prune` DELETES remote-tracking refs, so it is not something `--dry` may do.
+    # A plain fetch only adds or fast-forwards refs, which ancestry checks need and
+    # which changes nothing the user would miss.
+    run(["git", "fetch", "--quiet", *([] if a.dry else ["--prune"]), "origin"], cwd=ctx.primary)
     marks = markers(ctx)
     status_cmd = (f"python3 {WORKSPACE}/project-manager/skills/feature-breakdown/scripts/tracker_status.py "
                   f"--context {ctx.path} --spec <spec> --only \"<title>\" --status "
@@ -315,19 +318,30 @@ def main():
     watching = "delivery-watch" in stages
 
     # ---- tracker snapshot (normalised by trackers/; `none` yields {})
-    tasks = {}
+    # `tasks_ok` is the difference between "the board is empty" and "we could not
+    # read the board". They are NOT the same: without it, a 429 or an expired token
+    # made every ticket linked in a PR body look like it needed a status move, and
+    # the watcher told the heartbeat to move tickets it had never read.
+    tasks, tasks_ok = {}, True
     try:
         tasks = ctx.tracker().tasks()
     except Exception as e:  # noqa: BLE001 - report, keep watching the rest
+        tasks_ok = False
         errors.append(f"{ctx.f.get('tracker', 'tracker')}: {e}")
     stat = lambda tid: ((tasks.get(tid) or {}).get("status") or "?").lower()
     title_of = {v["id"]: (slug, k) for slug, (_, m) in marks.items() for k, v in m.items()
                 if not k.startswith("_") and isinstance(v, dict)}
 
     def qa_moves(ids):
-        """[(ticket id, spec slug, title, current status)] that should go to qa, parents included."""
-        moves = [(i, *title_of.get(i, (None, (tasks.get(i) or {}).get("name", i))), stat(i))
-                 for i in sorted(ids) if stat(i) in QA_FROM or (not tasks and i)]
+        """[(ticket id, spec slug, title, current status)] that should go to qa, parents included.
+
+        Returns nothing when the board could not be read: a ticket whose current
+        status is unknown must never be moved on a guess.
+        """
+        if not tasks_ok:
+            return []
+        moves = [(i, *title_of.get(i, (None, (tasks.get(i) or {}).get("title") or i)), stat(i))
+                 for i in sorted(ids) if stat(i) in QA_FROM]
         moved = {m[0] for m in moves}
         for slug, (_, m) in marks.items():                 # parent -> qa when all its children are qa+
             kids = [v["id"] for k, v in m.items() if not k.startswith("_") and isinstance(v, dict)]
@@ -443,7 +457,8 @@ def main():
                     tickets=[{"id": i, "spec": sp and f"{ctx.specs}/{sp}.md", "title": t, "status": st} for i, sp, t, st in moves],
                     command=status_cmd)
             else:
-                notes.append(f"{where}: merged; no linked ticket needs moving")
+                notes.append(f"{where}: merged; " + ("no linked ticket needs moving" if tasks_ok
+                             else "the board could not be read, so its tickets were NOT judged"))
             continue
         cands = sorted(((c, d) for c, d in commits.items() if ctx.is_ancestor(msha, c)), key=lambda x: x[1]["at"])
         ok = next(((c, d) for c, d in cands if d["status"] == "ok"), None)
@@ -462,7 +477,8 @@ def main():
             elif not ours:
                 notes.append(f"{where}: on staging (not ours; no action)")
             else:
-                notes.append(f"{where}: on staging; its tickets are already qa/complete")
+                notes.append(f"{where}: on staging; " + ("its tickets are already qa/complete" if tasks_ok
+                             else "the board could not be read, so its tickets were NOT judged"))
             continue
         failed = [(c, d) for c, d in cands if d["status"] == "failed"]
         running = [(c, d) for c, d in cands if d["status"] == "running"]

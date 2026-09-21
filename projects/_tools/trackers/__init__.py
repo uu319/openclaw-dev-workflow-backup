@@ -25,13 +25,60 @@ import urllib.request
 TIMEOUT = 30
 
 
+class ApiError(RuntimeError):
+    """An HTTP error from a tracker, carrying the API's own reason."""
+
+    def __init__(self, status, reason, detail=""):
+        self.status, self.reason = status, reason
+        super().__init__(f"HTTP {status} {reason}" + (f": {detail}" if detail else ""))
+
+
+def _reason(body):
+    """The API's own explanation, and nothing else.
+
+    Deliberately NOT the raw body: an error body can echo the request that
+    produced it, and that request carried the Authorization header. Only known
+    message fields are surfaced, truncated.
+    """
+    try:
+        d = json.loads(body)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not isinstance(d, dict):
+        return ""
+    for k in ("message", "err", "error", "error_description"):
+        v = d.get(k)
+        if isinstance(v, str) and v:
+            return v[:200]
+    for k in ("errorMessages", "errors"):       # Jira
+        v = d.get(k)
+        if isinstance(v, list) and v and isinstance(v[0], str):
+            return "; ".join(v)[:200]
+        if isinstance(v, dict) and v:
+            return "; ".join(f"{a}: {b}" for a, b in list(v.items())[:4])[:200]
+    return ""
+
+
 def http_json(url, headers, data=None, method=None, timeout=TIMEOUT):
-    """GET, or POST/PUT when `data` is given. Raises urllib HTTPError as-is."""
+    """GET, or POST/PUT when `data` is given.
+
+    Raises ApiError with the API's own reason on any non-2xx. urllib already
+    raises on 4xx/5xx, but it discards the body, which is where every tracker
+    explains what was actually wrong.
+    """
     req = urllib.request.Request(
         url, headers=headers, data=data,
         method=method or ("POST" if data is not None else "GET"))
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        body = r.read().decode()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            status, body = r.status, r.read().decode()
+    except urllib.error.HTTPError as e:
+        detail = _reason(e.read().decode(errors="replace"))
+        if e.code == 429:
+            detail = (detail + f" (retry-after: {e.headers.get('Retry-After')})").strip()
+        raise ApiError(e.code, e.reason, detail) from None
+    if not 200 <= status < 300:
+        raise ApiError(status, "unexpected status", _reason(body))
     return json.loads(body) if body.strip() else {}
 
 

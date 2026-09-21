@@ -73,13 +73,13 @@ class TrackerMCP:
 
     # --- tools ---------------------------------------------------------------
     def get_task(self, task_id):
-        tk = self._need()
-        found = tk.tasks().get(task_id)
-        if found:
-            return found
-        # fall back to a direct read for a task the board listing did not include
-        return {"id": task_id, "url": tk.task_url(task_id),
-                "note": "not found on this project's board"}
+        """Read one ticket live.
+
+        A miss must RAISE, not return a task-shaped dict: an agent reading
+        `{"id": ..., "url": ...}` sees a ticket that does not exist, and this is
+        VanPM's only read path.
+        """
+        return self._need().get_task(task_id)
 
     def create_task(self, name, description="", status=None, parent=None, tags=None):
         return self._need().create_task(name, description=description, status=status,

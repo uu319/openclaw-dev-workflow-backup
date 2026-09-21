@@ -394,6 +394,8 @@ def live_check(fields):
     except urllib.error.HTTPError as e:
         # never echo the body: it can contain the request we sent, token included
         return [f"live check: {tk.kind} board {fields['board_id']} -> HTTP {e.code} {e.reason}"]
+    except trackers.ApiError as e:
+        return [f"live check: {tk.kind} board {fields['board_id']} -> {e}"]
     except (urllib.error.URLError, RuntimeError, ValueError, KeyError) as e:
         return [f"live check: {tk.kind} board {fields['board_id']} -> {type(e).__name__}: {e}"]
     print(f"LIVE {tk.kind} board {fields['board_id']} = '{name}' ({where})")

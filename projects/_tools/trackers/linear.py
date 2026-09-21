@@ -125,8 +125,12 @@ class Linear(Tracker):
         uuid = self._q("query($id:String!){issue(id:$id){id}}", id=tid).get("issue", {}).get("id")
         if not uuid:
             raise RuntimeError(f"Linear issue '{tid}' not found")
-        self._q("mutation($id:String!,$s:String!){issueUpdate(id:$id,input:{stateId:$s}){success}}",
-                id=uuid, s=self._state_id(status))
+        d = self._q("mutation($id:String!,$s:String!){issueUpdate(id:$id,input:{stateId:$s}){success}}",
+                    id=uuid, s=self._state_id(status))
+        # Linear answers 200 with success:false for a rejected write (permission,
+        # workflow rule). Unchecked, a refused status move reported as done.
+        if not ((d.get("issueUpdate") or {}).get("success")):
+            raise RuntimeError(f"Linear refused the status move of {tid} to '{status}' (success: false)")
 
     def create_task(self, title, description="", status=None, parent=None, **kw):
         t = self.team()
@@ -137,6 +141,9 @@ class Linear(Tracker):
             puuid = self._q("query($id:String!){issue(id:$id){id}}", id=parent).get("issue", {}).get("id")
             if puuid:
                 inp["parentId"] = puuid
-        d = self._q("mutation($i:IssueCreateInput!){issueCreate(input:$i){issue{id identifier title url "
+        d = self._q("mutation($i:IssueCreateInput!){issueCreate(input:$i){success issue{id identifier title url "
                     "updatedAt description state{name type} assignee{name email} parent{identifier}}}}", i=inp)
-        return self._task(((d.get("issueCreate") or {}).get("issue")) or {})
+        res = d.get("issueCreate") or {}
+        if not res.get("success") or not res.get("issue"):
+            raise RuntimeError(f"Linear refused to create '{title}' (success: {res.get('success')})")
+        return self._task(res["issue"])
