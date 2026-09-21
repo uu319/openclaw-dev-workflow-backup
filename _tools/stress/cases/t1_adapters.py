@@ -178,6 +178,35 @@ def jira_closed_uses_status_category_not_an_english_word_list():
     eq(t2["closed"], False, "with no category, an unknown name falls back to not-closed")
 
 
+def actions_keys_on_the_workflow_file_not_the_run_name():
+    """A run's display name is NOT stable, so it cannot be the check key.
+
+    GitHub's `run-name:` sets it per run, and dependabot's is unique every time.
+    Verified on a real repo 2026-09-21: 19 runs produced 19 distinct names. Keyed
+    on `name`, an expected check would never match, every commit would sit at
+    `running` until the cutoff, and no ticket would ever move - the 12.5f stall
+    on a different provider.
+    """
+    class Host:
+        def gh(self, *a):
+            return {"workflow_runs": [
+                {"head_sha": "abc", "name": "Deploy by van for PR #41",
+                 "path": ".github/workflows/deploy-staging.yml",
+                 "status": "completed", "conclusion": "success",
+                 "created_at": "2026-09-21T10:00:00Z", "id": 1, "html_url": "u"},
+                {"head_sha": "abc", "name": "Deploy by sam for PR #42",
+                 "path": ".github/workflows/deploy-staging.yml",
+                 "status": "completed", "conclusion": "success",
+                 "created_at": "2026-09-21T11:00:00Z", "id": 2, "html_url": "u"},
+            ]}
+    runs = ci.for_project({"flow": {"deploy_signal": "github-actions"},
+                           "github_repo": "o/r"}, Host()).runs("main")
+    eq({r["check"] for r in runs}, {"deploy-staging.yml"},
+       "two runs of one workflow must share one stable check key")
+    eq(runs[0]["display"], "Deploy by van for PR #41",
+       "the per-run name is kept for humans, just not used as the key")
+
+
 CASES = [
     ("tracker dispatch", dispatch_picks_the_declared_provider),
     ("unknown tracker refused by name", an_unknown_tracker_is_refused_by_name),
@@ -192,6 +221,7 @@ CASES = [
     ("error bodies never leak the request", error_bodies_never_leak_the_request),
     ("jira uses /search/jql + cursor paging", jira_uses_the_current_search_endpoint_and_cursor_pages),
     ("jira closed via statusCategory", jira_closed_uses_status_category_not_an_english_word_list),
+    ("actions keys on the workflow file", actions_keys_on_the_workflow_file_not_the_run_name),
     ("ci dispatch", ci_dispatch_picks_the_declared_provider),
     ("no-ci reports no runs", no_ci_reports_no_runs),
 ]

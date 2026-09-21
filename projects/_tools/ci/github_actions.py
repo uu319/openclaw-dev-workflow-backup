@@ -35,9 +35,20 @@ class GitHubActions(CI):
             else:
                 concl = (r.get("conclusion") or "").lower()
                 st = OK if concl in GREEN else (FAILED if concl in RED else FAILED)
+            # The check key must be STABLE across runs, because a project lists the
+            # checks it waits for by name in `Deploy checks`. `run.name` is NOT
+            # stable: GitHub's `run-name:` makes it per-run, and dependabot's is
+            # unique every time - 19 runs on fms-studio produced 19 distinct names
+            # (verified 2026-09-21). An expected name would then never match, and
+            # every commit would sit at `running` until NO_BUILD_AFTER_MIN: the
+            # 12.5f stall, reproduced on another provider.
+            # `path` is the workflow file, which is stable and is what a person
+            # would name anyway (`deploy-staging.yml`).
+            path = (r.get("path") or "").rsplit("/", 1)[-1]
             out.append({
                 "commit": commit,
-                "check": r.get("name") or (r.get("path") or "").rsplit("/", 1)[-1] or "?",
+                "check": path or r.get("name") or "?",
+                "display": r.get("name") or path,
                 "status": st,
                 "at": r.get("created_at") or "",
                 "id": str(r.get("id") or ""),

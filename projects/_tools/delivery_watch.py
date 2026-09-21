@@ -256,8 +256,13 @@ def is_ours(pr, prefixes, me):
 
 
 def bdesc(r):
-    """One line about a CI run, whichever provider produced it."""
-    return f"{r.get('check', '?')} {r.get('raw_status') or r['status']} run {r.get('id', '')} ({r.get('url', '')})"
+    """One line about a CI run, whichever provider produced it.
+
+    `display` is what a person recognises (a workflow's run name can be set per
+    run); `check` is the stable key the Deploy checks list is matched against.
+    """
+    return (f"{r.get('display') or r.get('check', '?')} {r.get('raw_status') or r['status']} "
+            f"run {r.get('id', '')} ({r.get('url', '')})")
 
 
 # ---------------------------------------------------------------- main
