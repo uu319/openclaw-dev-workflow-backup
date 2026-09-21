@@ -82,6 +82,8 @@ def framework_repos():
     return out + [(f"skill-{n}", os.path.join(SHARED_SKILLS_DIR, n)) for n in SHARED_SKILLS]
 
 
+OFFBOX_STALE_AFTER = 10   # commits behind before the off-box copy is a FIX
+
 ARTIFACT_DIRS = ["specs", "specs/_done", "specs/_superseded", "patches", "reviews", "qa", "runs"]
 
 R = []  # (status, area, message, fix)
@@ -186,12 +188,21 @@ def check_offbox():
             never.append(name); continue
         rc, n = run(["git", "rev-list", "--count", "HEAD", f"^refs/offbox/{name}"], cwd=repo)
         if rc == 0 and n.isdigit() and int(n):
-            behind.append(f"{name} +{n}")
+            behind.append((name, int(n)))
+    summary = ", ".join(f"{nm} +{n}" for nm, n in behind)
     if never:
         fix("framework", f"no off-box copy yet for: {', '.join(never)} (Decision I)",
             "Van, from a real terminal: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>")
+    elif any(n >= OFFBOX_STALE_AFTER for _, n in behind):
+        # A copy that exists but stopped being updated used to report OK forever, with
+        # the growing count appended to an OK line nobody reads. An expired credential,
+        # a revoked deploy key or a failing push is then invisible until the day the
+        # backup is needed. The whole point of the check is that it goes red on its own.
+        fix("framework", f"off-box copy is stale ({OFFBOX_STALE_AFTER}+ commits behind): {summary}",
+            "push again: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>"
+            " - if it fails, the credential is the usual cause (a deploy key does not expire, a PAT does)")
     else:
-        ok("framework", "off-box copy exists for every framework repo" + (f"; commits since: {', '.join(behind)}" if behind else ""))
+        ok("framework", "off-box copy exists for every framework repo" + (f"; commits since: {summary}" if behind else ""))
 
 
 def load_validator():
