@@ -25,8 +25,8 @@ OC = f"{HOME}/.openclaw"
 WS = os.environ.get("OPENCLAW_WORKSPACE", f"{OC}/workspace")
 CODE = f"{HOME}/projects"
 AGENTS = ["project-manager", "developer", "qa-engineer", "code-reviewer"]
-SHARED_TOOLS = ["tracker_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_env.py", "git_env.py",
-                "spec_index.py", "validate_context.py", "worktree.py"]
+SHARED_TOOLS = ["tracker_mcp.py", "tracker_probe.py", "delivery_watch.py", "figma_mcp.py",
+                "gcloud_env.py", "git_env.py", "spec_index.py", "validate_context.py", "worktree.py"]
 # one module per tracker provider, reached only through trackers.for_project() (architecture §2)
 TRACKER_ADAPTERS = ["__init__.py", "clickup.py", "jira.py", "linear.py"]
 # one module per CI provider, behind ci.for_project() (architecture §2)

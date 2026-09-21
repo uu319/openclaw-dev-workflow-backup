@@ -41,8 +41,9 @@ step below is optional.
     reads check runs) · `none` (the merge is the signal).
   - **Deploy checks**: the trigger or workflow names that must ALL pass before a ticket moves to
     `staged`. Omit when there is one, or no CI.
-  - **Board status names**, if they are not `to do / in progress / qa / rejected / on hold / complete /
-    cancelled`: map them to the canonical keys `todo doing staged rejected done cancelled hold`.
+  - **Board statuses: do not ask.** The tracker knows them; step 3d reads them and proposes the
+    mapping. (This question used to present one project's board as the default, so every other
+    project was framed as the exception, and it asked the user to do the mapping in their head.)
   - **Chat channel** where this project's updates go.
 
 Do not proceed with placeholders. A missing Tracker Board ID (when the Tracker is not `none`) =
@@ -108,6 +109,30 @@ absent, write back; python3, not node). Say what you changed.
 
 Ask the user to turn on **Settings → General → Automatically delete head branches**
 for the repo. That is how `worktree.py <slug> sweep` learns a PR was merged.
+
+## 3d. Ask the tracker for its board and statuses (skip when Tracker is `none`)
+
+Never type a board's statuses from memory, and never assume the canonical keys map
+onto them the way they do for another project.
+
+```
+python3 /home/openclaw/.openclaw/workspace/projects/_tools/tracker_probe.py \
+  --tracker <clickup|jira|linear> --board <board id> --secret <VAULT NAME> \
+  [--base-url https://<site>.atlassian.net]    # jira only
+```
+
+It prints the board's real name, its statuses, and the exact `**Statuses:**`,
+`**Create status:**` and `**Status map:**` lines to paste into step 4.
+
+Two things to do with the output:
+
+1. **Confirm the board name with the user before continuing.** A valid id for the
+   wrong board validates perfectly and then puts every ticket in the wrong place.
+2. **Read the "not matched automatically" list aloud.** Each line says what that
+   absent status costs (no `rejected` = QA rejections are not detected). Anything
+   marked `!!` is required and must be mapped by hand; the rest are genuinely
+   optional and the project works without them. If the board has an equivalent
+   under a different name, add it to the Status map.
 
 ## 4. Write PROJECT_CONTEXT.md from the template
 
