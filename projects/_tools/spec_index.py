@@ -15,7 +15,10 @@ Standard library only.
 """
 import datetime, importlib.util, json, os, re, sys
 
-WS = "/home/openclaw/.openclaw/workspace"
+# The workspace root. `OPENCLAW_WORKSPACE` overrides it so the tools can be run
+# against an isolated copy (tests, a dry run of a new project) without touching
+# the live tree - which the heartbeat scans every 15 minutes and acts on.
+WS = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
 VALIDATOR = f"{WS}/projects/_tools/validate_context.py"
 PUSH = f"{WS}/project-manager/skills/feature-breakdown/scripts/tracker_push.py"
 

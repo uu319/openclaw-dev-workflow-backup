@@ -48,7 +48,10 @@ import argparse, datetime, glob, importlib.util, json, os, re, shutil, subproces
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
 VALIDATOR = os.path.join(TOOLS, "validate_context.py")
-WORKSPACE = "/home/openclaw/.openclaw/workspace"
+# The workspace root. `OPENCLAW_WORKSPACE` overrides it so the tools can be run
+# against an isolated copy (tests, a dry run of a new project) without touching
+# the live tree - which the heartbeat scans every 15 minutes and acts on.
+WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
 
 sys.path.insert(0, TOOLS)
 import ci  # noqa: E402

@@ -37,6 +37,10 @@ import urllib.request
 
 # This module is also loaded through importlib by lint_workspace.py and the MCP
 # launchers, where sys.path does not include this directory. Add it ourselves.
+# The workspace root. `OPENCLAW_WORKSPACE` overrides it so the tools can be run
+# against an isolated copy without touching the live tree.
+WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import trackers  # noqa: E402
 
@@ -337,7 +341,7 @@ def parse(path):
             fields.setdefault("warnings", []).append(
                 f"gcp_key_secret '{fields['gcp_key_secret']}' does not contain _{slug_upper}; "
                 f"allowed only if the vault really uses this name")
-        expect = f"/home/openclaw/.openclaw/workspace/credentials/gcp/{fields.get('slug', '')}.json"
+        expect = f"{WORKSPACE}/credentials/gcp/{fields.get('slug', '')}.json"
         if fields.get("gcp_key_json") and fields["gcp_key_json"] != expect:
             errors.append(f"GCP Key JSON must be the project's own key at {expect} "
                           f"(found: {fields['gcp_key_json']})")

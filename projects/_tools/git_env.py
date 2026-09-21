@@ -35,7 +35,10 @@ import shutil
 import subprocess
 import sys
 
-WORKSPACE = "/home/openclaw/.openclaw/workspace"
+# The workspace root. `OPENCLAW_WORKSPACE` overrides it so the tools can be run
+# against an isolated copy (tests, a dry run of a new project) without touching
+# the live tree - which the heartbeat scans every 15 minutes and acts on.
+WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
 VALIDATOR = f"{WORKSPACE}/projects/_tools/validate_context.py"
 
 

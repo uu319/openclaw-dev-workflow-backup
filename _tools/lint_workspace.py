@@ -20,7 +20,9 @@ import fnmatch, glob, importlib.util, json, os, re, subprocess, sys
 
 HOME = "/home/openclaw"
 OC = f"{HOME}/.openclaw"
-WS = f"{OC}/workspace"
+# `OPENCLAW_WORKSPACE` overrides the root so the linter can check an isolated copy
+# the same way the other tools do. Unset, this is the live tree.
+WS = os.environ.get("OPENCLAW_WORKSPACE", f"{OC}/workspace")
 CODE = f"{HOME}/projects"
 AGENTS = ["project-manager", "developer", "qa-engineer", "code-reviewer"]
 SHARED_TOOLS = ["tracker_mcp.py", "delivery_watch.py", "figma_mcp.py", "gcloud_env.py", "git_env.py",
