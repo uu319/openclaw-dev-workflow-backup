@@ -34,6 +34,18 @@ If a listed command fails for a reason outside this feature - a broken lockfile,
 a missing service, an unrelated failing suite - that is a **finding you report**,
 not something to fix, work around, or silently skip.
 
+4. **Defeat the build cache, or you have verified nothing.** Nx, Turbo, Gradle,
+   Bazel and friends replay a previous result when the inputs match - including
+   a result computed in *another agent's worktree*. A green line that says
+   `Cache: 1/1 hit (100%)`, or names a path that is not your worktree, means the
+   command did not run. VanDev has usually just run the same command on the same
+   inputs, so this is the normal case, not a rare one.
+
+   Add the project's no-cache flag to every verification run: for Nx,
+   `npx nx test <project> --skip-nx-cache`. Check the output names YOUR worktree
+   path and does not report a cache hit. Put the command you actually ran in the
+   report - not the one PROJECT_CONTEXT lists, the one you ran.
+
 ## How to test
 
 - Follow the Given/When/Then literally. Set up the Given, do exactly the When,
