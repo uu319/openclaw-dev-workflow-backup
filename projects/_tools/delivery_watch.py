@@ -315,6 +315,35 @@ def merge_state(disk, mine):
     return out
 
 
+def qa_moves_for(ids, tasks, tasks_ok, title_of, marks, staged_name):
+    """[(ticket id, spec slug, title, current status)] that should go to qa, parents included.
+
+    Returns nothing when the board could not be read: a ticket whose current
+    status is unknown must never be moved on a guess.
+
+    This is module-level rather than a closure so a test can reach it without a
+    live board. It is the most dangerous branch in the watcher: before the
+    `tasks_ok` guard, a 429 or an expired token made every ticket linked in a PR
+    body look like it needed moving, and the watcher asked the heartbeat to move
+    tickets it had never read.
+    """
+    if not tasks_ok:
+        return []
+    stat = lambda tid: ((tasks.get(tid) or {}).get("status") or "?").lower()   # noqa: E731
+    moves = [(i, *title_of.get(i, (None, (tasks.get(i) or {}).get("title") or i)), stat(i))
+             for i in sorted(ids) if stat(i) in QA_FROM]
+    moved = {m[0] for m in moves}
+    for slug, (_, m) in marks.items():                 # parent -> qa when all its children are qa+
+        kids = [v["id"] for k, v in m.items() if not k.startswith("_") and isinstance(v, dict)]
+        if not kids or not (set(kids) & moved):
+            continue
+        parent, children = kids[0], kids[1:]
+        staged = {staged_name.lower()} if staged_name else set()
+        if children and stat(parent) in QA_FROM and all(c in moved or stat(c) in staged | CLOSED for c in children):
+            moves.append((parent, slug, title_of[parent][1], stat(parent)))
+    return moves
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slug"); ap.add_argument("--json", action="store_true")
@@ -410,25 +439,7 @@ def main():
                 if not k.startswith("_") and isinstance(v, dict)}
 
     def qa_moves(ids):
-        """[(ticket id, spec slug, title, current status)] that should go to qa, parents included.
-
-        Returns nothing when the board could not be read: a ticket whose current
-        status is unknown must never be moved on a guess.
-        """
-        if not tasks_ok:
-            return []
-        moves = [(i, *title_of.get(i, (None, (tasks.get(i) or {}).get("title") or i)), stat(i))
-                 for i in sorted(ids) if stat(i) in QA_FROM]
-        moved = {m[0] for m in moves}
-        for slug, (_, m) in marks.items():                 # parent -> qa when all its children are qa+
-            kids = [v["id"] for k, v in m.items() if not k.startswith("_") and isinstance(v, dict)]
-            if not kids or not (set(kids) & moved):
-                continue
-            parent, children = kids[0], kids[1:]
-            staged = {ctx.staged.lower()} if ctx.staged else set()
-            if children and stat(parent) in QA_FROM and all(c in moved or stat(c) in staged | CLOSED for c in children):
-                moves.append((parent, slug, title_of[parent][1], stat(parent)))
-        return moves
+        return qa_moves_for(ids, tasks, tasks_ok, title_of, marks, ctx.staged)
 
     # ---- PRs + builds (only when the project's Flow has the delivery-watch stage)
     if not watching:
