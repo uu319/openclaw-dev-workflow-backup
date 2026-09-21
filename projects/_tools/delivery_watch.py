@@ -351,6 +351,49 @@ def lint_owner(projects):
     return None
 
 
+def refresh_primary(ctx, errors, dry=False):
+    """Fast-forward the primary checkout so agents read current code.
+
+    PROJECT_CONTEXT calls this directory "kept on the Default branch", but
+    nothing kept it there: a plain fetch moves remote refs and leaves the working
+    tree where it was. Found 15 commits (two days) behind, and an agent reading
+    project files there to diagnose a bug read two-day-old code with no signal
+    that it was stale - which produced a bug report for a test that had not been
+    failing for two days, and a full pipeline ran on it.
+
+    Fast-forward only, and only when the tree is clean and on the Default branch.
+    This checkout is read-only by contract, so anything else here is somebody's
+    work in progress and must be reported, never overwritten.
+    """
+    ref = f"origin/{ctx.branch}"
+    head = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ctx.primary)[1].strip()
+    behind = run(["git", "rev-list", "--count", f"HEAD..{ref}"], cwd=ctx.primary)[1].strip()
+    if not behind.isdigit() or int(behind) == 0:
+        return
+    if head != ctx.branch:
+        errors.append(f"primary checkout {ctx.primary} is on `{head}`, not the Default branch "
+                      f"`{ctx.branch}`, and is {behind} commit(s) behind: agents reading project "
+                      f"code there see stale files. Left alone - it may be someone's work.")
+        return
+    if run(["git", "status", "--porcelain"], cwd=ctx.primary)[1].strip():
+        errors.append(f"primary checkout {ctx.primary} has uncommitted changes and is {behind} "
+                      f"commit(s) behind `{ref}`: agents reading it see stale code. Left alone.")
+        return
+    if run(["git", "merge-base", "--is-ancestor", "HEAD", ref], cwd=ctx.primary)[0] != 0:
+        errors.append(f"primary checkout {ctx.primary} has diverged from `{ref}` "
+                      f"({behind} behind): it cannot be fast-forwarded. Left alone.")
+        return
+    if dry:
+        errors.append(f"primary checkout {ctx.primary} is {behind} commit(s) behind `{ref}` "
+                      f"(not moved: --dry)")
+        return
+    rc, _, err = run(["git", "merge", "--ff-only", "--quiet", ref], cwd=ctx.primary)
+    if rc != 0:
+        errors.append(f"could not fast-forward the primary checkout to `{ref}`: {err.strip()[:200]}")
+    else:
+        print(f"primary checkout fast-forwarded {behind} commit(s) to {ref}")
+
+
 def feedback_ack_id(pr_number, ids):
     """A stable, collision-free ack id for one batch of PR feedback.
 
@@ -468,6 +511,7 @@ def main():
     # A plain fetch only adds or fast-forwards refs, which ancestry checks need and
     # which changes nothing the user would miss.
     run(["git", "fetch", "--quiet", *([] if a.dry else ["--prune"]), "origin"], cwd=ctx.primary)
+    refresh_primary(ctx, errors, dry=a.dry)
     marks = markers(ctx)
     status_cmd = (f"python3 {WORKSPACE}/project-manager/skills/feature-breakdown/scripts/tracker_status.py "
                   f"--context {ctx.path} --spec <spec> --only \"<title>\" --status "
