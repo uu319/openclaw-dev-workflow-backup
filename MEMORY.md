@@ -21,3 +21,4 @@ NOT here; they live in each project's PROJECT_CONTEXT.md.
 - **2026-09-17 evening**: the fresh Nx scaffold (PR #15) replaced the frontend and **removed the landing page from `Development`**. Restore is PR #32 (`feature/restore-landing-pages`), open as of 2026-09-19; its tickets were reset to `to do`.
 - **2026-09-17/18**: ~28 PRs (#3-#31, deploy/lockfile/peer-dep fixes) went out with no review or QA. Commit `90e659b` on `Development` is a README line VanQA pushed "to trigger CI".
 - **2026-09-19 lessons** (setup audit): approval questions that time out are a NO; task branch is pushed and the PR opened right after the lane commit, then reviewed on the PR (`openclaw/review` status on the head SHA, re-review after every push); QA gets its own worktree; nobody but Van merges; `nx test-ci` does not work (see PROJECT_CONTEXT test commands).
+- **2026-09-21**: `github-actions-pr-checks` shipped and closed.

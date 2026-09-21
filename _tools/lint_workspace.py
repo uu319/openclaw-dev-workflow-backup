@@ -263,8 +263,16 @@ def check_code_roots(ctxs):
     if os.path.isdir(managed):
         n = sum(len(glob.glob(f"{d}/*")) for d in glob.glob(f"{managed}/*") if os.path.isdir(d))
         if n:
-            fix("code", f"{n} OpenClaw managed worktree dir(s) under ~/.openclaw/worktrees (settings-repo copies, never code)",
-                "openclaw worktrees list; openclaw worktrees remove <id> for each; then openclaw worktrees gc")
+            # These auto-clean: OpenClaw's hourly GC snapshots and removes them after 7 idle
+            # days. So the FIX is NOT the cleanup - it is that they were created at all. Each
+            # one is a copy of the settings repo made because a spawn passed `worktree: true`,
+            # which both the orchestration skill and main's AGENTS.md forbid in bold. Naming
+            # the cleanup here sent people to tidy a symptom while the cause kept firing.
+            fix("code", f"{n} OpenClaw managed worktree dir(s) under ~/.openclaw/worktrees: a spawn "
+                        f"passed `worktree: true`, so OpenClaw copied the SETTINGS repo (never code)",
+                "cause: main must spawn with no `worktree` and no `cwd` (orchestration skill, "
+                "'How every spawn looks'). They auto-clean after 7 idle days; remove them early only "
+                "to quieten this line: openclaw worktrees remove <id>")
         else:
             ok("code", "no OpenClaw managed worktrees")
 
