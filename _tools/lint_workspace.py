@@ -415,23 +415,35 @@ def check_host():
     # rejecting or applying a proposal leaves its draft on disk, so the number
     # never moved and the line could not be cleared by doing what it told you to
     # do. It read 12 before and after seven rejections.
-    pending, seen = [], 0
+    pending, orphaned, seen = [], [], 0
     for agent in ["main"] + sorted(AGENTS):
         rc, out = run(["openclaw", "skills", "workshop", "list", "--agent", agent])
         if rc != 0:
             continue
         seen += 1
-        n = sum(1 for l in out.splitlines() if re.search(r"\s+pending\s+", l))
-        if n:
-            pending.append(f"{agent} {n}")
+        for l in out.splitlines():
+            if not re.search(r"\s+pending\s+", l):
+                continue
+            pid = l.split()[0]
+            # A proposal whose draft is gone cannot be rejected - the CLI says to
+            # run `openclaw doctor --fix`, which stops the gateway and is on the
+            # never-list. Counting it with the actionable ones makes the line
+            # unclearable, which is what this check was already guilty of once.
+            drafts = [os.path.join(OC, "skill-workshop", "proposals", pid),
+                      os.path.join(OC, "agents", agent, "agent", "skill-workshop", "proposals", pid)]
+            (pending if any(os.path.isdir(d) for d in drafts) else orphaned).append(f"{agent}/{pid}")
     if not seen:
         ok("host", "skill-workshop proposals not readable (openclaw CLI unavailable)")
-    elif pending:
-        fix("host", f"pending skill-workshop proposal(s): {', '.join(pending)}",
-            "review: openclaw skills workshop list --agent <id>; "
-            "openclaw skills workshop reject <id> --agent <id> for the ones you will not adopt")
     else:
-        ok("host", "no pending skill-workshop proposals")
+        if pending:
+            fix("host", f"{len(pending)} pending skill-workshop proposal(s) you can act on",
+                "openclaw skills workshop reject <id> --agent <id> for the ones you will not adopt")
+        else:
+            ok("host", "no actionable pending skill-workshop proposals")
+        if orphaned:
+            # Reported, never a FIX: there is no action available that this box allows.
+            ok("host", f"{len(orphaned)} orphaned proposal record(s) whose draft is gone "
+                       f"(only `openclaw doctor --fix` clears these, and it stops the gateway)")
 
 
 def main():
