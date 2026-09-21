@@ -148,6 +148,44 @@ def board_id_has_a_sane_length_cap():
         raise AssertionError("a 4000-digit board id was accepted and would be sent to the tracker API")
 
 
+def a_plain_kanban_board_can_be_onboarded():
+    """To Do / In Progress / In Review / Done - no cancelled, no QA column.
+
+    The framework used to REQUIRE `cancelled`, so this perfectly ordinary board
+    could not be onboarded at all. `cancelled` is used in exactly one place (the
+    closed set, beside `done`), so its absence just means nothing is cancelled.
+    """
+    f, errs = parsed(
+        ("- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`",
+         "- **Statuses:** `To Do`, `In Progress`, `In Review`, `Done`"),
+        ("- **Create status:** `to do`", "- **Create status:** `To Do`"))
+    eq(errs, [], "a board with no cancelled/qa/hold column must still onboard")
+    eq(f["status"]["doing"], "In Progress", "the two load-bearing keys must still resolve")
+    eq(f["status"]["done"], "Done", "the two load-bearing keys must still resolve")
+    eq(f["status"]["cancelled"], None, "an absent status maps to None, not an error")
+    contains(f.get("warnings", []), "cancelled",
+             "what is lost by an absent status must be said, not silently assumed")
+
+
+def fms_studio_vocabulary_is_not_in_the_shared_alias_table():
+    """"For Development" was one project's name for a REJECTED column.
+
+    Left in the shared inference table, a board that uses it to mean *todo* has
+    its todo tickets inferred as rejected - which makes the watcher emit a
+    REJECTED action per ticket and spawn VanPM and VanDev at each one.
+    """
+    f, errs = parsed(
+        ("- **Statuses:** `to do`, `in progress`, `qa`, `rejected`, `on hold`, `complete`, `cancelled`",
+         "- **Statuses:** `For Development`, `In Progress`, `Done`"),
+        ("- **Create status:** `to do`", "- **Create status:** `For Development`"))
+    eq(errs, [], "this board must onboard")
+    if f["status"].get("rejected") == "For Development":
+        raise AssertionError(
+            "'For Development' was inferred as the REJECTED status - one project's "
+            "vocabulary in a table applied to every project. Each of those tickets would "
+            "produce a REJECTED action and spawn agents.")
+
+
 CASES = [
     ("backtick aside hijacks Deploy signal", backtick_hijack_deploy_signal),
     ("backtick aside hijacks PR base", backtick_hijack_pr_base),
@@ -160,4 +198,7 @@ CASES = [
     ("status name containing a comma", a_status_containing_a_comma_is_not_split),
     ("unparseable Tracker line infers clickup", an_unparseable_tracker_line_does_not_silently_become_clickup),
     ("board id length cap", board_id_has_a_sane_length_cap),
+    ("plain Kanban board onboards", a_plain_kanban_board_can_be_onboarded),
+    ("no project vocabulary in the alias table", fms_studio_vocabulary_is_not_in_the_shared_alias_table),
 ]
+

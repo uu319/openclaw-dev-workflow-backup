@@ -102,12 +102,18 @@ PLACEHOLDER = re.compile(r"<[^>]*>")
 # ---------------------------------------------------------------- Flow profile
 STAGES = ["spec", "tickets", "review", "internal-qa", "merge-gate", "delivery-watch"]
 CANON = ["todo", "doing", "staged", "rejected", "done", "cancelled", "hold"]
-REQUIRED_STATUS = ["todo", "doing", "done", "cancelled"]
+# The only two a project genuinely cannot work without: `doing` is what --claim
+# sets when an agent picks a ticket up, and `done` is how a feature is known to be
+# finished. Everything else degrades: no `cancelled` just means nothing is ever
+# cancelled; no `rejected` means QA rejections are not detected; no `hold` means
+# nothing is parked. Requiring all four made a perfectly normal Kanban board
+# (To Do / In Progress / In Review / Done) fail to onboard.
+REQUIRED_STATUS = ["doing", "done"]
 ALIASES = {   # used only to infer a status map the file does not spell out
     "todo": ["to do", "todo", "open", "backlog", "new", "ready"],
     "doing": ["in progress", "in dev", "in development", "doing", "wip"],
     "staged": ["qa", "staging", "in qa", "ready for qa", "deployed"],
-    "rejected": ["rejected", "for development", "qa failed", "reopened"],
+    "rejected": ["rejected", "qa failed", "reopened", "changes requested"],
     "done": ["complete", "completed", "done", "closed"],
     "cancelled": ["cancelled", "canceled", "won't do", "wont do"],
     "hold": ["on hold", "blocked", "hold"],
@@ -226,10 +232,22 @@ def parse_flow(text, fields, errors):
     for k in CANON:
         if k not in smap:
             smap[k] = next((low[a] for a in ALIASES[k] if a in low), None)
+    LOSES = {"todo": "tickets not yet started are not recognised",
+             "staged": "nothing can be marked as reaching staging",
+             "rejected": "QA rejections are not detected",
+             "cancelled": "nothing is treated as cancelled",
+             "hold": "nothing can be parked"}
     if has_tracker:
         for k in REQUIRED_STATUS:
             if not smap.get(k):
-                errors.append(f"Flow Status map has no `{k}` status (add `{k}=<status>` to **Status map:**)")
+                errors.append(f"Flow Status map has no `{k}` status (add `{k}=<status>` to "
+                              f"**Status map:**). This one is required: `doing` is what a claim "
+                              f"sets, `done` is how a finished feature is recognised.")
+        absent = [k for k in CANON if k not in REQUIRED_STATUS and not smap.get(k)]
+        if absent:
+            fields.setdefault("warnings", []).append(
+                "this board has no " + ", ".join(f"`{k}`" for k in absent) + " status; "
+                + "; ".join(LOSES[k] for k in absent if k in LOSES))
         if flow["deploy_signal"] != "none" and not smap.get("staged"):
             errors.append("Flow Deploy signal is set but the Status map has no `staged` status to move deployed tickets to")
     fields["flow"], fields["status"] = flow, smap

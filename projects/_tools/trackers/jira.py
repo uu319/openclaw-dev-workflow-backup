@@ -21,6 +21,7 @@ class Jira(Tracker):
     def __init__(self, fields, token=None):
         super().__init__(fields, token)
         self.base = (fields.get("tracker_base_url") or "").rstrip("/")
+        self._types = None
 
     def _h(self):
         if not self.token or ":" not in self.token:
@@ -133,9 +134,26 @@ class Jira(Tracker):
         avail = [(t.get("to") or {}).get("name") for t in tr.get("transitions", [])]
         raise RuntimeError(f"{tid}: no transition to '{status}'; available from here: {avail}")
 
+    def issue_type(self, subtask=False):
+        """The project's own name for a (sub)task type.
+
+        Hardcoding "Sub-task" 400s on a team-managed project, which calls it
+        "Subtask", and sites rename these freely. Ask the project instead.
+        """
+        if self._types is None:
+            d = http_json(f"{self.base}/rest/api/3/project/{self.board_id}", self._h())
+            self._types = d.get("issueTypes") or []
+        names = [t["name"] for t in self._types if bool(t.get("subtask")) == subtask]
+        if not names:
+            return "Subtask" if subtask else "Task"
+        for preferred in (("Subtask", "Sub-task") if subtask else ("Task", "Story")):
+            if preferred in names:
+                return preferred
+        return names[0]
+
     def create_task(self, title, description="", status=None, parent=None, **kw):
         f = {"project": {"key": self.board_id}, "summary": title,
-             "issuetype": {"name": kw.get("issue_type") or ("Sub-task" if parent else "Task")},
+             "issuetype": {"name": kw.get("issue_type") or self.issue_type(subtask=bool(parent))},
              "description": {"type": "doc", "version": 1, "content": [
                  {"type": "paragraph", "content": [{"type": "text", "text": description or ""}]}]}}
         if parent:
