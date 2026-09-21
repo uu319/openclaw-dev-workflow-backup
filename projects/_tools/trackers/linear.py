@@ -5,6 +5,9 @@ Linear calls a status a workflow state, and states belong to the team, so a move
 resolves the state name against that team's states.
 """
 import json
+import mimetypes
+import os
+import urllib.request
 import os
 import re
 
@@ -159,6 +162,90 @@ class Linear(Tracker):
         # workflow rule). Unchecked, a refused status move reported as done.
         if not ((d.get("issueUpdate") or {}).get("success")):
             raise RuntimeError(f"Linear refused the status move of {tid} to '{status}' (success: false)")
+
+    # --- capabilities tracker_push needs -------------------------------------
+
+    def _uuid(self, tid):
+        u = (self._q("query($id:String!){issue(id:$id){id}}", id=tid).get("issue") or {}).get("id")
+        if not u:
+            raise RuntimeError(f"Linear issue '{tid}' not found")
+        return u
+
+    def _label_ids(self, names):
+        """Label names -> ids, creating any the team does not have yet.
+
+        Linear takes label IDs, not names, so a tag has to be resolved or made
+        first. Lane tags (`FE`, `BE`) repeat across every spec, so this is a
+        lookup far more often than a create.
+        """
+        t = self.team()
+        have = {l["name"].lower(): l["id"] for l in
+                ((self._q("query($id:String!){team(id:$id){labels(first:250){nodes{id name}}}}",
+                          id=t["id"]).get("team") or {}).get("labels") or {}).get("nodes", [])}
+        out = []
+        for n in names or []:
+            key = str(n).lower()
+            if key not in have:
+                d = self._q("mutation($i:IssueLabelCreateInput!){issueLabelCreate(input:$i){success issueLabel{id}}}",
+                            i={"name": str(n), "teamId": t["id"]})
+                res = d.get("issueLabelCreate") or {}
+                if not res.get("success"):
+                    continue                      # a label is not worth failing the push over
+                have[key] = (res.get("issueLabel") or {})["id"]
+            out.append(have[key])
+        return out
+
+    def update_task(self, tid, **fields):
+        inp = {}
+        if fields.get("title"):
+            inp["title"] = fields["title"]
+        if fields.get("description") is not None:
+            inp["description"] = fields["description"]      # Linear takes markdown natively
+        if fields.get("tags") is not None:
+            inp["labelIds"] = self._label_ids(fields["tags"])
+        if not inp:
+            return {}
+        d = self._q("mutation($id:String!,$i:IssueUpdateInput!){issueUpdate(id:$id,input:$i){success}}",
+                    id=self._uuid(tid), i=inp)
+        if not ((d.get("issueUpdate") or {}).get("success")):
+            raise RuntimeError(f"Linear refused to update {tid} (success: false)")
+        return {"id": tid, "ok": True}
+
+    def link_tasks(self, tid, other, kind="blocks"):
+        d = self._q("mutation($i:IssueRelationCreateInput!){issueRelationCreate(input:$i){success}}",
+                    i={"issueId": self._uuid(tid), "relatedIssueId": self._uuid(other), "type": kind})
+        if not ((d.get("issueRelationCreate") or {}).get("success")):
+            raise RuntimeError(f"Linear refused to link {tid} -> {other}")
+        return {"from": tid, "to": other, "type": kind}
+
+    def attach(self, tid, path, filename):
+        """Two steps: Linear signs an upload URL, the bytes go straight to storage,
+        then the returned asset URL is attached to the issue."""
+        size = os.path.getsize(path)
+        ctype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        d = self._q("mutation($c:String!,$f:String!,$s:Int!){fileUpload(contentType:$c,filename:$f,size:$s)"
+                    "{success uploadFile{uploadUrl assetUrl headers{key value}}}}",
+                    c=ctype, f=filename, s=size)
+        up = (d.get("fileUpload") or {})
+        if not up.get("success") or not up.get("uploadFile"):
+            raise RuntimeError(f"Linear refused an upload slot for {filename}")
+        uf = up["uploadFile"]
+        with open(path, "rb") as fh:
+            blob = fh.read()
+        headers = {h["key"]: h["value"] for h in (uf.get("headers") or [])}
+        headers["Content-Type"] = ctype
+        req = urllib.request.Request(uf["uploadUrl"], data=blob, headers=headers, method="PUT")
+        with urllib.request.urlopen(req, timeout=120):
+            pass
+        asset = uf["assetUrl"]
+        self._q("mutation($i:AttachmentCreateInput!){attachmentCreate(input:$i){success}}",
+                i={"issueId": self._uuid(tid), "title": filename, "url": asset})
+        return {"title": filename, "url": asset}
+
+    def attachments(self, tid):
+        d = self._q("query($id:String!){issue(id:$id){attachments(first:50){nodes{title url}}}}", id=tid)
+        return [{"title": a.get("title"), "url": a.get("url")}
+                for a in (((d.get("issue") or {}).get("attachments") or {}).get("nodes") or [])]
 
     def create_task(self, title, description="", status=None, parent=None, **kw):
         t = self.team()

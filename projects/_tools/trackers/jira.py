@@ -7,12 +7,77 @@ name in the status map is resolved against the issue's available transitions.
 """
 import base64
 import json
+import urllib.error
+import urllib.request
+import uuid
 import re
 import urllib.parse
 
-from . import Tracker, http_json
+from . import ApiError, Tracker, _reason, http_json
 
 CLOSED = {"done", "closed", "resolved", "cancelled", "canceled", "won't do", "wont do"}
+
+
+def _inline(text):
+    """Markdown inline -> ADF text nodes: `code`, **bold**, [label](url)."""
+    out, pos = [], 0
+    rx = re.compile(r"`([^`]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?://[^)\s]+)\)")
+    for m in rx.finditer(text):
+        if m.start() > pos:
+            out.append({"type": "text", "text": text[pos:m.start()]})
+        if m.group(1) is not None:
+            out.append({"type": "text", "text": m.group(1), "marks": [{"type": "code"}]})
+        elif m.group(2) is not None:
+            out.append({"type": "text", "text": m.group(2), "marks": [{"type": "strong"}]})
+        else:
+            out.append({"type": "text", "text": m.group(3),
+                        "marks": [{"type": "link", "attrs": {"href": m.group(4)}}]})
+        pos = m.end()
+    if pos < len(text):
+        out.append({"type": "text", "text": text[pos:]})
+    return out or [{"type": "text", "text": " "}]
+
+
+def md_to_adf(md):
+    """Markdown -> Atlassian Document Format.
+
+    Jira Cloud's v3 API takes ADF, not markdown, so a description posted as a
+    plain string arrives as one unreadable paragraph - or is rejected. Ticket
+    bodies here are headings, bullets, checkboxes and fenced blocks, so those are
+    what this covers; anything else degrades to a paragraph rather than being
+    dropped.
+    """
+    content, lines, i = [], (md or "").splitlines(), 0
+    while i < len(lines):
+        line = lines[i]
+        if line.startswith("```"):                       # fenced code
+            i += 1
+            buf = []
+            while i < len(lines) and not lines[i].startswith("```"):
+                buf.append(lines[i]); i += 1
+            i += 1
+            content.append({"type": "codeBlock", "content": [{"type": "text", "text": "\n".join(buf) or " "}]})
+            continue
+        m = re.match(r"(#{1,6})\s+(.*)", line)
+        if m:
+            content.append({"type": "heading", "attrs": {"level": min(len(m.group(1)), 6)},
+                            "content": _inline(m.group(2))})
+            i += 1
+            continue
+        if re.match(r"\s*[-*]\s+", line):                 # bullet / checkbox run
+            items = []
+            while i < len(lines) and re.match(r"\s*[-*]\s+", lines[i]):
+                txt = re.sub(r"^\s*[-*]\s+", "", lines[i])
+                txt = re.sub(r"^\[([ xX])\]\s*", lambda x: "DONE " if x.group(1).lower() == "x" else "TODO ", txt)
+                items.append({"type": "listItem",
+                              "content": [{"type": "paragraph", "content": _inline(txt)}]})
+                i += 1
+            content.append({"type": "bulletList", "content": items})
+            continue
+        if line.strip():
+            content.append({"type": "paragraph", "content": _inline(line)})
+        i += 1
+    return {"type": "doc", "version": 1, "content": content or [{"type": "paragraph", "content": [{"type": "text", "text": " "}]}]}
 
 
 class Jira(Tracker):
@@ -123,6 +188,61 @@ class Jira(Tracker):
                 seen.add(i); out.append(i)
         return out
 
+    # --- capabilities tracker_push needs -------------------------------------
+
+    def update_task(self, tid, **fields):
+        """Change summary / description / labels. Parent is never moved here."""
+        f = {}
+        if fields.get("title"):
+            f["summary"] = fields["title"]
+        if fields.get("description") is not None:
+            f["description"] = md_to_adf(fields["description"])
+        if fields.get("tags") is not None:
+            # Jira labels cannot contain spaces; the lane tags never do.
+            f["labels"] = [str(x).replace(" ", "-") for x in fields["tags"]]
+        if not f:
+            return {}
+        http_json(f"{self.base}/rest/api/3/issue/{tid}", self._h(),
+                  data=json.dumps({"fields": f}).encode(), method="PUT")
+        return {"id": tid, "ok": True}
+
+    def link_tasks(self, tid, other, kind="Blocks"):
+        """`tid` blocks `other`. Jira calls this an issue link, not a dependency."""
+        http_json(f"{self.base}/rest/api/3/issueLink", self._h(),
+                  data=json.dumps({"type": {"name": kind},
+                                   "inwardIssue": {"key": other},
+                                   "outwardIssue": {"key": tid}}).encode())
+        return {"from": tid, "to": other, "type": kind}
+
+    def attach(self, tid, path, filename):
+        """Multipart upload. Jira demands X-Atlassian-Token: no-check on this one
+        endpoint (XSRF protection) and refuses a JSON content-type."""
+        boundary = "----openclaw" + uuid.uuid4().hex
+        with open(path, "rb") as fh:
+            blob = fh.read()
+        body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; "
+                f"filename=\"{filename}\"\r\nContent-Type: application/octet-stream\r\n\r\n"
+                ).encode() + blob + f"\r\n--{boundary}--\r\n".encode()
+        h = self._h()
+        h.pop("Content-Type", None)
+        h["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+        h["X-Atlassian-Token"] = "no-check"
+        req = urllib.request.Request(f"{self.base}/rest/api/3/issue/{tid}/attachments",
+                                     data=body, headers=h, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                out = json.loads(r.read().decode() or "[]")
+        except urllib.error.HTTPError as e:
+            raise ApiError(e.code, e.reason, _reason(e.read().decode(errors="replace"))) from None
+        first = out[0] if isinstance(out, list) and out else {}
+        return {"title": first.get("filename") or filename, "url": first.get("content") or ""}
+
+    def attachments(self, tid):
+        """[{title, url}] already on the issue - used for idempotent re-pushes."""
+        d = http_json(f"{self.base}/rest/api/3/issue/{tid}?fields=attachment", self._h())
+        return [{"title": a.get("filename"), "url": a.get("content")}
+                for a in ((d.get("fields") or {}).get("attachment") or [])]
+
     def set_status(self, tid, status):
         """Jira moves by transition id, so find the transition that lands on `status`."""
         tr = http_json(f"{self.base}/rest/api/3/issue/{tid}/transitions", self._h())
@@ -154,8 +274,7 @@ class Jira(Tracker):
     def create_task(self, title, description="", status=None, parent=None, **kw):
         f = {"project": {"key": self.board_id}, "summary": title,
              "issuetype": {"name": kw.get("issue_type") or self.issue_type(subtask=bool(parent))},
-             "description": {"type": "doc", "version": 1, "content": [
-                 {"type": "paragraph", "content": [{"type": "text", "text": description or ""}]}]}}
+             "description": md_to_adf(description)}
         if parent:
             f["parent"] = {"key": parent}
         it = http_json(f"{self.base}/rest/api/3/issue", self._h(),
