@@ -13,7 +13,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import harness  # noqa: E402
@@ -26,7 +25,7 @@ WATCH = os.path.join(harness.TOOLS, "delivery_watch.py")
 
 def _sandbox():
     """A minimal project tree the watcher can resolve by slug."""
-    root = tempfile.mkdtemp(prefix="stress-state-")
+    root = harness._mkdtemp("stress-state-")   # tracked, so the runner can drop it
     art = os.path.join(root, "projects", "demo-state", "artifacts")
     os.makedirs(os.path.join(art, "specs"), exist_ok=True)
     code = os.path.join(root, "code")

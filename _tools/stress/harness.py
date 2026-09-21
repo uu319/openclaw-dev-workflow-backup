@@ -11,10 +11,44 @@ import importlib.util
 import io
 import os
 import sys
+import shutil
 import tempfile
 
 WS = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/workspace")
 TOOLS = os.path.join(WS, "projects/_tools")
+
+
+# Every temp dir this harness makes, so the runner can drop the ones whose case
+# passed. Keeping them all was deliberate - a failing case is inspectable - but
+# /tmp here is a 1 GB RAM disk, and 20 dirs per run with no upper bound fills it.
+# A full RAM disk presents as "out of memory", never "out of disk".
+MADE = []
+
+
+def _mkdtemp(prefix):
+    d = tempfile.mkdtemp(prefix=prefix)
+    MADE.append(d)
+    return d
+
+
+def mark():
+    """How many temp dirs exist now, so a case can be scoped."""
+    return len(MADE)
+
+
+def drop(since, keep=False):
+    """Discard temp dirs made since `mark()`.
+
+    `keep=True` leaves them on disk and returns their paths, so a failing case
+    stays inspectable - which is the whole reason they were not cleaned before.
+    """
+    made, del_list = MADE[since:], []
+    del MADE[since:]
+    if keep:
+        return made
+    for d in made:
+        shutil.rmtree(d, ignore_errors=True)
+    return del_list
 
 
 def load(name, path):
@@ -117,7 +151,7 @@ def context(*edits, base=BASE):
         if old not in s:
             raise AssertionError(f"harness: base context has no {old!r} to replace")
         s = s.replace(old, "" if new is None else new)
-    d = tempfile.mkdtemp(prefix="stress-ctx-")
+    d = _mkdtemp("stress-ctx-")
     p = os.path.join(d, "PROJECT_CONTEXT.md")
     open(p, "w", encoding="utf-8").write(s)
     return p
@@ -135,7 +169,7 @@ def project_sandbox(slug="demo-state", tracker="none"):
     which matters: the heartbeat scans the real projects/ every 15 minutes.
     """
     import subprocess
-    root = tempfile.mkdtemp(prefix="stress-proj-")
+    root = _mkdtemp("stress-proj-")
     # Symlink the REAL tools in: the point is to exercise the shipped code, and the
     # tools resolve the validator and each other relative to OPENCLAW_WORKSPACE.
     os.makedirs(os.path.join(root, "projects"), exist_ok=True)

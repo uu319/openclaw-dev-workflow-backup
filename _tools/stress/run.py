@@ -25,6 +25,9 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 CASES = os.path.join(HERE, "cases")
 
+sys.path.insert(0, HERE)
+import harness  # noqa: E402  (needs HERE on the path first)
+
 
 def modules(tier=None):
     out = []
@@ -61,23 +64,35 @@ def main():
                 print(f"  - {name}")
                 continue
             t0 = time.time()
+            # Temp dirs are kept only for a case that failed, and dropped for one
+            # that passed: /tmp is a 1 GB RAM disk, and 20 leaked dirs per run
+            # with no bound is how it fills.
+            mark = harness.mark()
             try:
                 fn()
             except NotImplementedError as e:
                 skipped += 1
+                harness.drop(mark)
                 print(f"  \033[33mSKIP\033[0m {name} ({e})")
                 continue
             except AssertionError as e:
                 failed += 1
+                kept = harness.drop(mark, keep=True)
                 fails.append((name, str(e)))
                 print(f"  \033[31mFAIL\033[0m {name}\n        {str(e).replace(chr(10), chr(10) + '        ')}")
+                if kept:
+                    print(f"        kept for inspection: {kept[0]}")
                 continue
             except Exception:  # noqa: BLE001 - an unexpected crash is a failure too
                 failed += 1
+                kept = harness.drop(mark, keep=True)
                 tb = traceback.format_exc().strip().splitlines()[-1]
                 fails.append((name, tb))
                 print(f"  \033[31mERROR\033[0m {name}\n        {tb}")
+                if kept:
+                    print(f"        kept for inspection: {kept[0]}")
                 continue
+            harness.drop(mark)
             passed += 1
             ms = (time.time() - t0) * 1000
             print(f"  \033[32mok\033[0m   {name}" + (f"  ({ms:.0f}ms)" if a.verbose or ms > 500 else ""))
