@@ -132,6 +132,52 @@ def no_ci_reports_no_runs():
        "Deploy signal `none` means the merge is the signal; there are no runs to read")
 
 
+def jira_uses_the_current_search_endpoint_and_cursor_pages():
+    """Jira Cloud REMOVED /rest/api/3/search (HTTP 410, CHANGE-2046).
+
+    Its replacement is cursor-paged and returns no `total`, so the old
+    `start >= total` loop exited on the first pass and reported page one as the
+    whole board. Confirmed against a live site 2026-09-21; stubbed here so a
+    regression cannot pass unnoticed without an account.
+    """
+    import trackers.jira as J
+    seen = []
+    pages = [
+        {"issues": [{"key": "KAN-1", "fields": {"summary": "one", "status": {"name": "To Do"}}}],
+         "nextPageToken": "CURSOR2", "isLast": False},
+        {"issues": [{"key": "KAN-2", "fields": {"summary": "two", "status": {"name": "Done"}}}],
+         "isLast": True},
+    ]
+
+    def fake(url, headers, data=None, method=None, timeout=None):
+        seen.append(url)
+        return pages[len(seen) - 1]
+
+    real, J.http_json = J.http_json, fake
+    try:
+        out = trackers.for_project(JIRA, "e:t").tasks()
+    finally:
+        J.http_json = real
+
+    eq(sorted(out), ["KAN-1", "KAN-2"], "both pages must be collected")
+    contains(seen[0], "/rest/api/3/search/jql", "the removed /search endpoint must not be used")
+    contains(seen[0], "ORDER+BY+created", "cursor paging needs a stable sort or rows repeat/skip")
+    contains(seen[1], "nextPageToken=CURSOR2", "page two must follow the cursor page one returned")
+    eq(len(seen), 2, "paging must stop at isLast, not loop forever")
+
+
+def jira_closed_uses_status_category_not_an_english_word_list():
+    """A board whose terminal status is "Shipped" is still closed."""
+    import trackers.jira as J
+    tk = trackers.for_project(JIRA, "e:t")
+    t = tk._task({"key": "KAN-7", "fields": {
+        "summary": "s", "status": {"name": "Shipped", "statusCategory": {"key": "done"}}}})
+    eq(t["closed"], True, "statusCategory `done` means closed whatever the status is named")
+    t2 = tk._task({"key": "KAN-8", "fields": {
+        "summary": "s", "status": {"name": "Shipped"}}})
+    eq(t2["closed"], False, "with no category, an unknown name falls back to not-closed")
+
+
 CASES = [
     ("tracker dispatch", dispatch_picks_the_declared_provider),
     ("unknown tracker refused by name", an_unknown_tracker_is_refused_by_name),
@@ -144,6 +190,8 @@ CASES = [
     ("clickup implements optional caps", clickup_implements_the_optional_capabilities),
     ("ApiError carries the reason", api_errors_carry_the_providers_reason),
     ("error bodies never leak the request", error_bodies_never_leak_the_request),
+    ("jira uses /search/jql + cursor paging", jira_uses_the_current_search_endpoint_and_cursor_pages),
+    ("jira closed via statusCategory", jira_closed_uses_status_category_not_an_english_word_list),
     ("ci dispatch", ci_dispatch_picks_the_declared_provider),
     ("no-ci reports no runs", no_ci_reports_no_runs),
 ]

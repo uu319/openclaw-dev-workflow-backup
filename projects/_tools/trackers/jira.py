@@ -8,6 +8,7 @@ name in the status map is resolved against the issue's available transitions.
 import base64
 import json
 import re
+import urllib.parse
 
 from . import Tracker, http_json
 
@@ -30,7 +31,12 @@ class Jira(Tracker):
 
     def _task(self, it):
         f = it.get("fields") or {}
-        st = ((f.get("status") or {}).get("name") or "")
+        status = f.get("status") or {}
+        st = status.get("name") or ""
+        # Jira marks terminal statuses with statusCategory.key == "done", whatever
+        # the status is called. The English word list below is only a fallback for
+        # a response that did not carry the category.
+        cat = (status.get("statusCategory") or {}).get("key")
         parent = (f.get("parent") or {}).get("key")
         assignee = f.get("assignee") or {}
         desc = f.get("description")
@@ -43,7 +49,7 @@ class Jira(Tracker):
             "url": f"{self.base}/browse/{it.get('key')}",
             "assignees": [x for x in [assignee.get("emailAddress") or assignee.get("displayName")] if x],
             "parent": parent,
-            "closed": st.lower() in CLOSED,
+            "closed": (cat == "done") if cat else (st.lower() in CLOSED),
             "updated": f.get("updated"),
             "description": desc or "",
         }
@@ -59,16 +65,32 @@ class Jira(Tracker):
         return proj.get("name"), names, f"Jira site {self.base}"
 
     def tasks(self):
-        out, start = {}, 0
+        """Every issue on the project, paged.
+
+        `/rest/api/3/search` was REMOVED by Jira Cloud (HTTP 410, CHANGE-2046).
+        Its replacement `/search/jql` is cursor-paged and returns no `total`, so
+        the old `start >= total` loop would have exited on the first pass and
+        reported the first page as the whole board. `isLast` / `nextPageToken`
+        are the contract now - confirmed against a live site 2026-09-21.
+
+        `ORDER BY created ASC` is required: cursor paging over an unsorted query
+        can repeat or skip rows between pages.
+        """
+        out, cursor = {}, None
         while True:
-            q = (f"{self.base}/rest/api/3/search?jql=project%3D{self.board_id}"
-                 f"&maxResults=100&startAt={start}"
-                 f"&fields=summary,status,assignee,parent,updated,description")
-            d = http_json(q, self._h())
+            params = {
+                "jql": f"project = {self.board_id} ORDER BY created ASC",
+                "maxResults": 100,
+                "fields": "summary,status,assignee,parent,updated,description",
+            }
+            if cursor:
+                params["nextPageToken"] = cursor
+            d = http_json(f"{self.base}/rest/api/3/search/jql?{urllib.parse.urlencode(params)}",
+                          self._h())
             for it in d.get("issues", []):
                 out[it["key"]] = self._task(it)
-            start += len(d.get("issues", []))
-            if start >= d.get("total", 0) or not d.get("issues"):
+            cursor = d.get("nextPageToken")
+            if d.get("isLast") or not cursor:
                 return out
 
     def get_task(self, tid):
