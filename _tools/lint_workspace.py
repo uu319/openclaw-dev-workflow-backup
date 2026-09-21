@@ -410,9 +410,28 @@ def check_host():
                                    "" if len(cfg) <= 5 else "delete all but the 5 newest openclaw.json.* copies")
     n = len(glob.glob(f"{OC}/backups/*"))
     (ok if n <= 10 else fix)("host", f"{n} entries in ~/.openclaw/backups", "" if n <= 10 else "keep the last 5 config backups + one dated dir per incident; delete the rest (they are 30 MB+)")
-    props = glob.glob(f"{OC}/skill-workshop/proposals/*")
-    if props:
-        fix("host", f"{len(props)} pending skill-workshop proposal(s)", "review weekly: openclaw skills workshop list; delete the ones you will not adopt")
+    # Count proposals that are actually PENDING, per agent. This used to count
+    # DIRECTORIES under skill-workshop/proposals, which is not the same thing:
+    # rejecting or applying a proposal leaves its draft on disk, so the number
+    # never moved and the line could not be cleared by doing what it told you to
+    # do. It read 12 before and after seven rejections.
+    pending, seen = [], 0
+    for agent in ["main"] + sorted(AGENTS):
+        rc, out = run(["openclaw", "skills", "workshop", "list", "--agent", agent])
+        if rc != 0:
+            continue
+        seen += 1
+        n = sum(1 for l in out.splitlines() if re.search(r"\s+pending\s+", l))
+        if n:
+            pending.append(f"{agent} {n}")
+    if not seen:
+        ok("host", "skill-workshop proposals not readable (openclaw CLI unavailable)")
+    elif pending:
+        fix("host", f"pending skill-workshop proposal(s): {', '.join(pending)}",
+            "review: openclaw skills workshop list --agent <id>; "
+            "openclaw skills workshop reject <id> --agent <id> for the ones you will not adopt")
+    else:
+        ok("host", "no pending skill-workshop proposals")
 
 
 def main():
