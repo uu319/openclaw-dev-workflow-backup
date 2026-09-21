@@ -138,6 +138,10 @@ class Tracker:
     def attach(self, tid, path, filename):
         raise Unsupported(f"{self.kind} cannot upload attachments yet")
 
+    def attachments(self, tid):
+        """What is already attached, so a re-push does not upload twice."""
+        raise Unsupported(f"{self.kind} cannot list attachments yet")
+
 
 class Unsupported(NotImplementedError):
     """This provider does not implement an optional capability."""

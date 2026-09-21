@@ -85,22 +85,33 @@ def no_tracker_refuses_writes_with_a_reason():
         contains(str(e), "no tracker", f"NoTracker.{what} must say why")
 
 
-def optional_capabilities_refuse_loudly():
-    """Silently skipping an attachment means a spec whose screenshots never uploaded."""
-    for f, kind in ((JIRA, "jira"), (LINEAR, "linear")):
+def every_real_tracker_implements_the_push_capabilities():
+    """A spec push needs all four, on whichever tracker the project uses.
+
+    Jira and Linear used to refuse attach/link_tasks/update_task, which is why
+    tracker_push was ClickUp-only. They implement them now (2026-09-21, each
+    verified against the real service). What must never come back is a SILENT
+    skip: a spec whose screenshots never uploaded, reported as a success.
+    """
+    for f, kind in ((CLICKUP, "clickup"), (JIRA, "jira"), (LINEAR, "linear")):
         tk = trackers.for_project(f, "tok")
-        e = raises(trackers.Unsupported, lambda: tk.attach("X", "/tmp/x", "x.png"),
-                   f"{kind} cannot attach, and must say so")
-        contains(str(e), kind, "the refusal names the provider")
-        raises(trackers.Unsupported, lambda: tk.link_tasks("A", "B"),
-               f"{kind} cannot link tickets, and must say so")
+        for m in ("attach", "link_tasks", "update_task", "attachments"):
+            fn = getattr(type(tk), m, None)
+            base = getattr(trackers.Tracker, m, None)
+            if not callable(fn):
+                raise AssertionError(f"{kind} must implement {m}")
+            if base is not None and fn is base:
+                raise AssertionError(
+                    f"{kind}.{m} is still the base class stub, which refuses; "
+                    f"tracker_push needs a real implementation")
 
 
-def clickup_implements_the_optional_capabilities():
-    tk = trackers.for_project(CLICKUP, "t")
-    for m in ("attach", "link_tasks", "update_task"):
-        if not callable(getattr(tk, m, None)):
-            raise AssertionError(f"ClickUp must implement {m}")
+def no_tracker_still_refuses_the_push_capabilities():
+    """`Tracker: none` has nowhere to put an attachment, and must say so."""
+    tk = trackers.for_project({"tracker": "none"}, None)
+    e = raises(Exception, lambda: tk.create_task("x"),
+               "a project with no tracker cannot create tickets, and must say so")
+    contains(str(e), "no tracker", "the refusal must name the reason")
 
 
 def api_errors_carry_the_providers_reason():
@@ -382,8 +393,8 @@ CASES = [
     ("linear link parsing (url + bare key)", linear_links_urls_and_bare_keys),
     ("no-tracker reads are empty", no_tracker_links_nothing_and_reads_empty),
     ("no-tracker writes refuse", no_tracker_refuses_writes_with_a_reason),
-    ("jira/linear refuse attach + link", optional_capabilities_refuse_loudly),
-    ("clickup implements optional caps", clickup_implements_the_optional_capabilities),
+    ("every tracker implements push caps", every_real_tracker_implements_the_push_capabilities),
+    ("no-tracker still refuses", no_tracker_still_refuses_the_push_capabilities),
     ("ApiError carries the reason", api_errors_carry_the_providers_reason),
     ("error bodies never leak the request", error_bodies_never_leak_the_request),
     ("jira uses /search/jql + cursor paging", jira_uses_the_current_search_endpoint_and_cursor_pages),

@@ -54,6 +54,11 @@ class ClickUp(Tracker):
     def get_task(self, tid):
         return self._task(self._get(f"/task/{tid}"))
 
+    def attachments(self, tid):
+        """[{title, url}] already on the task - so a re-push does not re-upload."""
+        return [{"title": a.get("title"), "url": a.get("url")}
+                for a in (self._get(f"/task/{tid}").get("attachments") or [])]
+
     def comments(self, tid, limit=3):
         cs = self._get(f"/task/{tid}/comment").get("comments", [])
         return [{"by": (c.get("user") or {}).get("username"),
