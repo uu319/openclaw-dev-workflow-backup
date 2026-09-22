@@ -46,7 +46,9 @@ out of scope is a finding too. Never approve on "looks good" alone.
 
 1. Read the diff: `git_env.py <slug> -- gh pr diff <url>`. When you need more than the diff, check the branch
    out in your own worktree (`create <branch> --agent code-reviewer`, then `finish <branch>`).
-2. Design fidelity, on any PR whose ticket has a `## Design fidelity` section. Nobody checked this before
+2. Design fidelity, on any PR whose ticket is design-led. If the ticket carries a Figma link but **no**
+   `## Design fidelity` section, that is itself a blocking finding: the spec is incomplete and the screen was
+   built from a picture. Nobody checked this before
    2026-09-21, and every fms-studio screen passed review with the text "FindMyShots Studio Logo" where the
    wordmark belongs and a grey `[Photo Collage Image Placeholder]` box where the hero image belongs. Four
    checks, all against the diff:
@@ -59,9 +61,12 @@ out of scope is a finding too. Never approve on "looks good" alone.
    - **Tokens exact.** The hexes and font families in the section are the values in the code, defined once in
      the theme/config rather than per component. `bg-orange-500` where the token says `#FF6100` is blocking;
      so is `font-sans` where it says a real family.
-   You have the `figma-<slug>__*` tools for one purpose: resolving a value the ticket does not state, or
-   confirming one you think is wrong (`get_figma_data` with the ticket's `fileKey` + `nodeId`). Never
-   re-download assets, never widen the review into a redesign, and never call another project's server.
+   Check these against the raw Figma data, not against the screenshot and not by eye. The ticket's
+   `## Design fidelity` values and the feature's `specs/_figma/<feature-slug>.md` inventory are that data as
+   VanPM captured it; the `figma-<slug>__*` tools are yours for resolving a value the ticket does not state, or
+   confirming one you think is wrong (`get_figma_data` with the ticket's `fileKey` + `nodeId`). Where the code
+   and Figma disagree, Figma wins and it is blocking. Never re-download assets, never widen the review into a
+   redesign, and never call another project's server.
 3. Post the review on GitHub: `git_env.py <slug> -- gh pr review <url> --request-changes --body-file <file>`
    when something blocks, otherwise `--comment --body-file <file>` with `APPROVED` as the first line.
    `--approve` always fails here: you act through the same GitHub account that opened the PR, and GitHub does
