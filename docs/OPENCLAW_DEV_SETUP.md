@@ -318,7 +318,7 @@ openclaw gateway install      # creates ~/.config/systemd/user/openclaw-gateway.
 systemctl --user status openclaw-gateway.service
 ```
 
-### 4.2 TMPDIR drop-in for the gateway (mandatory; see 3.3)
+### 4.2 TMPDIR for the gateway and for shells (mandatory; see 3.3)
 ```bash
 mkdir -p ~/.config/systemd/user/openclaw-gateway.service.d
 cat > ~/.config/systemd/user/openclaw-gateway.service.d/tmpdir.conf <<'X'
@@ -336,6 +336,28 @@ Verify in the live process, not the unit file:
 ```bash
 tr '\0' '\n' < /proc/$(systemctl --user show -p MainPID --value openclaw-gateway.service)/environ | grep -E '^(TMPDIR|NODE_COMPILE_CACHE|PATH)='
 ```
+
+The drop-in reaches only the gateway's own process tree. A shell still gets `TMPDIR=/tmp`, and that
+is not cosmetic: on 2026-09-22 `openclaw backup create` tried to compact the 942 MB `main` agent DB
+into /tmp's 702 MB of free RAM and died with `SQLITE_FULL`, which SQLite reports as **"database or
+disk is full"** on a box with 70 GB free on `/`. Append to `~/.bashrc`:
+```bash
+cat >> ~/.bashrc <<'X'
+# /tmp is tmpfs (RAM). The gateway drop-in covers only the service; shells need their own.
+export TMPDIR=/home/openclaw/.cache/openclaw-tmp
+export TMP="$TMPDIR"
+export TEMP="$TMPDIR"
+export SQLITE_TMPDIR="$TMPDIR"          # SQLite reads this ahead of TMPDIR
+[ -d "$TMPDIR" ] || mkdir -p "$TMPDIR"
+X
+```
+`sudo` resets the environment, so the export does not survive into a root command. Anything heavy
+that must run as root carries it inline, and points at real disk rather than the openclaw-owned
+cache dir (root writing there leaves root-owned files where agent subprocesses later write):
+```bash
+sudo env TMPDIR=/var/tmp npm install -g openclaw@<version>
+```
+The linter checks the gateway's TMPDIR and the shell's, separately.
 
 ### 4.3 Node heap
 Leave OpenClaw's automatic `--max-old-space-size` (half of RAM). It keeps any existing heap flag when

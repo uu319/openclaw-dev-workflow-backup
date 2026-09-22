@@ -13,7 +13,7 @@ What it checks (the MANIFEST below is the architecture; anything not in it is cl
      and on the default branch; no OpenClaw managed worktrees of the settings repo.
   5. openclaw.json desired state: main deny [], loop detection on, heartbeat isolated, no specialist bots,
      specialist deny lists, MCP servers per project, only the intended skills enabled.
-  6. Host: /tmp size, gateway TMPDIR/PATH, gcloud + gh on the gateway PATH, backup sprawl.
+  6. Host: /tmp size, gateway AND shell TMPDIR, gcloud + gh on the gateway PATH, backup sprawl.
 Standard library only. Run it from the orchestrator (read-only shell) or by hand.
 """
 import fnmatch, glob, importlib.util, json, os, re, subprocess, sys
@@ -407,6 +407,21 @@ def check_host():
             fix("host", f"cannot read gateway environ: {e}")
     else:
         fix("host", "gateway not running (MainPID 0)", "systemctl --user start openclaw-gateway.service")
+
+    # The drop-in reaches only the gateway's own process tree; a shell still got
+    # TMPDIR=/tmp. On 2026-09-22 `openclaw backup create` tried to compact the 942 MB
+    # main agent DB into /tmp's 702 MB of free RAM and failed with SQLITE_FULL -
+    # reported as "database or disk is full" on a box with 70 GB free on /.
+    # SQLITE_TMPDIR is checked separately: SQLite reads it ahead of TMPDIR.
+    rc, out = run(["bash", "-ic", 'printf "LINTTMP %s|%s\\n" "$TMPDIR" "$SQLITE_TMPDIR"'])
+    marked = [l for l in out.splitlines() if l.startswith("LINTTMP ")]
+    shell_tmp, shell_sqlite = (marked[-1][len("LINTTMP "):].split("|", 1) if marked else ("", ""))
+    cache = f"{HOME}/.cache"
+    good = shell_tmp.startswith(cache) and shell_sqlite.startswith(cache)
+    (ok if good else fix)(
+        "host",
+        f"shell TMPDIR = {shell_tmp or '(unset -> /tmp)'}, SQLITE_TMPDIR = {shell_sqlite or '(unset -> TMPDIR)'}",
+        "" if good else "export TMPDIR/TMP/TEMP/SQLITE_TMPDIR=$HOME/.cache/openclaw-tmp in ~/.bashrc (guide 4.2)")
     for b in ("gcloud", "gh"):
         (ok if os.path.exists(f"{HOME}/.local/bin/{b}") else fix)("host", f"~/.local/bin/{b} present", "" if os.path.exists(f"{HOME}/.local/bin/{b}") else f"symlink {b} into ~/.local/bin (guide 3.2)")
     baks = glob.glob(f"{OC}/openclaw.json.clobbered*") + glob.glob(f"{OC}/openclaw.tmp.json")   # .bak..bak.4 is OpenClaw's own ring: allowed
