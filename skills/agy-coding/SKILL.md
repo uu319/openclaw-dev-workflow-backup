@@ -94,8 +94,11 @@ So when the ticket has a `## Design fidelity` section, do this **before** launch
    ```
 
    `install -D` creates the parent directories. Copy only the assets this ticket
-   claims. They are downloaded already — never call a Figma tool to re-fetch what
-   is sitting in Internal Artifacts, and never have `agy` fetch them itself.
+   claims — a feature's `[FE]` tickets share one manifest and each ships its own
+   subset. They are downloaded already: never call a Figma tool to re-fetch what is
+   sitting in Internal Artifacts, and never have `agy` fetch them itself. If the
+   folder holds only `manifest.json`, the cache was never built or was swept:
+   report that and stop, it is VanPM's to rebuild.
 2. **Check each one arrived and is not empty** (`test -s <path>`). A 0-byte asset
    is a failed download upstream: stop and report it, do not build around it.
 3. **Name them in the prompt**, with the tokens, and forbid the fallback:

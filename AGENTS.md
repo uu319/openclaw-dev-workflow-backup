@@ -49,7 +49,9 @@ The routine, every time:
 2. Design assets, when the ticket has a `## Design fidelity` section: copy each asset from
    `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/` into the worktree at the `repo_path` that
    section names (`install -D`), and check each is non-empty. They are already downloaded; do not re-fetch
-   them, and do not let the coding agent go looking. Then carry the tokens and the asset paths into the
+   them, and do not let the coding agent go looking. The binaries are a gitignored cache: if that `assets/`
+   folder holds only `manifest.json`, say so and stop — rebuilding it is VanPM's, from the manifest's
+   `file_key`, `png_scale` and per-asset `download` blocks. Then carry the tokens and the asset paths into the
    prompt (`agy-coding` skill, "Design work"). agy cannot see the design: unprompted it writes a grey box
    and a text logo, which is exactly what shipped before 2026-09-21.
 3. Code writing: substantial work (more than a couple of files, refactors, test suites) goes to **agy** as a
