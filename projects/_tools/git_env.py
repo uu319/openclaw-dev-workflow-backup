@@ -302,11 +302,22 @@ def guard(rest, fields, env):
         r = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd, stdout=subprocess.PIPE,
                            stderr=subprocess.DEVNULL, text=True)
         head = r.stdout.strip()
-    subprocess.run(["git", "fetch", "--quiet", "origin", head], cwd=cwd, stdout=subprocess.DEVNULL,
+        if not head or head == "HEAD":
+            die("refused: no --head given and the current directory is not on a branch. "
+                "Pass --head <branch>, or run from the worktree holding it.")
+    # The branch is verified against the REMOTE, so any checkout of this project's
+    # repo can answer - it does not have to be the worktree holding the branch.
+    # Fetching in os.getcwd() meant a correct `gh pr create` run from anywhere but
+    # the worktree searched an unrelated directory and died with "origin/<head>
+    # does not exist" even though the branch was pushed (2026-09-22).
+    repo = os.path.realpath(fields.get("code_cwd") or "")
+    if not repo or not os.path.isdir(os.path.join(repo, ".git")):
+        repo = cwd
+    subprocess.run(["git", "fetch", "--quiet", "origin", head], cwd=repo, stdout=subprocess.DEVNULL,
                    stderr=subprocess.DEVNULL, env=env)
-    sha = _sha_of(f"origin/{head}", cwd)
+    sha = _sha_of(f"origin/{head}", repo)
     if not sha:
-        die(f"refused: origin/{head} does not exist. Push the reviewed branch first.")
+        die(f"refused: origin/{head} does not exist (checked in {repo}). Push the reviewed branch first.")
     print(f"PR creation allowed for {head} @ {sha[:12]} into {want}. Review happens on the PR; "
           f"its result is the `{REVIEW_CONTEXT}` status.", file=sys.stderr)
 

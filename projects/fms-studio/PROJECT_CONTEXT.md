@@ -40,7 +40,7 @@
 - **Tracker MCP server:** `tracker-fms-studio` (tool `tracker-fms-studio__tracker_get_task`; writes go
   through VanPM's feature-breakdown scripts, never the MCP write tools)
 - **Figma file:** https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding
-- **Figma MCP server:** `figma-fms-studio` (tools `figma-fms-studio__get_figma_data`, `figma-fms-studio__download_figma_images`; uses only this project's Design key)
+- **Figma MCP server:** `figma-fms-studio` (tools `figma-fms-studio__get_figma_data`, `figma-fms-studio__download_figma_images`; uses only this project's Design key). **VanDev MUST use these tools to extract exact CSS, flexbox layouts, spacing, and download actual image assets during UI implementation. Do not approximate designs.**
 - **GCP Environment:** Staging only. No production environment exists yet.
 - **GCP Project ID:** `fms-studio-staging`
 - **GCP Region:** `asia-southeast1`
@@ -103,6 +103,7 @@
 - Every ticket body follows the template: Context · User story · In scope · Out of scope · Acceptance criteria (Given/When/Then, falsifiable) · Technical notes · Depends on/blocks · Test notes · Definition of done.
 - Tags: `agent-created` + lane tag. Priority: urgent=1, high=2, normal=3, low=4. Estimates in `time_estimate`.
 - Dependencies pushed as ClickUp task links. `[DB]` → `[BE]` → `[FE] wiring`; `[QA]` last.
+- **Figma Designs:** If the Figma page is large or complex, VanPM must extract the component breakdown and include direct `?node-id=` links in the `[FE]` ticket and spec. For small/simple screens, the main design link is sufficient.
 - Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.clickup.json` next to it (completion marker; re-runs update instead of duplicate).
 
 ## Artifact Routing
