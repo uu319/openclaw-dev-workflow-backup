@@ -339,6 +339,11 @@ python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --o
 python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --only "<exact title>" --status "<status>"
 ```
 
+`--spec` takes the `<feature>.md` spec, never its `<feature>.clickup.json` marker:
+the script appends the marker extension itself, so handing it the JSON fails with a
+"no marker" error. Holding only a ticket id, find its spec with
+`grep -rl "<ticket-id>" /home/openclaw/.openclaw/workspace/projects/<slug>/artifacts/specs/`.
+
 - Claim (`--claim`): VanDev starts a lane ticket, or picks up a ticket external QA
   `rejected`. Reply with the script's GO or SKIP line, word for word.
 - `qa`: only when the delivery watcher reports the merged change is **deployed to
@@ -357,6 +362,22 @@ status, never use `--all`: it moves every ticket in the spec at once.
 Never set `status:` headers in a spec to move tickets: the push ignores status on
 existing tickets. A ticket that is not in the spec's `.clickup.json` marker was
 not created by you; report it instead of editing it by hand.
+
+## Pick the next ticket (when asked what to work on next)
+
+Nothing here writes. Read the board, then name one ticket and why.
+
+1. Refresh the planning index:
+   `python3 /home/openclaw/.openclaw/workspace/projects/_tools/spec_index.py <slug>`, then read
+   `artifacts/specs/_index.md` for the active features.
+2. Catch tickets that live outside any spec:
+   `python3 {baseDir}/scripts/tracker_scan.py --context <CTX>`.
+3. Read live status for one or two foundational specs, one call each:
+   `python3 {baseDir}/scripts/tracker_status.py --context <CTX> --spec <spec.md> --get`.
+   Never loop over every spec in one shell command - that is the shape the loop
+   detector kills, and the index already told you which specs are live.
+4. Prefer the `to do` ticket that unblocks the most others (a `[DB]` before the
+   `[BE]`/`[FE]` that read it), not the oldest. Say what it unblocks.
 
 ## Onboarding hand-off (when the orchestrator asks you to fill the Stack)
 
