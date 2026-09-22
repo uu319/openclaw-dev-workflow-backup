@@ -128,7 +128,12 @@ class Tracker:
         raise NotImplementedError(f"{self.kind} cannot create tasks")
 
     def update_task(self, tid, **fields):
-        """Change title/description/tags/estimate. `parent` is never moved here."""
+        """Change title/description/tags/estimate, and/or re-parent the ticket.
+
+        `parent` is a ticket id to move this ticket under. A provider that cannot
+        make the move must raise, never drop the key: a subtask that silently
+        stayed where it was is the failure this interface exists to prevent.
+        """
         raise NotImplementedError(f"{self.kind} cannot update tasks")
 
     # --- optional capabilities -------------------------------------------------

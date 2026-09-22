@@ -74,12 +74,53 @@ class ClickUp(Tracker):
         http_json(f"{API}/task/{tid}", self._h(),
                   data=json.dumps({"status": status}).encode(), method="PUT")
 
+    def _set_parent(self, tid, parent):
+        """Move a task under another task, and prove it moved.
+
+        ClickUp takes `parent` on the task PUT, but it answers 200 whether or not
+        the move happened - and it only re-parents something that is ALREADY a
+        subtask. So the parent is read back: a silent no-op raises here rather
+        than being reported to the caller as a successful move.
+
+        Un-parenting is deliberately not offered: ClickUp's API cannot turn a
+        subtask back into a top-level task, and accepting `parent: null` would
+        look like it had.
+        """
+        parent = str(parent or "").strip()
+        if not parent:
+            raise ValueError(f"no parent id given for {tid}; ClickUp cannot un-parent a "
+                             f"subtask through the API (do it in the UI)")
+        if parent == tid:
+            raise ValueError(f"task {tid} cannot be its own parent")
+        http_json(f"{API}/task/{tid}", self._h(),
+                  data=json.dumps({"parent": parent}).encode(), method="PUT")
+        now = (self.get_task(tid).get("parent") or "")
+        if now != parent:
+            raise RuntimeError(
+                f"ClickUp accepted the request but {tid} still has parent "
+                f"{now or 'none'}, not {parent}: ClickUp only moves a task that is already a "
+                f"subtask. Convert it to a subtask in the UI, or re-create it with `parent`.")
+        return {"id": tid, "parent": parent, "ok": True}
+
     def update_task(self, tid, **fields):
-        body = {k: v for k, v in fields.items() if k != "parent" and v is not None}
-        if not body:
-            return {}
-        return http_json(f"{API}/task/{tid}", self._h(),
-                         data=json.dumps(body).encode(), method="PUT")
+        """Change name/description/estimate, and/or move the task under another.
+
+        `parent` is handled separately because it needs reading back; everything
+        else is one PUT. The task name is `name` on ClickUp - a body that said
+        `title` was accepted with a 200 and changed nothing, so a renamed ticket
+        silently kept its old name on the board (2026-09-22).
+        """
+        parent = fields.pop("parent", None)
+        if "title" in fields:
+            fields["name"] = fields.pop("title")
+        body = {k: v for k, v in fields.items() if v is not None}
+        out = {}
+        if body:
+            out = http_json(f"{API}/task/{tid}", self._h(),
+                            data=json.dumps(body).encode(), method="PUT")
+        if parent is not None:
+            out = {**(out or {}), **self._set_parent(tid, parent)}
+        return out
 
     def link_tasks(self, tid, other):
         http_json(f"{API}/task/{tid}/link/{other}", self._h(), data=b"{}")

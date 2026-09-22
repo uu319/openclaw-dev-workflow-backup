@@ -282,7 +282,8 @@ session (degenerate loops).
 
 **5.2 Ticket management.** Source: the tracker (whichever one - `trackers/`), mirrored by
 `specs/<feature>.md` + `.tracker.json` markers.
-Tools: `tracker_push.py` (create/update, dedupe by title, marker = idempotency), `tracker_status.py`
+Tools: `tracker_push.py` (create/update, matched by the `id:` stamped into the spec's ticket
+header so a renamed title updates instead of duplicating; marker = idempotency), `tracker_status.py`
 (`--get`, `--claim`, `--status`), `tracker_scan.py` (human tickets). Rules: VanPM is the only writer; canonical
 statuses through the Status map; `staged` only from the delivery watcher (DEPLOYED, or MERGED when Deploy signal is
 `none` and the board maps `staged`); `done` only by external QA, a MERGED action on a board without `staged`, or

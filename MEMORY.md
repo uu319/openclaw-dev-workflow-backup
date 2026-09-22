@@ -46,3 +46,9 @@ they auto-clean after 7 idle days.
 
 ## 2026-09-22
 - backend-test-di-fix: Fixed backend unit test dependency injection issue in app.controller.spec.ts. PR merged and deployed to staging (https://github.com/symphco/fms-studio/pull/41). Tickets moved to QA.
+
+- 2026-09-22: Communication timing: When a background step fails and requires a redo (like VanReviewer requesting changes or VanQA finding defects), send a brief visible update to the user *before* routing it back to the specialist. Do not hide multi-minute rework cycles in silence.
+
+## Rules updated 2026-09-22 (ClickUp Ticket Renaming)
+- **NEVER** use `tracker_push.py` (or ask VanPM to use it) to rename an existing ClickUp ticket. Changing the title in the spec markdown causes the push script to lose the ID mapping, resulting in a duplicate ticket and unlinked subtasks. 
+- If a ticket needs to be renamed, use the `tracker-fms-studio` MCP tools directly or interact with the ClickUp API via a python script. Do not use the feature-breakdown sync script for title changes.

@@ -191,8 +191,16 @@ class Jira(Tracker):
     # --- capabilities tracker_push needs -------------------------------------
 
     def update_task(self, tid, **fields):
-        """Change summary / description / labels. Parent is never moved here."""
+        """Change summary / description / labels, and/or move the issue under another.
+
+        `parent` is a normal field edit on Jira, so it rides along with the rest.
+        What Jira accepts depends on the project: a company-managed sub-task can
+        be moved to another parent, a team-managed issue can be given an epic.
+        When it refuses, it says why, and http_json surfaces that reason.
+        """
         f = {}
+        if fields.get("parent"):
+            f["parent"] = {"key": fields["parent"]}
         if fields.get("title"):
             f["summary"] = fields["title"]
         if fields.get("description") is not None:

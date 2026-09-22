@@ -1,0 +1,46 @@
+{
+  "[Editing Album] [FE] Album Card Menu and Modal Layout": {
+    "id": "z94kydaz8t",
+    "url": "https://app.clickup.com/t/z94kydaz8t",
+    "lane": "FE",
+    "attachments": {
+      "10041-4424.png": "https://t7533817.p.clickup-attachments.com/t7533817/fc4ffe4e-90f3-4049-9d43-3973f1125937/10041-4424.png",
+      "10009-5369.png": "https://t7533817.p.clickup-attachments.com/t7533817/19a94d43-75a2-422c-9823-ac218158eddf/10009-5369.png"
+    },
+    "desc_hash": "a2b3489bd6bb8b25"
+  },
+  "[Editing Album] [BE] Update event endpoint": {
+    "id": "z94kydaz8u",
+    "url": "https://app.clickup.com/t/z94kydaz8u",
+    "lane": "BE",
+    "attachments": {},
+    "desc_hash": "ac3f448f4b87be42"
+  },
+  "[Editing Album] [FE] API Wiring and Validation": {
+    "id": "z94kydaz8v",
+    "url": "https://app.clickup.com/t/z94kydaz8v",
+    "lane": "FE",
+    "attachments": {
+      "10041-4424.png": "https://t7533817.p.clickup-attachments.com/t7533817/0b700b59-c598-4dc2-b2ef-d248f993a970/10041-4424.png"
+    },
+    "desc_hash": "5cb12ff83e65a44b"
+  },
+  "[Editing Album] [QA] Edit album details and verify on dashboard": {
+    "id": "z94kydaz8w",
+    "url": "https://app.clickup.com/t/z94kydaz8w",
+    "lane": "QA",
+    "attachments": {},
+    "desc_hash": "b9d936b0f8f80ae8"
+  },
+  "[Editing Album] [Feature] Organizer Dashboard: Editing Album": {
+    "id": "z94kydaz8q",
+    "url": "https://app.clickup.com/t/z94kydaz8q",
+    "lane": "FEATURE",
+    "attachments": {
+      "10009-4695.png": "https://t7533817.p.clickup-attachments.com/t7533817/b2b2a2d6-2cf6-4fff-ba68-b97daf7975af/10009-4695.png",
+      "10041-4424.png": "https://t7533817.p.clickup-attachments.com/t7533817/4d4bda45-4f82-4243-917a-ba790653105d/10041-4424.png",
+      "10009-5369.png": "https://t7533817.p.clickup-attachments.com/t7533817/191c55a2-739f-4f06-bd0e-019c80a7e5bf/10009-5369.png"
+    },
+    "desc_hash": "ff9d2685c97112d9"
+  }
+}

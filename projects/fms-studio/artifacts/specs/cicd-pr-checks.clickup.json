@@ -1,0 +1,30 @@
+{
+  "[Feature] CI/CD: Cloud Build PR checks": {
+    "id": "z94kydawa8",
+    "url": "https://app.clickup.com/t/z94kydawa8",
+    "lane": "FEATURE",
+    "attachments": {},
+    "desc_hash": "98d98144d8739fe9"
+  },
+  "[INT] PR Checks: Create Cloud Build configuration": {
+    "id": "z94kydawaa",
+    "url": "https://app.clickup.com/t/z94kydawaa",
+    "lane": "INT",
+    "attachments": {},
+    "desc_hash": "32b304511f164362"
+  },
+  "[QA] Configure Playwright E2E Tests": {
+    "id": "z94kydazac",
+    "url": "https://app.clickup.com/t/z94kydazac",
+    "lane": "QA",
+    "attachments": {},
+    "desc_hash": "dd95766ec77687f1"
+  },
+  "[INT] Test Production Artifact Locally": {
+    "id": "z94kydazad",
+    "url": "https://app.clickup.com/t/z94kydazad",
+    "lane": "INT",
+    "attachments": {},
+    "desc_hash": "7bed42fa6720a6d9"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "feature": "editing-album",
+  "file_key": "ve5qHWxtQeBIxDF9xehnbn",
+  "png_scale": 2,
+  "assets": [
+    {
+      "file": "assets/theme-swatch-green.png",
+      "node": "10009:5416",
+      "kind": "png",
+      "name": "Green Theme Color Swatch",
+      "width": 101,
+      "height": 126,
+      "repo_path": "frontend/public/images/theme-swatch-green.png",
+      "download": {
+        "fileName": "theme-swatch-green.png",
+        "imageRef": "10239b11b605e4389a1267e1f9f3c9c69b9508cc"
+      }
+    },
+    {
+      "file": "assets/theme-swatch-pink.png",
+      "node": "10009:5418",
+      "kind": "png",
+      "name": "Pink Theme Color Swatch",
+      "width": 100,
+      "height": 56,
+      "repo_path": "frontend/public/images/theme-swatch-pink.png",
+      "download": {
+        "fileName": "theme-swatch-pink.png",
+        "imageRef": "3c1226f9bd8abf9451e848d9ac4d2ebc74205958"
+      }
+    }
+  ]
+}

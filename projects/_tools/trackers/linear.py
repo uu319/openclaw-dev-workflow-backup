@@ -196,7 +196,14 @@ class Linear(Tracker):
         return out
 
     def update_task(self, tid, **fields):
+        """Change title / description / labels, and/or move the issue under another.
+
+        Linear takes the parent as `parentId` on the same mutation, so a re-link
+        is one call; the id is resolved the same way every other id here is.
+        """
         inp = {}
+        if fields.get("parent"):
+            inp["parentId"] = self._uuid(fields["parent"])
         if fields.get("title"):
             inp["title"] = fields["title"]
         if fields.get("description") is not None:

@@ -88,15 +88,28 @@ class TrackerMCP:
         return self._need().create_task(name, description=description, status=status,
                                         parent=parent, tags=tags)
 
-    def update_task(self, task_id, status=None, description=None):
+    def update_task(self, task_id, status=None, description=None, parent=None):
+        """Move a ticket to another status, and/or under another ticket.
+
+        `parent` is here because a subtask that has come loose from its parent -
+        created without one, or detached by hand on the board - could previously
+        only be fixed by a human in the UI. The adapter raises when its provider
+        cannot make the move, so a failed re-link is never reported as done.
+        """
         tk = self._need()
-        if not status and not description:
-            return {"error": "No fields to update provided."}
         if description:
             raise RuntimeError("description edits go through VanPM's feature-breakdown "
                                "scripts, which keep the spec markers in sync")
-        tk.set_status(task_id, status)
-        return {"id": task_id, "status": status, "ok": True}
+        if not status and not parent:
+            return {"error": "No fields to update provided."}
+        out = {"id": task_id, "ok": True}
+        if parent:
+            tk.update_task(task_id, parent=parent)
+            out["parent"] = parent
+        if status:
+            tk.set_status(task_id, status)
+            out["status"] = status
+        return out
 
     TOOLS = [
         {"name": "tracker_get_task",
@@ -114,10 +127,16 @@ class TrackerMCP:
              "tags": {"type": "array", "items": {"type": "string"}}},
              "required": ["name"]}},
         {"name": "tracker_update_task",
-         "description": "Move one ticket to another status on this project's board.",
+         "description": "Move one ticket to another status, and/or re-link it under a "
+                        "parent ticket, on this project's board.",
          "inputSchema": {"type": "object", "properties": {
              "task_id": {"type": "string", "description": "Ticket id or key"},
-             "status": {"type": "string", "description": "Board status name"}},
+             "status": {"type": "string", "description": "Board status name"},
+             "parent": {"type": "string", "description":
+                        "Parent ticket id to move this ticket under. Re-links a subtask that "
+                        "lost its parent; it cannot un-parent one (pass no parent to leave it "
+                        "alone). On ClickUp the move is read back and fails loudly if the "
+                        "board did not apply it."}},
              "required": ["task_id"]}},
     ]
 

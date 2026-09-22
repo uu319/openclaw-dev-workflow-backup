@@ -851,7 +851,7 @@ that PR before Van hears "ready", and the PR body carries the ticket URL when a 
 ### 8.3 Specialist skills
 - `project-manager/skills/feature-breakdown/` — decomposition rules, ticket template, splitting patterns,
   spec validator (rejects > 8h, < 3 AC, non-GWT AC, filler phrases, missing out-of-scope), push **only** through
-  `scripts/tracker_push.py` (dedupe by title, similarity check, `<feature-slug>.clickup.json` marker next to the spec),
+  `scripts/tracker_push.py` (matches each ticket by the `id:` it stamps into the spec header, similarity check, `<feature-slug>.clickup.json` marker next to the spec),
   statuses through `scripts/tracker_status.py`, human tickets through `scripts/tracker_scan.py`. The MCP write tools
   are denied to VanPM (5.4); `tracker-<slug>__tracker_get_task` is for reads.
 - `developer/skills/agy-coding/` — how to launch the coding-agent backend (9.6) in the worktree
