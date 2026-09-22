@@ -164,6 +164,15 @@ def asset_entry_errors(title, raw, full, data):
     """
     errors = []
     feature_dir = os.path.dirname(os.path.dirname(full))  # .../<feature-slug>/assets/manifest.json
+    # The binaries beside the manifest are a gitignored, reproducible cache (.gitignore).
+    # A whole folder that was never materialised - fresh clone, or `worktree.py sweep` after
+    # 30 days - is not the same defect as one missing file, and it has a different fix.
+    cache = os.path.dirname(full)
+    present = {f for f in os.listdir(cache) if f != "manifest.json"} if os.path.isdir(cache) else set()
+    if data["assets"] and not present:
+        return [f"{title}: the asset cache for {raw} is empty - re-create it with download_figma_images "
+                f"using the manifest's file_key, png_scale and per-asset download blocks "
+                f"(localPath = that assets/ folder), then push again"]
     for i, a in enumerate(data["assets"]):
         where = f"{title}: asset manifest {raw} entry {i}"
         if not isinstance(a, dict):
@@ -304,6 +313,7 @@ def desc_hash(task):
 
 def validate(tickets, ctx, spec_path=None):
     errors = cross_spec_errors(tickets, spec_path) if spec_path else []
+    fe_design = []  # (title, claimed repo paths, manifest path, manifest) per [FE] ticket
     titles = [t.get("title") for t in tickets]
     if len(set(titles)) != len(titles):
         errors.append("duplicate titles in spec")
@@ -390,12 +400,35 @@ def validate(tickets, ctx, spec_path=None):
                 if not re.search(r"#[0-9A-Fa-f]{3,8}\b", fid):
                     errors.append(f"{title}: '## Design fidelity' names no colour as hex "
                                   f"(\"orange\" is not a token, `#FF6100` is)")
-                if a_data and a_data["assets"]:
-                    for a in a_data["assets"]:
-                        rp = str(a.get("repo_path", "")).strip()
-                        if rp and rp not in fid:
-                            errors.append(f"{title}: '## Design fidelity' does not list the manifest's "
-                                          f"repo path {rp} - the developer never learns where it goes")
+                # Which of the feature's assets THIS ticket ships. A feature usually has
+                # several [FE] tickets (layout, states, wiring, a copy fix) sharing one
+                # manifest, and only some of them ship artwork - so ownership is checked
+                # across the spec below, not ticket by ticket.
+                known = {str(a.get("repo_path", "")).strip() for a in (a_data or {}).get("assets", [])}
+                claimed = {rp for rp in known if rp and rp in fid}
+                for rp in re.findall(r"`([^`]+\.(?:png|jpe?g|gif|svg|webp|avif))`", fid):
+                    if rp not in known and not any(rp == str(a.get("file", "")).strip()
+                                                   for a in (a_data or {}).get("assets", [])):
+                        errors.append(f"{title}: '## Design fidelity' names {rp}, which is not in the "
+                                      f"asset manifest - download it first, or fix the path")
+                fe_design.append((title, claimed, a_raw, a_data))
+    # Asset ownership, across the spec: every asset the feature downloaded is shipped by
+    # exactly one [FE] ticket. One ticket owning none is fine (a copy fix, a wiring ticket);
+    # an asset owned by NOBODY is how a logo stays in Internal Artifacts forever, and one
+    # owned by two tickets is two developers writing the same file.
+    for manifest_path in {p for _, _, p, _ in fe_design if p}:
+        entries = next((d for _, _, p, d in fe_design if p == manifest_path and d), None)
+        for a in (entries or {}).get("assets", []):
+            rp = str(a.get("repo_path", "")).strip()
+            if not rp:
+                continue
+            owners = [t for t, claimed, p, _ in fe_design if p == manifest_path and rp in claimed]
+            if not owners:
+                errors.append(f"asset {rp} ({manifest_path}) is in no ticket's '## Design fidelity': "
+                              f"nothing will ever copy it into the repo")
+            elif len(owners) > 1:
+                errors.append(f"asset {rp} is claimed by {len(owners)} tickets ({', '.join(owners)}): "
+                              f"exactly one ticket ships each file")
     if errors:
         print("Spec rejected:", file=sys.stderr)
         for e in errors:

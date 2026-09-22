@@ -91,16 +91,28 @@ Collect, and write down in the spec:
      `<nodeId>.png`, which is the screenshot's naming. Where the node carries an
      `imageDownloadArguments` block, pass its `needsCropping`, `cropTransform`
      and `filenameSuffix` through unchanged: without them a cropped fill
-     downloads as the whole uncropped source image. Verify every file exists
-     and is larger than 0 bytes.
+     downloads as the whole uncropped source image. **That block appears in two
+     shapes** — inline JSON inside a node's `fills=[{...}]`, and YAML under
+     `GLOBAL_VARS` when the fill was hoisted. Read both. On the landing page,
+     reading only the YAML form found 3 of 12 crops and missed 4 assets outright,
+     because two crops of one source image look like one asset until you see
+     their different `filenameSuffix`. Verify every file exists and is > 0 bytes.
   5. **Asset manifest.** Write
      `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/manifest.json`:
      ```json
-     {"feature": "<feature-slug>",
+     {"feature": "<feature-slug>", "file_key": "<fileKey>", "png_scale": 2,
       "assets": [{"file": "assets/logo.svg", "node": "9734:3530", "kind": "svg",
                   "name": "FindMyShots wordmark", "width": 154, "height": 26,
-                  "repo_path": "frontend/public/brand/logo.svg"}]}
+                  "repo_path": "frontend/public/brand/logo.svg",
+                  "download": {"fileName": "logo.svg"}}]}
      ```
+     The `download` block is whatever you passed `download_figma_images` for that file —
+     `fileName`, plus `imageRef`/`gifRef` and any `needsCropping`/`cropTransform`/
+     `filenameSuffix`. It matters: **the downloaded binaries are gitignored**, because one
+     screen is ~37 MB and the framework repo is pushed off-box. The manifest is the committed
+     contract and must be enough to rebuild the folder exactly. A cropped file comes back with
+     its suffix in the name (`hero-scribble-02-3f7df0.png`), so `file` records the name that
+     actually landed, not the one you asked for.
      One entry per file you downloaded; `file` is relative to the feature's
      `_figma/<feature-slug>/` folder. `repo_path` is where the code should put
      it — your call from the project's `## Stack`, one convention per project.

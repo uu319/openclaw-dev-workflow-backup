@@ -27,7 +27,7 @@ Header keys:
 | `status` | no | status for a ticket when it is first created (ignored on re-push; move statuses with clickup_status.py) |
 | `figma` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
 | `screenshots` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
-| `assets` | `FE` (when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only" |
+| `assets` | `FE` (when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only". The manifest is committed; the binaries beside it are a gitignored cache rebuilt from its `file_key`, `png_scale` and per-asset `download` blocks. Several `[FE]` tickets share one manifest; each ships the subset its `## Design fidelity` lists, and across the spec every asset must be shipped by exactly one |
 | `existing_id` | no | tracker ticket id to update when the title differs from the existing ticket (used when adopting tickets people already made) |
 
 ## Complete example
