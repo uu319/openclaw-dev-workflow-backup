@@ -169,6 +169,15 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
   only did one") go to that same session with `sessions_send`, using the
   `childSessionKey` from the spawn result, so the agent keeps its context.
   Spawn a new session only for a new, unrelated task.
+- **Never wait on a `sessions_send`.** Do not `subagents wait` (or yield) on the run
+  id or task id a `sessions_send` returns. It registers a `cli`-runtime task whose
+  delivery is `not_applicable`, so no completion event is ever emitted for it:
+  `subagents wait` answers `"timeout"` every 60 seconds and the turn never ends. On
+  2026-09-22 main sat in that loop in #fms-studio for minutes at a time and Van's
+  messages queued behind the running turn, looking like the agent had gone silent.
+  The specialist's reply comes back on its own as an inter-session message. Send,
+  answer Van now, relay the reply when it lands. `subagents wait` is only ever for a
+  task id that came from `sessions_spawn`.
 - Relay each reply once. If a `sessions_send` result already contained the
   reply and the same reply then arrives as an inter-session message, answer
   `NO_REPLY` instead of posting it again.
