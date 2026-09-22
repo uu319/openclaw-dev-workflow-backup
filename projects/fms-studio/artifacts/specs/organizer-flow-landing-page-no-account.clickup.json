@@ -6,40 +6,87 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3b8ffe39-1c0c-47a3-ac5b-afdbd4e11f57/9731-3297.png"
     },
-    "desc_hash": "b5ceeb5489911a04"
-  },
-  "[FE] Landing Page: layout - navigation - and static content": {
-    "id": "z94kydab9c",
-    "url": "https://app.clickup.com/t/z94kydab9c",
-    "lane": "FE",
-    "attachments": {
-      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/6216f938-01d4-4a01-a32a-48f0e1decf51/9731-3297.png"
-    },
-    "desc_hash": "d18d728c994f50d7"
+    "desc_hash": "d3e4d1d83855bd82"
   },
   "[QA] Landing Page: E2E unauthenticated visitor views pricing and clicks signup": {
     "id": "z94kydab9d",
     "url": "https://app.clickup.com/t/z94kydab9d",
     "lane": "QA",
     "attachments": {},
-    "desc_hash": "f9bb36f98ffa7712"
+    "desc_hash": "deadfe77ada3cd32"
   },
-  "[FE] Bug: Fix landing page copy and links": {
-    "id": "z94kydadcw",
-    "url": "https://app.clickup.com/t/z94kydadcw",
+  "[FE] Landing Page: Header and Footer": {
+    "id": "z94kydb12t",
+    "url": "https://app.clickup.com/t/z94kydb12t",
     "lane": "FE",
     "attachments": {
-      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f613e6b4-875c-4be5-8f61-c46f97ba09b6/9731-3297.png"
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3e70718c-c406-45ef-985c-586430a1773e/9731-3297.png"
     },
-    "desc_hash": "7a3e3db6228364d6"
+    "desc_hash": "9c868f7bd22af3d4"
   },
-  "[FE] Defect: Landing page design not pixel perfect": {
-    "id": "z94kydb0ng",
-    "url": "https://app.clickup.com/t/z94kydb0ng",
+  "[FE] Landing Page: Hero Section": {
+    "id": "z94kydb12u",
+    "url": "https://app.clickup.com/t/z94kydb12u",
     "lane": "FE",
     "attachments": {
-      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/69a32271-b93d-4f83-87b5-34c43d985185/9731-3297.png"
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3fc817ca-7095-40a2-9aae-27bf900c8813/9731-3297.png"
     },
-    "desc_hash": "95fea3f003572f2f"
+    "desc_hash": "afb50dd0f98d08d2"
+  },
+  "[FE] Landing Page: How it works & Features Block": {
+    "id": "z94kydb12w",
+    "url": "https://app.clickup.com/t/z94kydb12w",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f1fade6c-3bad-4451-9b68-3a4f30ab8455/9731-3297.png"
+    },
+    "desc_hash": "f08b22b878a0ac78"
+  },
+  "[FE] Landing Page: Customization Section": {
+    "id": "z94kydb12x",
+    "url": "https://app.clickup.com/t/z94kydb12x",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/ea20149b-4400-444a-94b6-cd703f3fafbf/9731-3297.png"
+    },
+    "desc_hash": "a7271b5179fee0f1"
+  },
+  "[FE] Landing Page: Pricing & Contact": {
+    "id": "z94kydb12y",
+    "url": "https://app.clickup.com/t/z94kydb12y",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/686c0e22-c583-4325-bb09-996caa0b16a6/9731-3297.png"
+    },
+    "desc_hash": "0e89ff801fd298b0"
+  },
+  "_cancelled": {
+    "[FE] Landing Page: layout - navigation - and static content": {
+      "id": "z94kydab9c",
+      "url": "https://app.clickup.com/t/z94kydab9c",
+      "lane": "FE",
+      "attachments": {
+        "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/6216f938-01d4-4a01-a32a-48f0e1decf51/9731-3297.png"
+      },
+      "desc_hash": "d18d728c994f50d7"
+    },
+    "[FE] Bug: Fix landing page copy and links": {
+      "id": "z94kydadcw",
+      "url": "https://app.clickup.com/t/z94kydadcw",
+      "lane": "FE",
+      "attachments": {
+        "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f613e6b4-875c-4be5-8f61-c46f97ba09b6/9731-3297.png"
+      },
+      "desc_hash": "7a3e3db6228364d6"
+    },
+    "[FE] Defect: Landing page design not pixel perfect": {
+      "id": "z94kydb0ng",
+      "url": "https://app.clickup.com/t/z94kydb0ng",
+      "lane": "FE",
+      "attachments": {
+        "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/69a32271-b93d-4f83-87b5-34c43d985185/9731-3297.png"
+      },
+      "desc_hash": "95fea3f003572f2f"
+    }
   }
 }
