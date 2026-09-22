@@ -1,6 +1,6 @@
 # OpenClaw Dev Factory — Architecture and Self-Fix Runbook
 
-**Version:** 2.7 · **Date:** 2026-09-22 (2.7: **the design reaches the code** — VanPM downloads the screen's assets and exact tokens, not just a screenshot; `[FE]` tickets carry a `## Design fidelity` contract the push script enforces; VanDev copies assets into the worktree before agy runs, because agy cannot see the design; VanReviewer checks fidelity and gets Figma read access. Phase D. 2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 96 regression cases under `_tools/stress/` (75 at 2.6). 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Version:** 2.8 · **Date:** 2026-09-22 (2.8: **the design binds the whole chain, and the backup runs itself** — a Figma link anywhere makes the work design-led, goes to VanPM first, and the orchestrator checks the inventory, screenshots and manifest before it relays a spec for approval; VanDev stops instead of eyeballing, VanReviewer treats a missing design contract as blocking, VanQA verifies the screens for the first time. Phase E. Off-box copy moves from Van's terminal to a daily cron, staleness alarm 10 → 2 commits. 2.7: **the design reaches the code** — VanPM downloads the screen's assets and exact tokens, not just a screenshot; `[FE]` tickets carry a `## Design fidelity` contract the push script enforces; VanDev copies assets into the worktree before agy runs, because agy cannot see the design; VanReviewer checks fidelity and gets Figma read access. Phase D. 2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 96 regression cases under `_tools/stress/` (75 at 2.6). 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
 **Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.7) stays the fresh-install reference (host, config keys, every incident).
 This document is shorter and answers a different question: **what is the architecture, why does the system
 keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
@@ -91,7 +91,7 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 | Team registry | `AGENTS.md` roster + `_tools/validate_team.py` | main | — | a second roster file |
 | Architecture | `_tools/lint_workspace.py` | anyone (read-only) | everything above | deleting |
 | Design docs | `docs/OPENCLAW_ARCHITECTURE.md`, `docs/OPENCLAW_DEV_SETUP.md` (`~/OPENCLAW_*.md` are symlinks) | Claude Code sessions with Van | — | a second copy; changing the design without them in the same commit |
-| Off-box copy (Decision I) | `_tools/framework_offbox.py push <private repo url>` → one branch per framework repo, `refs/offbox/<name>` | Van, from a real terminal | the six repos (full-history token scan first) | git remotes on framework repos; force pushes; pushing `~/Backups/openclaw-git` |
+| Off-box copy (Decision I) | `_tools/framework_offbox.py push <private repo url>` → one branch per framework repo, `refs/offbox/<name>` | the `framework-offbox-push` cron, daily (guide §4.6); Van by hand when it fails | the six repos (full-history token scan first) | git remotes on framework repos; force pushes; pushing `~/Backups/openclaw-git` |
 | Code writing | coding agent (agy on Gemini, Decision B) in the worktree `create` printed | VanDev | — | git, gh, builds, tests, deploys (those are VanDev's own `exec`) |
 
 If a job is not in this table, the answer to "which script?" is **none yet**: add a row, then the tool, in one commit.
@@ -532,9 +532,13 @@ Deploy signal none, a custom board (Backlog/In Dev/Staging/QA Failed/Blocked/Don
 - Open (needs accounts): GitHub PRs, ClickUp, MCP registration, agents following the stage table. Create
   `projects/<slug>/` LAST when doing it live (after secrets and MCP), because the heartbeat picks it up at once.
 
-### Phase C — off-box copy, 2026-09-19 night (tooling done; the push is Van's)
-- Framework: `_tools/framework_offbox.py` (registry row). Tested against a scratch repo; it refuses today because
-  the main repo's history holds the fms-studio Figma token (commit 7715e27): rotate it, then `--allow-rotated`.
+### Phase C — off-box copy, 2026-09-19 night (done; automated 2026-09-22)
+- Framework: `_tools/framework_offbox.py` (registry row). It refused at first because the main repo's history held
+  the fms-studio Figma token (commit 7715e27); that was purged on 2026-09-21 and the scan has been clean since.
+- Since 2026-09-22 a daily `framework-offbox-push` cron runs it (guide §4.6). The tool existed from night one and
+  nothing ran it: the push was a person's to remember, and the linter only complained at 10 commits behind, so a
+  week of framework work could live on one VPS unbacked. The cron does the work; `OFFBOX_STALE_AFTER = 2` makes
+  the daily lint the alarm for a cron that dies. `--allow-rotated` stays a human decision and never goes on the job.
 - Design docs now live in the framework repo (`docs/`), so invariant 3 (design, linter and guide change in one
   commit) can finally hold and the docs travel with the off-box copy.
 - `~/Backups/openclaw-git` (2.7 GB, OpenClaw's database backup) is NOT pushable: its history, including the
@@ -619,7 +623,7 @@ orchestration skill skips `spec`, `tickets`, `internal-qa`. Then delete it (cont
 | F | Git: per-project SSH deploy key for push + repo-scoped PAT for the GitHub API | unchanged |
 | G | Dreaming **off** | applied 17:03 |
 | H | `skills/skill-creator` **removed** | done |
-| I | Private GitHub repo for the framework repos, pushed from Van's terminal only (`framework_offbox.py`); database backups pulled to Van's machine | tooling done; waits for Figma token rotation + SSH key |
+| I | Private GitHub repo for the framework repos (`framework_offbox.py`), pushed by a daily cron since 2026-09-22; database backups pulled to Van's machine | done; token rotated 2026-09-21, key on the box, cron in guide §4.6 |
 | J | Retention: runs 30 d, figma 30 d after archive, last 5 config backups, proposals weekly | first prune done; automation is Step 8 |
 | L | Spawn time limits: `runTimeoutSeconds` 3600 dev, 1800 others (orchestration skill) | applied 2026-09-20 |
 | M | Shared skills: only `worktree-lifecycle`; `beautiful-mermaid` moved to `~/Backups/removed-skills/`; skill-workshop proposals rejected (36 registry entries whose files were already deleted cannot be rejected without `openclaw doctor --fix`, which is forbidden; they are inert) | applied 2026-09-20 |

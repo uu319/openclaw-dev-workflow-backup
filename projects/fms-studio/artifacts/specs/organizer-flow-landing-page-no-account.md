@@ -4,6 +4,7 @@ Source: Figma node 9731-3297.
 
 ---ticket
 title: [Feature] Organizer Flow: Landing Page No Account
+id: z94kydab9b
 lane: FEATURE
 priority: normal
 status: to do
@@ -53,6 +54,7 @@ As an unauthenticated organizer, I want to learn about the Studio product, its f
 
 ---ticket
 title: [FE] Landing Page: layout - navigation - and static content
+id: z94kydab9c
 lane: FE
 parent: [Feature] Organizer Flow: Landing Page No Account
 priority: normal
@@ -174,6 +176,7 @@ As an unauthenticated organizer, I want to see the marketing landing page so I c
 
 ---ticket
 title: [QA] Landing Page: E2E unauthenticated visitor views pricing and clicks signup
+id: z94kydab9d
 lane: QA
 parent: [Feature] Organizer Flow: Landing Page No Account
 status: to do
@@ -215,6 +218,7 @@ As QA, I want to verify the unauthenticated landing page renders correctly and r
 
 ---ticket
 title: [FE] Bug: Fix landing page copy and links
+id: z94kydadcw
 lane: FE
 parent: [Feature] Organizer Flow: Landing Page No Account
 priority: high
@@ -269,5 +273,59 @@ As an unauthenticated organizer, I want the landing page to have correct text an
 ## Definition of done
 - [ ] All acceptance criteria pass
 - [ ] PR from `bug/landing-page-fixes` reviewed
+- [ ] Status moved to `qa` (VanPM sets it after review approves)
+---end
+
+---ticket
+title: [FE] Defect: Landing page design not pixel perfect
+id: z94kydb0ng
+lane: FE
+parent: [Feature] Organizer Flow: Landing Page No Account
+priority: high
+status: to do
+estimate_hours: 4
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
+assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
+
+## Context
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+
+**Defect Note:** The landing page was rejected by QA due to not being pixel-perfect with the Figma design. "the actual design is not properly implemented, please refer to figma link"
+
+## User story
+As an unauthenticated organizer, I want the landing page to exactly match the Figma design so the product looks professional.
+
+## In scope
+- Review and fix all layout, spacing, typography, and color deviations from the Figma design.
+- Ensure all sections (Hero, How it works, Features, Customization demo, Pricing, Footer) match the design exactly.
+
+## Out of scope (do NOT build)
+- Any new features or sections not in the Figma design.
+
+## Acceptance criteria
+- Given the browser viewport matches the desktop design, when the landing page renders, then all layout, spacing, colors, fonts, and assets match the Figma design exactly.
+- Given the browser viewport is narrower than 1024px, when the landing page renders, then the layout wraps responsibly per the design tokens and breakpoints.
+- Given the Hero section, when rendered, then the font sizes and layout match the Heavyitas display font and Host Grotesk body exactly per Figma.
+
+## Design fidelity
+- Tokens: Primary `#FF6100` · Text `#313131` · Muted `#797979` · White `#FFFFFF` · Black `#000000`
+- Font `Host Grotesk` — 400 at 18/20px (body), 500 at 18/20px (labels), 800 at 30/40/60px (headings)
+- Font `Heavitas` 400 at 50px — the display heading only
+- Reference the manifest at `specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json` for all exact asset details.
+
+## Technical notes
+- Branch prefix: `bug/landing-page-pixel-perfect`
+
+## Depends on / blocks
+- Depends on: none
+- Blocks: none
+
+## Test notes (how QA verifies)
+- Visually compare the implemented landing page against the Figma design.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+- [ ] PR from `bug/landing-page-pixel-perfect` reviewed
 - [ ] Status moved to `qa` (VanPM sets it after review approves)
 ---end

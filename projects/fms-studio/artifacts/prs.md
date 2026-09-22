@@ -4,6 +4,8 @@
 
 | Branch | Status | PR | Opened by | Task | Updated |
 |---|---|---|---|---|---|
+| `feature/47` | active |  | code-reviewer |  | 2026-09-22 |
+| `bug/landing-page-pixel-perfect` | pr_open | https://github.com/symphco/fms-studio/pull/47 | developer | Address PR feedback for landing page pixel perfect | 2026-09-22 |
 | `bug/organizer-flow-landing-page-no-account--z94kydab9b` | pr_open | 46 | code-reviewer | Address PR #46 feedback | 2026-09-22 |
 | `bug/landing-page-design-fix` | pr_open | https://github.com/symphco/fms-studio/pull/45 | developer | Fix landing page UI feedback | 2026-09-22 |
 | `bug/fix-tailwind-build` | merged_or_closed | https://github.com/symphco/fms-studio/pull/44 | code-reviewer | Fix Tailwind CSS not compiling in frontend production build | 2026-09-22 |

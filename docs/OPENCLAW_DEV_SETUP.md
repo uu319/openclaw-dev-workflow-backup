@@ -1,7 +1,7 @@
 # OpenClaw Fresh Setup — Development Factory
 
-**Version:** 1.7 · **Written:** 2026-09-17 · **Revised:** 2026-09-22 (1.7: the design reaches the code — Figma assets and tokens, not just screenshots; VanReviewer gains Figma read access and the fidelity check; 1.6: development-only + pluggable tracker/CI; 1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
-> **Architecture and self-fix runbook (2026-09-20):** `~/OPENCLAW_ARCHITECTURE.md` **v2.7** defines the layers, the file manifest, the per-project Flow profile and toolchain block, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
+**Version:** 1.8 · **Written:** 2026-09-17 · **Revised:** 2026-09-22 (1.8: a Figma link binds every step of the chain, not just VanPM's (§4.5 stays, orchestration gains the design-led gate); the off-box copy runs on a daily cron and the staleness alarm drops to 2 commits, §4.6; 1.7: the design reaches the code — Figma assets and tokens, not just screenshots; VanReviewer gains Figma read access and the fidelity check; 1.6: development-only + pluggable tracker/CI; 1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
+> **Architecture and self-fix runbook (2026-09-20):** `~/OPENCLAW_ARCHITECTURE.md` **v2.8** defines the layers, the file manifest, the per-project Flow profile and toolchain block, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
 
 **Target OpenClaw version:** 2026.9.4 or later (every config key below was checked against
 `/usr/lib/node_modules/openclaw/docs` on that version; re-check keys if you install a newer one).
@@ -397,6 +397,39 @@ openclaw cron add --name worktree-reap --every 10m --no-deliver --command \
 `reap: no orphaned worktree processes`. Automations live in the state database, not
 `openclaw.json`, so a restored backup keeps this; only a from-scratch rebuild needs the
 command above.
+
+### 4.6 Off-box copy automation
+
+Decision I says every framework repo has a copy off this box. The tool did that from the
+first day; what was missing was anything that *ran* it. The push was "Van, from a real
+terminal", and the linter only went red once a repo was **10 commits** behind - so a week
+of framework changes could sit on one VPS with nothing saying so. On 2026-09-22 five repos
+were committed and the only thing that noticed was a person asking whether a workflow
+existed.
+
+```bash
+openclaw cron add --name framework-offbox-push --every 1d --no-deliver --command \
+  'python3 /home/openclaw/.openclaw/workspace/_tools/framework_offbox.py push \
+   git@openclaw-backup.github.com:<owner>/<private repo>.git'
+```
+
+The SSH alias and key this uses (`openclaw-backup.github.com`,
+`~/.ssh/openclaw_framework_backup_ed25519`) are what made automation possible; before they
+were on the box the push could only happen from Van's laptop.
+
+Two rules for this job:
+
+- **Never add `--allow-rotated`.** The push scans every repo's full history for
+  token-shaped strings and refuses if it hits one. That flag is a human decision taken
+  *after* rotating the credential it named; on a timer it would quietly ship a leaked
+  token to a hosted remote every day.
+- **The linter is the alarm, not the cron.** `--no-deliver` keeps a healthy push silent,
+  so a failing one would be invisible - which is why `OFFBOX_STALE_AFTER` dropped from 10
+  to **2**. An expired key, a revoked deploy key or a refused scan now shows up as a red
+  line in the daily lint within a day or two. Check it with `openclaw cron runs <id>`.
+
+Verify once after creating it: `openclaw cron run <id>`, then `openclaw cron runs <id>`.
+A healthy run prints one `pushed` line per framework repo.
 
 ## 5. Gateway configuration (`openclaw.json`)
 

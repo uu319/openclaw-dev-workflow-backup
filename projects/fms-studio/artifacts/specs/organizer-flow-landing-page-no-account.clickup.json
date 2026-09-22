@@ -32,5 +32,14 @@
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f613e6b4-875c-4be5-8f61-c46f97ba09b6/9731-3297.png"
     },
     "desc_hash": "7a3e3db6228364d6"
+  },
+  "[FE] Defect: Landing page design not pixel perfect": {
+    "id": "z94kydb0ng",
+    "url": "https://app.clickup.com/t/z94kydb0ng",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/69a32271-b93d-4f83-87b5-34c43d985185/9731-3297.png"
+    },
+    "desc_hash": "95fea3f003572f2f"
   }
 }

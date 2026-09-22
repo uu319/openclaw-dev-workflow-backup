@@ -83,7 +83,8 @@ def framework_repos():
     return out + [(f"skill-{n}", os.path.join(SHARED_SKILLS_DIR, n)) for n in SHARED_SKILLS]
 
 
-OFFBOX_STALE_AFTER = 10   # commits behind before the off-box copy is a FIX
+OFFBOX_STALE_AFTER = 2    # commits behind before the off-box copy is a FIX (a daily cron pushes;
+                          # 10 meant a dead cron stayed invisible for a week of commits)
 
 ARTIFACT_DIRS = ["specs", "specs/_done", "specs/_superseded", "patches", "reviews", "qa", "runs"]
 
@@ -193,15 +194,19 @@ def check_offbox():
     summary = ", ".join(f"{nm} +{n}" for nm, n in behind)
     if never:
         fix("framework", f"no off-box copy yet for: {', '.join(never)} (Decision I)",
-            "Van, from a real terminal: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>")
+            "the `framework-offbox-push` cron should do this daily: `openclaw cron list`, then "
+            "`openclaw cron runs <id>` for why it has not - or push by hand: "
+            "python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>")
     elif any(n >= OFFBOX_STALE_AFTER for _, n in behind):
         # A copy that exists but stopped being updated used to report OK forever, with
         # the growing count appended to an OK line nobody reads. An expired credential,
         # a revoked deploy key or a failing push is then invisible until the day the
         # backup is needed. The whole point of the check is that it goes red on its own.
         fix("framework", f"off-box copy is stale ({OFFBOX_STALE_AFTER}+ commits behind): {summary}",
-            "push again: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>"
-            " - if it fails, the credential is the usual cause (a deploy key does not expire, a PAT does)")
+            "the daily `framework-offbox-push` cron has not pushed these: check it with `openclaw cron list` "
+            "and `openclaw cron runs <id>`. A push that ran and refused means the history token scan hit "
+            "something - read its output, rotate what it names, do not add --allow-rotated on the cron. "
+            "By hand: python3 ~/.openclaw/workspace/_tools/framework_offbox.py push <private repo url>")
     else:
         ok("framework", "off-box copy exists for every framework repo" + (f"; commits since: {summary}" if behind else ""))
 
