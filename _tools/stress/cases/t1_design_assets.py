@@ -166,10 +166,19 @@ def zero_byte_screenshot_is_rejected():
              "a screenshot that downloaded as 0 bytes must be rejected")
 
 
-def missing_asset_file_is_rejected():
+def empty_asset_cache_says_how_to_rebuild():
+    """The binaries are a gitignored cache; a fresh clone has none. That is not a spec defect."""
     art = _sandbox(GOOD_MANIFEST, assets_on_disk=())
+    out = _errors(_ticket(), art)
+    contains(out, "asset cache", "an empty cache must be named as such")
+    contains(out, "download_figma_images", "the error must say how to rebuild it")
+
+
+def missing_asset_file_is_rejected():
+    """One file gone while its siblings are there is a real defect, not a cold cache."""
+    art = _sandbox(GOOD_MANIFEST, assets_on_disk=(("unrelated.png", "x"),))
     contains(_errors(_ticket(), art), "file not found",
-             "a manifest entry whose file was never downloaded must be rejected")
+             "a manifest entry whose file is missing from a populated cache must be rejected")
 
 
 def named_colour_instead_of_hex_is_rejected():
@@ -181,13 +190,59 @@ def named_colour_instead_of_hex_is_rejected():
              "colours named in prose must be rejected")
 
 
-def asset_missing_from_fidelity_section_is_rejected():
-    """A manifest the ticket body never echoes leaves the developer without a destination."""
+def asset_owned_by_nobody_is_rejected():
+    """A manifest entry no ticket claims is a file that never reaches the repo."""
     art = _sandbox(GOOD_MANIFEST)
     body = BODY.format(fidelity="## Design fidelity\n- Tokens: Primary `#FF6100`\n"
                                 "- Assets: see the manifest\n\n")
-    contains(_errors(_ticket(body=body), art), "frontend/public/brand/logo.svg",
-             "an asset with no repo path in the body must be rejected")
+    contains(_errors(_ticket(body=body), art), "is in no ticket's",
+             "an asset claimed by no ticket must be rejected")
+
+
+def asset_owned_by_two_tickets_is_rejected():
+    """Two tickets writing the same file is two developers colliding."""
+    import contextlib, io
+    art = _sandbox(GOOD_MANIFEST)
+    push = _push()
+    ctx = {"artifacts_dir": os.path.realpath(art), "has_figma": True}
+    second = _ticket(title="[FE] Landing: hero states")
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(buf):
+            push.validate([PARENT, _ticket(), second], ctx, spec_path=None)
+    except SystemExit:
+        pass
+    contains(buf.getvalue(), "claimed by 2 tickets",
+             "an asset two tickets both ship must be rejected")
+
+
+def a_second_fe_ticket_may_own_no_assets():
+    """A copy fix or a wiring ticket ships no artwork; it must not have to duplicate the list."""
+    import contextlib, io
+    art = _sandbox(GOOD_MANIFEST)
+    push = _push()
+    ctx = {"artifacts_dir": os.path.realpath(art), "has_figma": True}
+    copyfix = _ticket(title="[FE] Landing: fix copy and links", estimate_hours="2",
+                      body=BODY.format(fidelity="## Design fidelity\n"
+                                                "- Tokens: Primary `#FF6100` - text `#313131`\n"
+                                                "- Assets: none - the layout ticket ships them\n\n"))
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stderr(buf):
+            push.validate([PARENT, _ticket(), copyfix], ctx, spec_path=None)
+    except SystemExit:
+        pass
+    eq(buf.getvalue(), "", "an [FE] ticket that owns no assets must pass when a sibling ships them")
+
+
+def inventing_an_asset_path_is_rejected():
+    """A path the body names but the manifest does not have was never downloaded."""
+    art = _sandbox(GOOD_MANIFEST)
+    body = BODY.format(fidelity="## Design fidelity\n- Tokens: Primary `#FF6100`\n"
+                                "- Assets:\n  - `assets/logo.svg` -> `frontend/public/brand/logo.svg`\n"
+                                "  - `assets/hero.png` -> `frontend/public/hero.png`\n\n")
+    contains(_errors(_ticket(body=body), art), "not in the asset manifest",
+             "an asset named in the body but never downloaded must be rejected")
 
 
 def broken_manifest_json_is_rejected():
@@ -240,9 +295,13 @@ CASES = [
     ("design: FE without design fidelity", fe_ticket_without_design_fidelity_is_rejected),
     ("design: zero-byte asset", zero_byte_asset_is_rejected),
     ("design: zero-byte screenshot", zero_byte_screenshot_is_rejected),
+    ("design: empty asset cache", empty_asset_cache_says_how_to_rebuild),
     ("design: manifest entry file missing", missing_asset_file_is_rejected),
     ("design: colour named instead of hex", named_colour_instead_of_hex_is_rejected),
-    ("design: asset has no repo path in body", asset_missing_from_fidelity_section_is_rejected),
+    ("design: asset owned by nobody", asset_owned_by_nobody_is_rejected),
+    ("design: asset owned by two tickets", asset_owned_by_two_tickets_is_rejected),
+    ("design: sibling FE ticket owns no assets", a_second_fe_ticket_may_own_no_assets),
+    ("design: invented asset path", inventing_an_asset_path_is_rejected),
     ("design: unparseable manifest", broken_manifest_json_is_rejected),
     ("design: manifest outside artifacts", manifest_outside_artifacts_is_rejected),
     ("design: backend ticket needs no assets", backend_ticket_needs_no_assets),

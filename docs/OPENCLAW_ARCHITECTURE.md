@@ -1,6 +1,6 @@
 # OpenClaw Dev Factory — Architecture and Self-Fix Runbook
 
-**Version:** 2.7 · **Date:** 2026-09-22 (2.7: **the design reaches the code** — VanPM downloads the screen's assets and exact tokens, not just a screenshot; `[FE]` tickets carry a `## Design fidelity` contract the push script enforces; VanDev copies assets into the worktree before agy runs, because agy cannot see the design; VanReviewer checks fidelity and gets Figma read access. Phase D. 2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 92 regression cases under `_tools/stress/` (75 at 2.6). 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Version:** 2.7 · **Date:** 2026-09-22 (2.7: **the design reaches the code** — VanPM downloads the screen's assets and exact tokens, not just a screenshot; `[FE]` tickets carry a `## Design fidelity` contract the push script enforces; VanDev copies assets into the worktree before agy runs, because agy cannot see the design; VanReviewer checks fidelity and gets Figma read access. Phase D. 2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 96 regression cases under `_tools/stress/` (75 at 2.6). 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
 **Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.7) stays the fresh-install reference (host, config keys, every incident).
 This document is shorter and answers a different question: **what is the architecture, why does the system
 keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
@@ -121,8 +121,10 @@ Every path, who creates it, who removes it, when. Anything else the linter flags
 │   │                                          (`.clickup.json` from before the rename is still read everywhere)
 │   ├── specs/_index.md, _planned-data.md      generated / VanPM-maintained
 │   ├── specs/_figma/<feature>/*.png           VanPM screenshots; archived with the spec
-│   ├── specs/_figma/<feature>/assets/        VanPM: the artwork the screen ships (image fills, icon SVGs)
-│   │                                          + manifest.json (file → repo_path); VanDev copies these into its worktree
+│   ├── specs/_figma/<feature>/assets/        VanPM: the artwork the screen ships (image fills, icon SVGs).
+│   │                                          manifest.json is COMMITTED (the contract: file → repo_path +
+│   │                                          the download block); the binaries are GITIGNORED - one screen
+│   │                                          is ~37 MB and rebuildable. VanDev copies them into its worktree
 │   ├── patches/<feature>--<lane>.patch        VanDev; kept (history)
 │   ├── reviews/<feature>--<lane>.md           VanReviewer; the saved review of a PR head (`--review-status` needs it)
 │   ├── qa/<feature>.md                        VanQA
@@ -561,7 +563,9 @@ Four gaps in series, each of which alone would have produced it:
 **The fix**, one change per gap:
 - **VanPM** (`feature-breakdown` SKILL.md Step 1.4–1.6): download every `type: IMAGE` fill, `[IMAGE-SVG]` node
   and `gifRef` into `specs/_figma/<feature-slug>/assets/`, passing each node's `imageDownloadArguments`
-  (without `cropTransform` a cropped fill downloads as the whole uncropped source), write `assets/manifest.json`
+  (they come in two shapes — inline JSON in the node's `fills`, and YAML under `GLOBAL_VARS`; reading only the
+  YAML form found 3 of the landing page's 12 crops and missed 4 assets outright, because two crops of one source
+  image look like one asset until you see their `filenameSuffix`), write `assets/manifest.json`
   (`file` → `repo_path`), and record tokens as exact values.
 - **The spec** (`ticket-template.md`, `spec-format.md`): a new `assets:` header key and a `## Design fidelity`
   body section on every `[FE]` ticket — hex tokens, the asset list with repo paths, "no placeholders" — plus a
@@ -579,7 +583,18 @@ Four gaps in series, each of which alone would have produced it:
 (`9794-6547.png` sat empty for five days). `tracker_push.py` now rejects a 0-byte screenshot or asset, and
 Step 1.1 tells VanPM to read the tool's per-file reply instead of assuming.
 
-**Regression suite:** `_tools/stress/cases/t1_design_assets.py`, 13 cases (92 offline cases total, 0 failing) —
+**Repo size.** The downloaded binaries are gitignored (`.gitignore`): the landing page alone is 37 MB, and 13
+screens would push this repo past 500 MB permanently, on a box whose framework repos are pushed off-box
+(Decision I). `manifest.json` is committed and carries `file_key`, `png_scale` and a per-asset `download` block,
+so the folder is a pure function of it; `tracker_push.py` tells you how to rebuild an empty cache instead of
+reporting 36 missing files. Note the 36 screenshot PNGs already committed before this (35 MB) were left alone.
+
+**Asset ownership.** A feature's `[FE]` tickets share one manifest. Each ships the subset its `## Design
+fidelity` lists; across the spec every asset must be shipped by **exactly one** ticket. Nobody owning it means
+the file never reaches the repo; two owning it means two developers writing the same path. A copy-fix or wiring
+ticket that ships nothing is fine and does not repeat the list.
+
+**Regression suite:** `_tools/stress/cases/t1_design_assets.py`, 17 cases (96 offline cases total, 0 failing) —
 including the two that must keep passing: a `[BE]` ticket is never asked for a manifest, and a project with no
 Figma file is untouched.
 

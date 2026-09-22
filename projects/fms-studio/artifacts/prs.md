@@ -4,7 +4,8 @@
 
 | Branch | Status | PR | Opened by | Task | Updated |
 |---|---|---|---|---|---|
-| `bug/fix-backend-test-di` | pr_open | https://github.com/symphco/fms-studio/pull/40 | developer | address PR feedback | 2026-09-21 |
+| `bug/backend-test-di-fix` | abandoned | https://github.com/symphco/fms-studio/pull/41 | developer | Address review feedback on backend test DI | 2026-09-22 |
+| `bug/fix-backend-test-di` | merged_or_closed | https://github.com/symphco/fms-studio/pull/40 | developer | address PR feedback | 2026-09-21 |
 | `feature/z94kydaw4w-pr-checks` | merged_or_closed | https://github.com/symphco/fms-studio/pull/39 | developer | Switch PR checks to Cloud Build | 2026-09-21 |
 | `bug/staging-build-c2dceb854d` | merged_or_closed | https://github.com/symphco/fms-studio/pull/38 | developer | Address PR 38 feedback | 2026-09-20 |
 | `bug/pr-37` | active |  | code-reviewer |  | 2026-09-19 |

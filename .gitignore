@@ -30,3 +30,13 @@ __pycache__/
 **/artifacts/delivery_state.json
 **/worktrees.jsonl.lock
 **/artifacts/delivery_state.json.lock
+
+# Figma asset cache: the artwork a screen ships, downloaded into
+# artifacts/specs/_figma/<feature>/assets/. These are BINARIES and they are
+# reproducible - each manifest.json carries the file key, scale and per-asset
+# download block, so `download_figma_images` rebuilds the folder exactly.
+# One landing page is 37 MB; committing 13 screens would push this repo past
+# 500 MB, permanently, and it is pushed off-box (Decision I). The manifest is
+# the contract and IS committed; the pixels are a cache.
+**/artifacts/specs/_figma/*/assets/*
+!**/artifacts/specs/_figma/*/assets/manifest.json

@@ -41,3 +41,8 @@ they auto-clean after 7 idle days.
 - **2026-09-17/18**: ~28 PRs (#3-#31, deploy/lockfile/peer-dep fixes) went out with no review or QA. Commit `90e659b` on `Development` is a README line VanQA pushed "to trigger CI".
 - **2026-09-19 lessons** (setup audit): approval questions that time out are a NO; task branch is pushed and the PR opened right after the lane commit, then reviewed on the PR (`openclaw/review` status on the head SHA, re-review after every push); QA gets its own worktree; nobody but Van merges; `nx test-ci` does not work (see PROJECT_CONTEXT test commands).
 - **2026-09-21**: `github-actions-pr-checks` shipped and closed.
+
+- 2026-09-22: Never send `sessions_send` to update a subagent (like VanDev or VanReviewer) after its session has settled. The system routes the orphaned message into the user's chat channel as an [Inter-session message], which causes confusion. If a child run is done and there is nothing to reply to the user, reply NO_REPLY or use sessions_yield correctly.
+
+## 2026-09-22
+- backend-test-di-fix: Fixed backend unit test dependency injection issue in app.controller.spec.ts. PR merged and deployed to staging (https://github.com/symphco/fms-studio/pull/41). Tickets moved to QA.

@@ -1,0 +1,638 @@
+{
+ "feature": "organizer-flow-landing-page-no-account",
+ "figma_node": "9731:3297",
+ "assets": [
+  {
+   "file": "assets/logo.svg",
+   "node": "9734:3530",
+   "kind": "svg",
+   "name": "FindMyShots Studio wordmark (header + footer)",
+   "width": 154,
+   "height": 26,
+   "repo_path": "frontend/public/brand/logo.svg",
+   "download": {
+    "fileName": "logo.svg"
+   }
+  },
+  {
+   "file": "assets/icon-shopping-bag.svg",
+   "node": "9773:3480",
+   "kind": "svg",
+   "name": "'shopping-bag' section icon",
+   "width": 54,
+   "height": 54,
+   "repo_path": "frontend/public/icons/shopping-bag.svg",
+   "download": {
+    "fileName": "icon-shopping-bag.svg"
+   }
+  },
+  {
+   "file": "assets/icon-calendar-heart.svg",
+   "node": "9773:3482",
+   "kind": "svg",
+   "name": "'calendar-heart' section icon",
+   "width": 54,
+   "height": 54,
+   "repo_path": "frontend/public/icons/calendar-heart.svg",
+   "download": {
+    "fileName": "icon-calendar-heart.svg"
+   }
+  },
+  {
+   "file": "assets/icon-ticket.svg",
+   "node": "9773:3486",
+   "kind": "svg",
+   "name": "'ticket' section icon",
+   "width": 54,
+   "height": 54,
+   "repo_path": "frontend/public/icons/ticket.svg",
+   "download": {
+    "fileName": "icon-ticket.svg"
+   }
+  },
+  {
+   "file": "assets/icon-gift.svg",
+   "node": "9773:3490",
+   "kind": "svg",
+   "name": "'gift' section icon",
+   "width": 54,
+   "height": 54,
+   "repo_path": "frontend/public/icons/gift.svg",
+   "download": {
+    "fileName": "icon-gift.svg"
+   }
+  },
+  {
+   "file": "assets/icon-images.svg",
+   "node": "9773:3512",
+   "kind": "svg",
+   "name": "'images' section icon",
+   "width": 54,
+   "height": 54,
+   "repo_path": "frontend/public/icons/images.svg",
+   "download": {
+    "fileName": "icon-images.svg"
+   }
+  },
+  {
+   "file": "assets/demo-swatch-gradient.svg",
+   "node": "9836:8756",
+   "kind": "svg",
+   "name": "theme-colour gradient swatch",
+   "width": 84,
+   "height": 84,
+   "repo_path": "frontend/public/marketing/demo/swatch-gradient.svg",
+   "download": {
+    "fileName": "demo-swatch-gradient.svg"
+   }
+  },
+  {
+   "file": "assets/demo-my-albums.png",
+   "node": "9836:7559",
+   "kind": "png",
+   "name": "customization demo: My Albums screen",
+   "width": 4096,
+   "height": 2290,
+   "repo_path": "frontend/public/marketing/demo/my-albums.png",
+   "download": {
+    "fileName": "demo-my-albums.png",
+    "imageRef": "a257929d7c8e53efa8c6544039ee5e0eeea0fac3"
+   }
+  },
+  {
+   "file": "assets/demo-swatch-overlay-01.png",
+   "node": "9836:8749",
+   "kind": "png",
+   "name": "theme-colour swatch overlay",
+   "width": 736,
+   "height": 920,
+   "repo_path": "frontend/public/marketing/demo/swatch-overlay-01.png",
+   "download": {
+    "fileName": "demo-swatch-overlay-01.png",
+    "imageRef": "10239b11b605e4389a1267e1f9f3c9c69b9508cc"
+   }
+  },
+  {
+   "file": "assets/demo-swatch-overlay-02.png",
+   "node": "9836:8751",
+   "kind": "png",
+   "name": "theme-colour swatch overlay",
+   "width": 1200,
+   "height": 675,
+   "repo_path": "frontend/public/marketing/demo/swatch-overlay-02.png",
+   "download": {
+    "fileName": "demo-swatch-overlay-02.png",
+    "imageRef": "3c1226f9bd8abf9451e848d9ac4d2ebc74205958"
+   }
+  },
+  {
+   "file": "assets/demo-approved.png",
+   "node": "9930:5207",
+   "kind": "png",
+   "name": "customization demo: approved album screen",
+   "width": 3456,
+   "height": 1966,
+   "repo_path": "frontend/public/marketing/demo/approved.png",
+   "download": {
+    "fileName": "demo-approved.png",
+    "imageRef": "e1daadf8dc56b456f83d7392cbcb14650970dec7"
+   }
+  },
+  {
+   "file": "assets/hero-photo-01.png",
+   "node": "9734:3570",
+   "kind": "png",
+   "name": "hero collage photo (image 97)",
+   "width": 1472,
+   "height": 1774,
+   "repo_path": "frontend/public/marketing/hero/photo-01.png",
+   "download": {
+    "fileName": "hero-photo-01.png",
+    "imageRef": "4295cb88cf2016433315d2d33def7eb9ec789d05"
+   }
+  },
+  {
+   "file": "assets/hero-photo-02.png",
+   "node": "9734:3571",
+   "kind": "png",
+   "name": "hero collage photo (image 98)",
+   "width": 1200,
+   "height": 1500,
+   "repo_path": "frontend/public/marketing/hero/photo-02.png",
+   "download": {
+    "fileName": "hero-photo-02.png",
+    "imageRef": "374b088cb2439858aeb56af051b5ba2ee5b389f4"
+   }
+  },
+  {
+   "file": "assets/hero-photo-03.png",
+   "node": "9734:3572",
+   "kind": "png",
+   "name": "hero collage photo (image 99)",
+   "width": 2400,
+   "height": 2918,
+   "repo_path": "frontend/public/marketing/hero/photo-03.png",
+   "download": {
+    "fileName": "hero-photo-03.png",
+    "imageRef": "31567b461248a664342bc71b582d3b6452ad6909"
+   }
+  },
+  {
+   "file": "assets/hero-photo-04.png",
+   "node": "9734:3573",
+   "kind": "png",
+   "name": "hero collage photo (image 107)",
+   "width": 736,
+   "height": 1308,
+   "repo_path": "frontend/public/marketing/hero/photo-04.png",
+   "download": {
+    "fileName": "hero-photo-04.png",
+    "imageRef": "581dc12df0b3c5dedee6616fd43c33f78d940062"
+   }
+  },
+  {
+   "file": "assets/hero-photo-05.png",
+   "node": "9734:3574",
+   "kind": "png",
+   "name": "hero collage photo (image 100)",
+   "width": 1472,
+   "height": 1852,
+   "repo_path": "frontend/public/marketing/hero/photo-05.png",
+   "download": {
+    "fileName": "hero-photo-05.png",
+    "imageRef": "7ff19bb3229eba8f86f00e6c8b8ef36be0467176"
+   }
+  },
+  {
+   "file": "assets/hero-photo-06.png",
+   "node": "9734:3575",
+   "kind": "png",
+   "name": "hero collage photo (image 101)",
+   "width": 800,
+   "height": 1104,
+   "repo_path": "frontend/public/marketing/hero/photo-06.png",
+   "download": {
+    "fileName": "hero-photo-06.png",
+    "imageRef": "8943dd1d3c7a1c1792b1287507ca531dfe5b4959"
+   }
+  },
+  {
+   "file": "assets/hero-photo-07-bcceaf.png",
+   "node": "9734:3576",
+   "kind": "png",
+   "name": "hero collage photo (image 104)",
+   "width": 735,
+   "height": 908,
+   "repo_path": "frontend/public/marketing/hero/photo-07.png",
+   "download": {
+    "fileName": "hero-photo-07.png",
+    "imageRef": "595f8dcc8ceac32fb2153bae2c7263c8425fd48d",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.9992935061454773,
+      0,
+      0.0003532608679961413
+     ],
+     [
+      0,
+      1,
+      0
+     ]
+    ],
+    "filenameSuffix": "bcceaf"
+   }
+  },
+  {
+   "file": "assets/hero-photo-08-41b289.png",
+   "node": "9734:3577",
+   "kind": "png",
+   "name": "hero collage photo (image 102)",
+   "width": 800,
+   "height": 537,
+   "repo_path": "frontend/public/marketing/hero/photo-08.png",
+   "download": {
+    "fileName": "hero-photo-08.png",
+    "imageRef": "436f942ba3fa4319b99bdda1a36e5da8a3844f43",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0.4475000202655792,
+      0.40666666626930237
+     ]
+    ],
+    "filenameSuffix": "41b289"
+   }
+  },
+  {
+   "file": "assets/hero-photo-09-7583dc.png",
+   "node": "9734:3578",
+   "kind": "png",
+   "name": "hero collage photo (Untitled design (7) 2)",
+   "width": 668,
+   "height": 536,
+   "repo_path": "frontend/public/marketing/hero/photo-09.png",
+   "download": {
+    "fileName": "hero-photo-09.png",
+    "imageRef": "e68c990c1f804e64f19cc5e0c6e6d7f32234a789",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.2947925925254822,
+      0,
+      0.3186231255531311
+     ],
+     [
+      0,
+      0.4422442317008972,
+      0.03630363196134567
+     ]
+    ],
+    "filenameSuffix": "7583dc"
+   }
+  },
+  {
+   "file": "assets/hero-photo-10-442cfc.png",
+   "node": "9734:3579",
+   "kind": "png",
+   "name": "hero collage photo (Untitled design (7) 4)",
+   "width": 488,
+   "height": 566,
+   "repo_path": "frontend/public/marketing/hero/photo-10.png",
+   "download": {
+    "fileName": "hero-photo-10.png",
+    "imageRef": "e68c990c1f804e64f19cc5e0c6e6d7f32234a789",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.2153574675321579,
+      0,
+      0.23036187887191772
+     ],
+     [
+      0,
+      0.4669966995716095,
+      0.5330033302307129
+     ]
+    ],
+    "filenameSuffix": "442cfc"
+   }
+  },
+  {
+   "file": "assets/hero-photo-11-317644.png",
+   "node": "9734:3580",
+   "kind": "png",
+   "name": "hero collage photo (Untitled design (7) 4)",
+   "width": 484,
+   "height": 490,
+   "repo_path": "frontend/public/marketing/hero/photo-11.png",
+   "download": {
+    "fileName": "hero-photo-11.png",
+    "imageRef": "e68c990c1f804e64f19cc5e0c6e6d7f32234a789",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.21359221637248993,
+      0,
+      0.7864077687263489
+     ],
+     [
+      0,
+      0.40429043769836426,
+      0
+     ]
+    ],
+    "filenameSuffix": "317644"
+   }
+  },
+  {
+   "file": "assets/hero-photo-12.png",
+   "node": "9734:3588",
+   "kind": "png",
+   "name": "hero collage photo (image 106)",
+   "width": 1200,
+   "height": 1500,
+   "repo_path": "frontend/public/marketing/hero/photo-12.png",
+   "download": {
+    "fileName": "hero-photo-12.png",
+    "imageRef": "4369e8203f2f347a9b0ac1eb5fd8600ab322bb6c"
+   }
+  },
+  {
+   "file": "assets/hero-photo-13.png",
+   "node": "9734:3589",
+   "kind": "png",
+   "name": "hero collage photo (image 105)",
+   "width": 735,
+   "height": 572,
+   "repo_path": "frontend/public/marketing/hero/photo-13.png",
+   "download": {
+    "fileName": "hero-photo-13.png",
+    "imageRef": "28f84f73ef9761cf76ab78183f22a33f016b3b2a"
+   }
+  },
+  {
+   "file": "assets/hero-scribble-01-2e7fd8.png",
+   "node": "9734:3581",
+   "kind": "png",
+   "name": "decorative scribble (row scribble 1)",
+   "width": 656,
+   "height": 182,
+   "repo_path": "frontend/public/marketing/hero/scribble-01.png",
+   "download": {
+    "fileName": "hero-scribble-01.png",
+    "imageRef": "c15705c706a52d8b3d48573e07418d79b99ad897",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.9999999403953552,
+      0,
+      0
+     ],
+     [
+      0,
+      0.24795639514923096,
+      0.752043604850769
+     ]
+    ],
+    "filenameSuffix": "2e7fd8"
+   }
+  },
+  {
+   "file": "assets/hero-scribble-02-5fb332.png",
+   "node": "9734:3582",
+   "kind": "png",
+   "name": "decorative scribble (row scribble 2)",
+   "width": 364,
+   "height": 424,
+   "repo_path": "frontend/public/marketing/hero/scribble-02.png",
+   "download": {
+    "fileName": "hero-scribble-02.png",
+    "imageRef": "c15705c706a52d8b3d48573e07418d79b99ad897",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      0.5548779964447021,
+      0,
+      0.22560973465442657
+     ],
+     [
+      0,
+      0.5776566863059998,
+      0
+     ]
+    ],
+    "filenameSuffix": "5fb332"
+   }
+  },
+  {
+   "file": "assets/hero-scribble-03-3f7df0.png",
+   "node": "9734:3583",
+   "kind": "png",
+   "name": "decorative scribble (row scribble (1) 2)",
+   "width": 174,
+   "height": 536,
+   "repo_path": "frontend/public/marketing/hero/scribble-03.png",
+   "download": {
+    "fileName": "hero-scribble-03.png",
+    "imageRef": "27ba83354b5e1debe19a107a925fe3d4098524e0",
+    "needsCropping": true,
+    "filenameSuffix": "3f7df0",
+    "cropTransform": [
+     [
+      0.23641304671764374,
+      0.0,
+      0.7635869979858398
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "assets/hero-scribble-04-19fb02.png",
+   "node": "9734:3584",
+   "kind": "png",
+   "name": "decorative scribble (row scribble (1) 1)",
+   "width": 483,
+   "height": 536,
+   "repo_path": "frontend/public/marketing/hero/scribble-04.png",
+   "download": {
+    "fileName": "hero-scribble-04.png",
+    "imageRef": "27ba83354b5e1debe19a107a925fe3d4098524e0",
+    "needsCropping": true,
+    "filenameSuffix": "19fb02",
+    "cropTransform": [
+     [
+      0.6559917330741882,
+      0.0,
+      0.0
+     ],
+     [
+      0.0,
+      0.9999999403953552,
+      0.0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "assets/hero-scribble-05-542cb2.png",
+   "node": "9734:3590",
+   "kind": "png",
+   "name": "decorative scribble (row scribble (4) 1)",
+   "width": 649,
+   "height": 165,
+   "repo_path": "frontend/public/marketing/hero/scribble-05.png",
+   "download": {
+    "fileName": "hero-scribble-05.png",
+    "imageRef": "50686c7f9e6f367e2ab95e2218dc2bc5fd8a46f7",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      1,
+      0,
+      0
+     ],
+     [
+      0,
+      0.6226415038108826,
+      0.37735849618911743
+     ]
+    ],
+    "filenameSuffix": "542cb2"
+   }
+  },
+  {
+   "file": "assets/hero-scribble-06-4491a3.png",
+   "node": "9734:3603",
+   "kind": "png",
+   "name": "decorative scribble (row scribble (5) 2)",
+   "width": 514,
+   "height": 432,
+   "repo_path": "frontend/public/marketing/hero/scribble-06.png",
+   "download": {
+    "fileName": "hero-scribble-06.png",
+    "imageRef": "42e1e83c14d0609caf0e2d271d4d4dab893002bc",
+    "needsCropping": true,
+    "filenameSuffix": "4491a3",
+    "cropTransform": [
+     [
+      0.6291309595108032,
+      0.0,
+      0.3708690404891968
+     ],
+     [
+      0.0,
+      1.0,
+      0.0
+     ]
+    ]
+   }
+  },
+  {
+   "file": "assets/feature-photo-01.png",
+   "node": "9761:3185",
+   "kind": "png",
+   "name": "feature card photo (image 113)",
+   "width": 1200,
+   "height": 1600,
+   "repo_path": "frontend/public/marketing/features/photo-01.png",
+   "download": {
+    "fileName": "feature-photo-01.png",
+    "imageRef": "d9064492a33d1808afcbd2ab0cec4ab3750a60d6"
+   }
+  },
+  {
+   "file": "assets/feature-photo-02.png",
+   "node": "9761:3191",
+   "kind": "png",
+   "name": "feature card photo (image 114)",
+   "width": 1200,
+   "height": 1599,
+   "repo_path": "frontend/public/marketing/features/photo-02.png",
+   "download": {
+    "fileName": "feature-photo-02.png",
+    "imageRef": "36acb4e2834cea845c88fc5dda94107720baa8b8"
+   }
+  },
+  {
+   "file": "assets/feature-photo-03.png",
+   "node": "9761:3197",
+   "kind": "png",
+   "name": "feature card photo (image 115)",
+   "width": 700,
+   "height": 1050,
+   "repo_path": "frontend/public/marketing/features/photo-03.png",
+   "download": {
+    "fileName": "feature-photo-03.png",
+    "imageRef": "73c410d6024506d37cabeacd8063ad0d529b56b7"
+   }
+  },
+  {
+   "file": "assets/feature-photo-04.png",
+   "node": "I9749:3711;9734:3637",
+   "kind": "png",
+   "name": "feature card photo (image 109)",
+   "width": 735,
+   "height": 551,
+   "repo_path": "frontend/public/marketing/features/photo-04.png",
+   "download": {
+    "fileName": "feature-photo-04.png",
+    "imageRef": "ba63bbed00a4e86d93860319c39fff4d1aa893de"
+   }
+  },
+  {
+   "file": "assets/feature-photo-05.png",
+   "node": "I9749:3716;9734:3648",
+   "kind": "png",
+   "name": "feature card photo (image 110)",
+   "width": 1200,
+   "height": 1499,
+   "repo_path": "frontend/public/marketing/features/photo-05.png",
+   "download": {
+    "fileName": "feature-photo-05.png",
+    "imageRef": "95c72e4020b333ebd5595a13640158c942064ecd"
+   }
+  },
+  {
+   "file": "assets/feature-photo-06-2de83a.png",
+   "node": "I9749:3716;9734:3651",
+   "kind": "png",
+   "name": "feature card photo (image 111)",
+   "width": 1200,
+   "height": 1499,
+   "repo_path": "frontend/public/marketing/features/photo-06.png",
+   "download": {
+    "fileName": "feature-photo-06.png",
+    "imageRef": "95c72e4020b333ebd5595a13640158c942064ecd",
+    "needsCropping": true,
+    "cropTransform": [
+     [
+      2.006636142730713,
+      -0.265039324760437,
+      -0.59303879737854
+     ],
+     [
+      0.16985155642032623,
+      2.006636142730713,
+      -0.6488237977027893
+     ]
+    ],
+    "filenameSuffix": "2de83a"
+   }
+  }
+ ],
+ "file_key": "ve5qHWxtQeBIxDF9xehnbn",
+ "png_scale": 2,
+ "note": "The files beside this manifest are a gitignored cache. Re-create them with download_figma_images using file_key, png_scale and each asset's download block, localPath = this folder."
+}
