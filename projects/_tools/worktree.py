@@ -6,6 +6,7 @@ Usage:
   worktree.py <slug> create <branch> [--agent <id>] [--task "<one line>"]
   worktree.py <slug> finish <branch> [--pr <url>]
   worktree.py <slug> sweep
+  worktree.py <slug> reap
   worktree.py <slug> list
   worktree.py <slug> path <branch>
 
@@ -17,6 +18,9 @@ Lifecycle (see the shared `worktree-lifecycle` skill for the why):
   finish  Removes the worktree right after the PR is opened, but ONLY if nothing in it
           exists only locally: no modified/untracked files, an upstream is set, and no
           commits ahead of it. Otherwise it keeps the folder and says why (exit 2).
+  reap    Kills only processes whose worktree is already gone (their cwd link ends in
+          "(deleted)"). Local, no network, safe to run on a timer: a process in a worktree
+          that still exists is never touched. `sweep` does this too, at the end.
   sweep   git fetch --prune + git worktree prune. A branch whose remote is gone
           (GitHub "Automatically delete head branches" after merge) is marked merged in
           the ledger and its local branch is deleted if its tip is the SHA we pushed.
@@ -647,6 +651,10 @@ def main():
     p = Project(slug)
     if cmd == "sweep":
         cmd_sweep(p)
+    elif cmd == "reap":
+        dead = reap_orphans(p.root)
+        print(f"reaped {len(dead)} orphaned process(es): " + ", ".join(str(x) for x in dead)
+              if dead else "reap: no orphaned worktree processes")
     elif cmd == "list":
         cmd_list(p)
     elif cmd in ("create", "finish", "path"):
