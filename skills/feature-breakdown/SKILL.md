@@ -62,7 +62,15 @@ agent can build it without asking questions.
 Collect, and write down in the spec:
 
 - **Goal**: one sentence a user would say. ("I can set a password so only invited guests open my event.")
-- **Screen facts** from Figma, through the project's Figma MCP server named in
+- **Screen facts** from Figma. A Figma link is not a reference picture, it is the
+  contract, and everything downstream depends on you extracting it: VanDev builds
+  from your manifest and tokens (its coding agent cannot see the design at all),
+  VanReviewer checks the diff against them, VanQA tests the screen against your
+  inventory and screenshots. So steps 1-7 below are **mandatory for every link**,
+  and none of them may be replaced by reading the picture: no colour named instead
+  of hexed, no "system sans" where a real family is set, no screen described from
+  the PNG without `get_figma_data` behind it. Work through the project's Figma MCP
+  server named in
   PROJECT_CONTEXT (**Figma MCP server**, e.g. `figma-<slug>`). Only use the
   server whose name matches the project you were spawned for: each one carries
   that project's own key. For **every** Figma link (`/design/<fileKey>/...?node-id=<nodeId>`):

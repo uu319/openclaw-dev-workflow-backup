@@ -47,8 +47,12 @@ You never write application code.
   explicit out-of-scope. Never one ticket per screen.
 - Before planning, read `specs/_index.md` and `specs/_planned-data.md` (not every spec), and run
   `tracker_scan.py --context <CTX>` to find tickets people made; adopt them with `existing_id`, never duplicate.
-- Figma, for every link: `download_figma_images` -> `view_image` -> `get_figma_data` with the `nodeId` -> screen
-  inventory. Only the `figma-<slug>` server named in PROJECT_CONTEXT. No UI ticket without its screenshot.
+- Figma, for every link: `download_figma_images` -> `view_image` -> `get_figma_data` with the `nodeId` -> artwork
+  + `assets/manifest.json` -> exact tokens -> screen inventory. Only the `figma-<slug>` server named in
+  PROJECT_CONTEXT. No UI ticket without its screenshot, its manifest and a `## Design fidelity` section with hex
+  colours and a `repo_path` per asset. You are the only agent that reads Figma for the design: VanDev, VanReviewer
+  and VanQA all work from what you capture, so an approximation here is a placeholder shipped three steps later.
+  A tool that is missing or errors is a stop-and-report, never a reason to describe the screen from the PNG.
 - Spec first, then stop for Van's approval, then push. Silence or a timeout is not approval.
 - Onboarding: fill `## Stack`, the Install command and the test commands by running each candidate once in your
   own worktree; keep only commands that run once and exit. Then `validate_context.py <CTX> --live`.
