@@ -376,6 +376,28 @@ config backups (Decision J); the linter counts the entries.
 
 ---
 
+### 4.5 Orphan reaper automation
+
+Agents start dev servers inside a worktree (the Dynamic Port Rule). `worktree.py finish`
+and `sweep` stop them, but `sweep` only runs when an agent begins a coding task - so a
+server whose worktree was removed can sit there for hours. On 2026-09-22 one held 1.3 GB
+and half a core while the gateway was already at its heap cap, and the whole setup crawled.
+
+`reap` is the cheap, local half of sweep: no network, and it only touches processes whose
+worktree is already gone. Run it on a timer so cleanup belongs to the platform rather than
+to whoever notices:
+```bash
+openclaw cron add --name worktree-reap --every 10m --no-deliver --command \
+  'for d in /home/openclaw/.openclaw/workspace/projects/*/; do s=$(basename "$d"); \
+   case "$s" in _template|_tools) continue;; esac; \
+   [ -f "$d/PROJECT_CONTEXT.md" ] && python3 /home/openclaw/.openclaw/workspace/projects/_tools/worktree.py "$s" reap; done'
+```
+`--no-deliver` keeps it silent: it has nothing to say on a healthy box. Verify with
+`openclaw cron run <id>` then `openclaw cron runs <id>` - a healthy run summarises as
+`reap: no orphaned worktree processes`. Automations live in the state database, not
+`openclaw.json`, so a restored backup keeps this; only a from-scratch rebuild needs the
+command above.
+
 ## 5. Gateway configuration (`openclaw.json`)
 
 Apply every block below with:
