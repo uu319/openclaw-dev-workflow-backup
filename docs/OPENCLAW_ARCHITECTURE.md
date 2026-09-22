@@ -1,7 +1,7 @@
 # OpenClaw Dev Factory — Architecture and Self-Fix Runbook
 
-**Version:** 2.6 · **Date:** 2026-09-21 (2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 75 regression cases under `_tools/stress/`. 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
-**Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.6) stays the fresh-install reference (host, config keys, every incident).
+**Version:** 2.7 · **Date:** 2026-09-22 (2.7: **the design reaches the code** — VanPM downloads the screen's assets and exact tokens, not just a screenshot; `[FE]` tickets carry a `## Design fidelity` contract the push script enforces; VanDev copies assets into the worktree before agy runs, because agy cannot see the design; VanReviewer checks fidelity and gets Figma read access. Phase D. 2.6: **stress-tested** — the primary checkout is kept current and never trampled (5.3a), a cached test result is not a test run, the merge gate states what it actually verified, the daily lint is owned by the first project that VALIDATES, feedback ack ids cannot collide, and PR stages require a repo. 92 regression cases under `_tools/stress/` (75 at 2.6). 2.5: **development-only**, and the toolchain becomes pluggable — tracker and CI are adapter packages, `Tracker: none` and `github-actions` are real answers, §4.1b. 2.4: delivery watcher — success by ancestry, blame by authorship, act only on our PRs, no state waits forever. 2.3: review check moved to merge time — `openclaw/review` status; shared skill under git. 2.2: steps 6-9 done; step 10 open) · **For:** Van (van@symph.co)
+**Companion:** `~/OPENCLAW_DEV_SETUP.md` ("the guide", v1.7) stays the fresh-install reference (host, config keys, every incident).
 This document is shorter and answers a different question: **what is the architecture, why does the system
 keep rotting, and how does it fix itself.** When the two disagree, this one wins and the guide gets edited.
 
@@ -74,7 +74,7 @@ The heartbeat runs it once a day (§7 step 9) and posts FIX lines to the project
 | Concern | The one tool | Owner | Reads | Never |
 |---|---|---|---|---|
 | Project facts | `projects/<slug>/PROJECT_CONTEXT.md` + `projects/_tools/validate_context.py` | main (onboarding), VanPM (`## Stack`) | — | duplicated into USER.md, skills, scripts |
-| Figma access | `projects/_tools/figma_mcp.py` → MCP `figma-<slug>` | VanPM, VanDev | context + vault | REST calls, shared key |
+| Figma access | `projects/_tools/figma_mcp.py` → MCP `figma-<slug>` | VanPM (screenshots, **assets**, tokens), VanDev (missing detail only), VanReviewer (confirm a value only) | context + vault | REST calls, shared key, a second download of an asset VanPM already fetched |
 | Tracker adapters | `projects/_tools/trackers/` (`for_project(fields, token)` → clickup · jira · linear · none) | shared by every tracker caller | context + vault | a provider name outside this package; a second client for the same tracker |
 | Board discovery | `projects/_tools/tracker_probe.py` → the board's real name, statuses and a proposed Status map | main (onboarding step 3d) | the tracker + vault | typing a board's statuses from memory; assuming another project's mapping |
 | Tracker read | `projects/_tools/tracker_mcp.py` → MCP `tracker-<slug>` (tools `tracker_get_task` / `tracker_create_task` / `tracker_update_task`; reads only for VanPM) | VanPM | context + vault | discovery of boards by API; a vendor in a tool name |
@@ -121,6 +121,8 @@ Every path, who creates it, who removes it, when. Anything else the linter flags
 │   │                                          (`.clickup.json` from before the rename is still read everywhere)
 │   ├── specs/_index.md, _planned-data.md      generated / VanPM-maintained
 │   ├── specs/_figma/<feature>/*.png           VanPM screenshots; archived with the spec
+│   ├── specs/_figma/<feature>/assets/        VanPM: the artwork the screen ships (image fills, icon SVGs)
+│   │                                          + manifest.json (file → repo_path); VanDev copies these into its worktree
 │   ├── patches/<feature>--<lane>.patch        VanDev; kept (history)
 │   ├── reviews/<feature>--<lane>.md           VanReviewer; the saved review of a PR head (`--review-status` needs it)
 │   ├── qa/<feature>.md                        VanQA
@@ -506,7 +508,7 @@ defers it until in-flight agent turns finish. Backup: `openclaw.json.pre-heartbe
 ### Phase A — DONE 2026-09-19 night: review check at merge time (Van approved)
 - `git_env.py --review-status <pr>`: `openclaw/review` = success/failure on the PR head, only when a review file's
   `Reviewed SHA` equals it; raw `statuses` API writes refused; the unused PR-create review code removed.
-- Reviewer AGENTS.md step 4, orchestration steps 3 + 5 (ready message only on a green head), main AGENTS.md,
+- Reviewer AGENTS.md step 5, orchestration steps 3 + 5 (ready message only on a green head), main AGENTS.md,
   and the shared `worktree-lifecycle` skill (was untracked and still described push-after-APPROVED; now its own repo,
   checked by the linter, which also flags any other shared skill).
 - Waiting on Van: token permission "Commit statuses: Read and write" (today reads and writes both return 403), then
@@ -537,6 +539,49 @@ Deploy signal none, a custom board (Backlog/In Dev/Staging/QA Failed/Blocked/Don
   `--exclude-secrets` was added to the schedule after that run; the first redacted run is 2026-09-20 09:30 UTC
   (check `global/manifest.json` → `excludedTables` lists `secret_store_entries`). Copy it off the box by PULLING
   from Van's own encrypted machine (rsync over ssh), never by a push from this box.
+
+### Phase D — DONE 2026-09-22: the design reaches the code (Van approved "do full fix")
+
+**The defect.** The Figma MCP worked perfectly and the pipeline used one tenth of it. Every one of the 36 files
+it had ever downloaded for fms-studio was a whole-screen PNG named `<nodeId>.png`. Zero assets: `git ls-files`
+found **no** image or SVG tracked in the repo, and `frontend/public/` held only a favicon. The landing page
+shipped `<div>FindMyShots Studio Logo</div>` where the wordmark belongs and a grey box captioned
+`[Photo Collage Image Placeholder]` where the hero belongs, in stock Tailwind colours, while the Figma
+inventory sitting in `specs/_figma/` had recorded `#FF6100` and `Host Grotesk` correctly. One screen group
+alone (event creation) contains 36 image fills across 239 nodes and 222 vector nodes, none of them fetched.
+
+Four gaps in series, each of which alone would have produced it:
+1. `feature-breakdown` Step 1 said "screenshot the frame". It never said "download the artwork in it".
+2. The spec carried no visual contract: AC must be falsifiable Given/When/Then, which pushes everything to
+   behaviour, and the DoD said "subtasks COMPLETE and QA passes". Nothing required matching the design.
+3. **`agy` cannot see the design** — no Figma tools, and the screenshots live outside the worktree it runs in.
+   The agent that actually writes the components got text only, and filled the gaps with placeholders.
+4. Nobody checked. QA and VanReviewer both had `figma-*` denied.
+
+**The fix**, one change per gap:
+- **VanPM** (`feature-breakdown` SKILL.md Step 1.4–1.6): download every `type: IMAGE` fill, `[IMAGE-SVG]` node
+  and `gifRef` into `specs/_figma/<feature-slug>/assets/`, passing each node's `imageDownloadArguments`
+  (without `cropTransform` a cropped fill downloads as the whole uncropped source), write `assets/manifest.json`
+  (`file` → `repo_path`), and record tokens as exact values.
+- **The spec** (`ticket-template.md`, `spec-format.md`): a new `assets:` header key and a `## Design fidelity`
+  body section on every `[FE]` ticket — hex tokens, the asset list with repo paths, "no placeholders" — plus a
+  DoD checkbox. `tracker_push.py` enforces all of it and renders the asset list into the ClickUp `## Design`
+  section. An empty `"assets": []` is valid and means "this screen is CSS only": the point is a positive
+  statement instead of silence.
+- **VanDev** (`AGENTS.md` step 2, `agy-coding` "Design work"): copy the assets into the worktree at their
+  `repo_path` **before** launching agy, verify non-empty, and name them and the tokens in the prompt with an
+  explicit "do not render a placeholder". Assets are never re-downloaded; they are already on disk.
+- **VanReviewer** (`AGENTS.md` step 2, `figma-*` un-denied, linter expectation inverted): four checks against
+  the diff — assets present, assets actually referenced, no stand-ins, tokens exact. Figma access is read-only
+  and only to confirm a value it thinks is wrong.
+
+**Also fixed:** a failed download used to leave a 0-byte file that every later check passed
+(`9794-6547.png` sat empty for five days). `tracker_push.py` now rejects a 0-byte screenshot or asset, and
+Step 1.1 tells VanPM to read the tool's per-file reply instead of assuming.
+
+**Regression suite:** `_tools/stress/cases/t1_design_assets.py`, 13 cases (92 offline cases total, 0 failing) —
+including the two that must keep passing: a `[BE]` ticket is never asked for a manifest, and a project with no
+Figma file is untouched.
 
 ### Step 10 — Second project dry-run (proves multi-project)
 Onboard a throwaway repo as `demo-teammate` with Profile `teammate`, Ticket source `human`, Deploy signal

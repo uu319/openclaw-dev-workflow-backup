@@ -1,7 +1,7 @@
 # OpenClaw Fresh Setup — Development Factory
 
-**Version:** 1.6 · **Written:** 2026-09-17 · **Revised:** 2026-09-20 (1.6: development-only + pluggable tracker/CI; 1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
-> **Architecture and self-fix runbook (2026-09-20):** `~/OPENCLAW_ARCHITECTURE.md` **v2.5** defines the layers, the file manifest, the per-project Flow profile and toolchain block, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
+**Version:** 1.7 · **Written:** 2026-09-17 · **Revised:** 2026-09-22 (1.7: the design reaches the code — Figma assets and tokens, not just screenshots; VanReviewer gains Figma read access and the fidelity check; 1.6: development-only + pluggable tracker/CI; 1.5: §12.5f delivery watcher stall; 1.4: aligned with the architecture doc) · **For:** Van (van@symph.co)
+> **Architecture and self-fix runbook (2026-09-20):** `~/OPENCLAW_ARCHITECTURE.md` **v2.7** defines the layers, the file manifest, the per-project Flow profile and toolchain block, and the ordered self-fix steps; `~/.openclaw/workspace/_tools/lint_workspace.py` checks this box against it. When that document and this guide disagree, the architecture document wins.
 
 **Target OpenClaw version:** 2026.9.4 or later (every config key below was checked against
 `/usr/lib/node_modules/openclaw/docs` on that version; re-check keys if you install a newer one).
@@ -117,8 +117,19 @@ orchestrator ever doing a specialist's work.
 | `main` | VanOpenClaw (Orchestrator) | Talks to Van, routes, verifies with a read-only shell, never builds or changes anything |
 | `project-manager` | VanPM | Figma/request → spec → tickets in the tracker |
 | `developer` | VanDev | One lane ticket → branch + PR; a coding agent writes the code, VanDev runs git/gh/builds |
-| `code-reviewer` | VanReviewer | PR vs ticket → APPROVED / CHANGES REQUESTED on GitHub + the `openclaw/review` status |
+| `code-reviewer` | VanReviewer | PR vs ticket → APPROVED / CHANGES REQUESTED on GitHub + the `openclaw/review` status, design fidelity included |
 | `qa-engineer` | VanQA | Feature vs acceptance criteria → PASS/FAIL report with defects |
+
+**How a design becomes code** (the chain is only as strong as its weakest link — it broke at every link
+before 2026-09-22, architecture Phase D). VanPM downloads three things from each Figma frame, not one: the
+**screenshot** (`specs/_figma/<feature>/<nodeId>.png`, what the screen looks like), the **assets**
+(`specs/_figma/<feature>/assets/` + `manifest.json` — the image fills and icon SVGs the code has to ship,
+which a screenshot cannot be cut up into), and the **tokens** (exact hexes and font families). Those become a
+`## Design fidelity` section on every `[FE]` ticket, which `tracker_push.py` refuses to push without. VanDev
+copies the assets into its worktree **before** launching the coding agent and names them in the prompt —
+the coding agent has no Figma tools and cannot see a PNG, so anything not in its prompt becomes a placeholder.
+VanReviewer then checks the diff actually contains and renders them. A screen with no artwork says so with an
+empty manifest; silence is what produced the placeholders.
 
 Every project brings its own:
 1. **Project management tool** (ClickUp now; Jira/Linear later) — reached through an MCP server per project.
@@ -440,7 +451,7 @@ routing: main is never given a project `cwd`, never runs the pipeline steps itse
         identity: { name: "VanReviewer", emoji: "🔍", theme: "Sharp, eagle-eyed, constructive" },
         subagents: { allowAgents: [] },
         memory: { search: { sources: ["memory"], rememberAcrossConversations: false } },
-        tools: { deny: ["figma-*", "tracker-*"] }
+        tools: { deny: ["tracker-*"] }   // figma-* read access since 2026-09-22: it checks design fidelity
       },
       "qa-engineer": {
         workspace: "/home/openclaw/.openclaw/workspace/qa-engineer",
@@ -458,6 +469,13 @@ Create the agents first: `openclaw agents add <id> --workspace ~/.openclaw/works
 Note on `figma-*` deny: it only **hides** the tools. OpenClaw still spawns every `figma-*` server
 (~120 MB each) in any agent session that has tools, because the MCP runtime checks per-run
 `toolsAllow`, not the agent deny list. Mitigation is 5.5.
+
+**VanReviewer Figma read (2026-09-22, Phase D):** the reviewer used to deny `figma-*` too, and that is part of
+why every fms-studio screen passed review with a text logo and a grey placeholder box: nobody in the chain ever
+compared the built screen to the design. It now denies only `tracker-*`, and the linter expects exactly that
+(`figma-*` in the reviewer's deny list is a FIX line, not an OK). The access is read-only by prompt: confirm a
+value the ticket does not state, never download assets — VanPM already did that, into Internal Artifacts.
+VanQA keeps both denies; it tests behaviour against the AC, and has no design contract to check.
 
 **VanPM tracker writes (2026-09-19):** that is why `project-manager` denies `tracker-*__tracker_update_task` and
 `tracker-*__tracker_create_task` (the linter checks these exact lists; `apply_patch` is not denied anywhere on the live box). It keeps `tracker_get_task` for reads; every write goes through

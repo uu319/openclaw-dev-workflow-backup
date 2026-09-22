@@ -320,9 +320,16 @@ def check_config(ctxs):
     pm_deny = ent.get("project-manager", {}).get("tools", {}).get("deny", [])
     need = {"tracker-*__tracker_update_task", "tracker-*__tracker_create_task"}
     (ok if need <= set(pm_deny) else fix)("config", f"project-manager deny = {pm_deny}", "" if need <= set(pm_deny) else "add the two tracker write tools (writes go through scripts)")
-    for a in ("qa-engineer", "code-reviewer"):
-        d = set(ent.get(a, {}).get("tools", {}).get("deny", []))
-        (ok if {"figma-*", "tracker-*"} <= d else fix)("config", f"{a} deny = {sorted(d)}", "" if {"figma-*", "tracker-*"} <= d else "add figma-* and tracker-*")
+    qa_deny = set(ent.get("qa-engineer", {}).get("tools", {}).get("deny", []))
+    (ok if {"figma-*", "tracker-*"} <= qa_deny else fix)("config", f"qa-engineer deny = {sorted(qa_deny)}",
+        "" if {"figma-*", "tracker-*"} <= qa_deny else "add figma-* and tracker-*")
+    # VanReviewer reads Figma (2026-09-21): it checks the built screen against the design, which
+    # nobody did before - every fms-studio screen passed review with a text logo and a grey box
+    # where the artwork belongs. It still never touches the tracker.
+    rv_deny = set(ent.get("code-reviewer", {}).get("tools", {}).get("deny", []))
+    rv_bad = ("tracker-*" not in rv_deny) or ("figma-*" in rv_deny)
+    (ok if not rv_bad else fix)("config", f"code-reviewer deny = {sorted(rv_deny)}",
+        "" if not rv_bad else "deny tracker-* only: figma-* is needed for the design-fidelity check")
     servers = set(c.get("mcp", {}).get("servers", {}).keys())
     for slug, f in ctxs.items():
         want = ({f"tracker-{slug}"} if f.get("tracker", "none") != "none" else set()) \
