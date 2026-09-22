@@ -58,6 +58,14 @@ default branch.
   untracked files, an upstream is set, zero unpushed commits. If anything is local it keeps
   the folder, prints why and exits 2. Exit 2 is not an error to work around: push the work,
   or tell Van what is there. Never `--force`, never `rm -rf`.
+- **finish** and **sweep** also stop what is still running *inside* the worktree before it is
+  removed (SIGTERM, then SIGKILL after 5s), and report the pids. A dev server started under the
+  Dynamic Port Rule otherwise outlives its worktree: on 2026-09-22 a `next dev` kept running with
+  a deleted working directory, holding 1.3 GB and half a core on a 2-core box, and the gateway -
+  already at its heap cap - slowed to the point where even Discord emoji reactions lagged. A
+  process in a worktree that still exists is never touched: it may be doing real work. `sweep`
+  additionally reaps orphans whose worktree is already gone, which is the only way to clear one
+  left behind by an older run.
 - **sweep** runs `git fetch --prune` + `git worktree prune`. For a branch whose remote is gone
   (GitHub deletes head branches after merge) it asks GitHub for the PR: if it is MERGED/CLOSED
   and the PR head equals the local tip, the worktree and local branch are removed - even when
