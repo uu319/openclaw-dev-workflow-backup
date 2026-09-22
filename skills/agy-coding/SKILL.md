@@ -84,6 +84,13 @@ text ticket alone it invents stand-ins — a `<div>Logo</div>`, a grey box capti
 "[Photo Collage Image Placeholder]", `bg-orange-500` where the brand is `#FF6100`.
 Every fms-studio screen built before 2026-09-21 shipped that way.
 
+This is not optional on design-led work: a ticket built from the screenshot, from the
+Figma link, or from your own judgement of what the screen should look like is a
+rework, whatever it looks like in the browser. If the ticket carries a Figma link but
+no `## Design fidelity` section, or names assets that are not on disk, stop and report
+it to the orchestrator - VanPM rebuilds it from the manifest. Never approximate a
+colour, a font or an asset to keep moving.
+
 So when the ticket has a `## Design fidelity` section, do this **before** launching:
 
 1. **Copy the assets into the worktree**, at the `repo_path` the section gives:

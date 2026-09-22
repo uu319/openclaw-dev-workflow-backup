@@ -54,6 +54,11 @@ The routine, every time:
    `file_key`, `png_scale` and per-asset `download` blocks. Then carry the tokens and the asset paths into the
    prompt (`agy-coding` skill, "Design work"). agy cannot see the design: unprompted it writes a grey box
    and a text logo, which is exactly what shipped before 2026-09-21.
+   **A ticket that carries a Figma link but no `## Design fidelity` section, or whose manifest names assets
+   that are not on disk, is incomplete - stop and report it to the orchestrator.** It is VanPM's to fix, and
+   the one thing you must never do instead is build the screen from the screenshot, from the Figma link, or
+   from your own sense of what it should look like. You have the `figma-<slug>__*` tools for a single value
+   the ticket left out, never for the design itself. No eyeballed hex, no "close enough" font, no placeholder.
 3. Code writing: substantial work (more than a couple of files, refactors, test suites) goes to **agy** as a
    background worker (`agy-coding` skill), launched with `workdir:` = the worktree and the preparation receipt
    `create` printed in its prompt, output piped through `tee` into
@@ -63,6 +68,10 @@ The routine, every time:
    lint commands (never a Forbidden one), git, `gh`, `gcloud`, reading logs. Never wrap these in a script for a
    worker, and never ask Van to `/approve` a script.
 5. `git add`, then `git -C <worktree> status` must be empty before you commit: an uncommitted file is not in the PR.
+   On a design-led ticket, check the diff before you push: every `repo_path` from `## Design fidelity` is an added
+   file **and** is referenced by the code, and `git -C <worktree> diff --cached` contains no `placeholder`,
+   `Placeholder` or `TODO` where artwork belongs. An asset copied in but never rendered means agy ignored it -
+   that is a rework, not a pass.
 6. Push the branch and open the PR when your spawn message says so (project-orchestration step 2):
    `git_env.py <slug> -- gh pr create --base <Flow PR base> ...`. The PR body lists the ClickUp URL of every
    ticket it delivers (`https://app.clickup.com/t/<id>`, from the spec's `.clickup.json`). Reply with the real PR
