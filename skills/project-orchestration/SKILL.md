@@ -55,6 +55,40 @@ land as COMMENTED. VanReviewer therefore submits `--comment` (or `--request-chan
 the first line of the review body (`APPROVED` / `CHANGES REQUESTED`) and in its reply to you. A real GitHub
 approval needs a second GitHub account for VanReviewer.
 
+## Design-led work: a Figma link binds every step
+
+A Figma link anywhere in the request - Van's message, a ticket, a spec, a PR
+comment - makes the work **design-led**. The design is then part of the contract,
+not a reference picture, and every step below runs its Figma half. There is no
+"build it from the screenshot" path and no eyeballing at any stage: every
+fms-studio screen shipped before 2026-09-21 was built that way, and every one of
+them went out with a text stand-in where the wordmark belongs and a grey box
+where the hero image belongs.
+
+Check this at step 0, before you spawn anything:
+
+- CTX must name a **Figma file** and a **Figma MCP server** (`figma-<slug>`). If
+  it does not, stop and tell Van the project has to be onboarded with its Figma
+  key first. Never let an agent reach Figma through another project's server or
+  through the REST API, and never call a `figma-*` tool yourself.
+- The link goes to **VanPM first, always** - including a one-line "make this
+  match the design" fix. A Figma link handed straight to VanDev is the failure
+  this section exists to prevent: VanDev gets no screen inventory, no asset
+  manifest and no tokens, and `agy` cannot see the design at all.
+
+What each step owes, and what you check before moving on:
+
+| Step | Agent | Its Figma obligation | You verify before relaying |
+|---|---|---|---|
+| 1 | VanPM | Per node: `download_figma_images` -> `view_image` -> `get_figma_data`, then the artwork, the manifest and the exact tokens | `specs/_figma/<feature-slug>.md` exists; each `<nodeId>.png` is non-zero; `specs/_figma/<feature-slug>/assets/manifest.json` exists (`"assets": []` is a valid answer, silence is not) |
+| 2 | VanDev | None of its own: it builds from the manifest files and the ticket's `## Design fidelity` values | the PR diff adds every `repo_path` that section lists, and references each one |
+| 3 | VanReviewer | `get_figma_data` on the ticket's `fileKey` + `nodeId` to confirm any value it doubts | the review file carries a `## Design fidelity` block |
+| 4 | VanQA | None live (Figma is denied to it): it tests against the captured inventory, screenshots and manifest | the QA report carries a `## Design fidelity` block |
+
+A step that cannot produce its artifact **stops and reports**; it never
+substitutes an approximation. Relaying "done" without the artifact is exactly
+how the placeholder shipped.
+
 ## Team mode (Profile `teammate` or `maintenance`)
 
 Van is one developer on a human team that shares the repo and the board. Then:
@@ -78,6 +112,10 @@ These rules still apply to it:
 - Code VanDev changes goes on a task branch with a PR (step 2) and gets a VanReviewer
   review on that PR (step 3) before you tell Van it is ready; merging stays Van's
   (step 5). Deploy fixes and "small" fixes included.
+- A request that carries a **Figma link** is never a single-agent VanDev job, however
+  small it sounds ("just make this header match the design"). It goes to VanPM first for
+  the Figma pass and the `## Design fidelity` section; then VanDev, then review. See
+  "Design-led work" above.
 - If the work has a tracker ticket, VanPM claims it (step 2) and the delivery
   watcher (step 6) moves it once the change is on staging: the PR body must carry its ClickUp
   URL. Any ticket work goes to VanPM, never VanDev.
@@ -119,6 +157,9 @@ it to Van instead of guessing.
 - Run `python3 /home/openclaw/.openclaw/workspace/projects/_tools/validate_context.py CTX`.
   Not VALID → fix via onboarding; do not continue.
 - Keep `flow` and `status` from `validate_context.py CTX --json`: they decide which steps below run.
+- If the request carries a Figma link, it is design-led: run the checks in
+  "Design-led work" above (CTX has a Figma file + `figma-<slug>` server; the link
+  goes to VanPM first) before step 1.
 - Run the delivery watcher once (step 6) and handle what it prints.
 
 ## 1. Spec (VanPM) — stages `spec` + `tickets`
@@ -129,7 +170,29 @@ Spawn `project-manager`:
 > Write the spec to `<Internal Artifacts>/specs/<feature-slug>.md` and stop
 > for approval. Do not push tickets.
 
-`sessions_yield` until done. Relay VanPM's summary (parent, subtasks per lane,
+When the feature has Figma links, add to that message:
+
+> These Figma links are the design contract, so the `feature-breakdown` Figma
+> steps are mandatory for **every** link, through the `figma-<slug>` MCP server
+> named in CTX: `download_figma_images` (screenshot), `view_image` (look at it),
+> `get_figma_data` with the `nodeId` (exact text, sizes, hex colours, fonts,
+> radii), then download the artwork itself (IMAGE fills, `[IMAGE-SVG]` nodes,
+> `gifRef`s) into `specs/_figma/<feature-slug>/assets/` and write its
+> `manifest.json`. Do not describe a screen from the PNG alone and do not
+> approximate a value: every colour is a hex and every font is a real family in
+> the spec. Every `[FE]` ticket carries `figma:`, `screenshots:`, `assets:` and a
+> `## Design fidelity` section. If a Figma tool is missing or errors, stop and
+> report it - do not fall back to the REST API or to eyeballing. Reply with the
+> paths you wrote.
+
+`sessions_yield` until done. On a design-led feature, **check the artifacts before
+you relay anything**: `ls` `specs/_figma/<feature-slug>.md`, each screenshot PNG
+(non-zero bytes - a 0-byte screenshot sat unnoticed in fms-studio for five days)
+and `specs/_figma/<feature-slug>/assets/manifest.json`. Any of them missing or
+empty → `sessions_send` VanPM to finish the Figma pass; do not relay the summary
+and do not ask Van for a go on a spec that has no design data behind it.
+
+Relay VanPM's summary (parent, subtasks per lane,
 hours, open questions) to the user **verbatim**. Wait for Van's explicit "go".
 No answer is not a go. On "go": `sessions_send` VanPM "approved, push". VanPM
 replies with ticket links; relay them.
@@ -167,7 +230,23 @@ For each unit of work:
    > `<Internal Artifacts>/specs/<feature-slug>.md` on branch `<branch>`
    > (`worktree-lifecycle`: `sweep`, then `create <branch>`). Commit the changes. Then immediately push the branch (`git push -u origin <branch>`) and open a PR into `<PR base>` using `git_env.py <slug> -- gh pr create --base <PR base>`. The PR body must list the ticket's URL (skip when the project has no tracker). Reply with the PR URL and the commit SHA.
 
-   `sessions_yield`. VanDev says the spec is wrong or impossible → VanPM sets
+   When the ticket has a `## Design fidelity` section, add to that message:
+
+   > This is a design-led ticket. Before you launch the coding agent, copy every
+   > asset from `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/` into the
+   > worktree at the `repo_path` that section names (`install -D`), check each one
+   > is non-empty, and put the asset paths and the exact tokens (hex colours, font
+   > families and weights, radii) in the prompt. `agy` cannot see the design:
+   > unprompted it writes a grey box and a text logo. No placeholder, no text
+   > stand-in, no near colour from the framework palette, no value you eyeballed
+   > from the screenshot. If the assets folder holds only `manifest.json`, or an
+   > asset is 0 bytes, or the ticket gives you no `## Design fidelity` section at
+   > all, stop and report it instead of building around it. Before you commit,
+   > confirm the diff adds each asset **and** references it.
+
+   `sessions_yield`. A stop of that kind is VanPM's to fix (rebuild the asset cache
+   from the manifest, or write the missing `## Design fidelity` section), not
+   VanDev's and not yours. VanDev says the spec is wrong or impossible → VanPM sets
    the ticket `on hold`, go back to step 1 with the objection; never "fix" the
    spec yourself.
 
@@ -177,7 +256,24 @@ Spawn `code-reviewer`:
 
 > Project `<slug>`. Context: `<CTX>`. Review the PR at `<PR URL>` natively on GitHub using `git_env.py <slug> -- gh pr review <PR URL>`. If changes are needed, use `--request-changes` and leave your comments on GitHub. If it is good, use `--comment` with `APPROVED` as the first line of the body (`--approve` fails: same GitHub account as the PR author). Save the same review as `<Internal Artifacts>/reviews/<feature-slug>--<lane-slug>.md` (line 1 verdict, line 2 `Reviewed SHA: <head sha>`), then run `git_env.py <slug> --review-status <PR URL>`. Reply with the verdict, the file path and that command's output line.
 
-- `ls` the review file before relaying the verdict.
+When the PR's ticket has a `## Design fidelity` section, add to that message:
+
+> Check the design too, against the raw Figma data - not against the screenshot
+> and not by eye. Every `repo_path` in the ticket's `## Design fidelity` section is
+> an added, non-empty file in the diff **and** is referenced by code in the same
+> diff; the diff contains no `placeholder`/`Placeholder`/`[Image`/`Logo</` and no
+> plain coloured box where artwork belongs; the hexes and font families are the
+> exact ones in the section, defined once in the theme rather than per component.
+> Any value the ticket does not state, or one you think is wrong, you resolve with
+> `get_figma_data` on the ticket's `fileKey` + `nodeId` through the `figma-<slug>`
+> server - read only: never re-download assets, never another project's server.
+> Your review file carries a `## Design fidelity` block: one line per asset (repo
+> path → the file:line that renders it, or MISSING) and one line on the tokens. A
+> missing or unreferenced asset, a stand-in, or a wrong token is **blocking**.
+
+- `ls` the review file before relaying the verdict. On a design-led ticket, read it
+  and confirm the `## Design fidelity` block is there: a verdict without it is not a
+  review of this ticket, so send it back rather than relaying an approval.
 - The review's result on GitHub is the commit status `openclaw/review` on the PR head (green = APPROVED,
   red = CHANGES REQUESTED). Any push after the review is a new commit without it, so every fix is reviewed
   again (this includes `PR_FEEDBACK` fixes). If VanReviewer's line says `403 … Commit statuses`, tell Van once:
@@ -194,6 +290,23 @@ This is our internal pre-merge check; it changes no ticket status. Spawn `qa-eng
 > `finish <branch>`). Use only the test commands in PROJECT_CONTEXT. Write
 > `<Internal Artifacts>/qa/<feature-slug>.md` with the tested SHA. Do not modify code,
 > commit or push.
+
+When the feature is design-led, add to that message:
+
+> Verify the screens against the captured Figma data, which is the same raw
+> extraction the spec was written from: the screen inventory
+> `<Internal Artifacts>/specs/_figma/<feature-slug>.md` (every element, its exact
+> copy and its tokens), the screenshots `specs/_figma/<feature-slug>/<nodeId>.png`
+> (open them with `view_image` and compare against the running screen), and
+> `specs/_figma/<feature-slug>/assets/manifest.json` (every asset, and the
+> `repo_path` it must live at). Figma itself is denied to you - that inventory is
+> your source, and it is what the tickets were written from, so a disagreement
+> between the two is a finding. Confirm each manifest asset exists in the branch at
+> its `repo_path`, is non-empty, and is what actually renders on the screen; check
+> the tokens as rendered (computed colour, font family, radius), not as declared in
+> a config file. Report it in a `## Design fidelity` block in your report, one line
+> per asset and one on the tokens. A placeholder box, a text stand-in or a near
+> colour is a defect with the same weight as a broken button.
 
 What VanQA tests against depends on what exists: the `[QA]` ticket's scenario plus the
 parent's criteria when VanPM wrote the spec; otherwise the human ticket's own acceptance
@@ -221,6 +334,9 @@ First verify, then send the message the Flow **Merge by** calls for.
   Exit 3 → something could not be READ (a missing token permission); say exactly that rather than
   calling it ready. Also confirm the head SHA is the one VanQA tested.
 - A red check is VanDev's to fix on the same branch, then the new head needs a new review (step 3).
+- On a design-led feature, also read the review file and the QA report and confirm both carry
+  their `## Design fidelity` block, each asset accounted for. `git_env.py` cannot see the design;
+  this is the last place a placeholder can still be caught before Van merges it.
 
 - **Merge by `van`** (default): "Feature `<feature-slug>` passed review and QA. Everything is ready on
   the PR. Merging is yours; tickets move when the merge is detected." Relay the PR link.

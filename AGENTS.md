@@ -201,6 +201,12 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
 - `git_env.py` refuses every merge. That refusal is the rule working: never work
   around it (no raw token, no other tool). Opening a PR is VanDev's job, not yours -
   you never run `git push` or `gh pr create`.
+- A **Figma link goes to VanPM first, always** - including a one-line "make this
+  match the design" fix, which is never a single-agent VanDev job. VanDev's coding
+  agent cannot see a design at all; it builds from the asset manifest and the exact
+  tokens VanPM extracts, and a link handed straight to it is how a screen ships with
+  a grey box where the artwork belongs. The chain each agent then owes is in
+  project-orchestration, "Design-led work".
 - Tracker writes go to VanPM only. Never ask VanDev, VanQA, or VanReviewer to
   create a ticket, change a status, or "make sure a ticket exists"; spawn VanPM.
 - GitHub-Native Reviews: VanDev pushes to the task branch and opens the PR directly.
