@@ -32,9 +32,13 @@ agent can build it without asking questions.
    `secrets` tool's `list` action or `openclaw secrets store list`/`get`: they print
    token values in plain text into your transcript (this leaked the ClickUp token
    four times in September). Do not shell out to `openclaw secrets` at all.
-3. Dedupe: the push script searches the list by exact title and updates
-   instead of creating. Still, if the user names a feature that already has a
-   ticket, say so in your summary.
+3. Dedupe: every ticket the push creates gets its board id written back into
+   its own `---ticket` header as `id:`, and later pushes match on that id, not
+   on the title. So you may rewrite a `title:` freely - the ticket is renamed on
+   the board, not duplicated. **Commit the spec after a push**: the `id:` lines
+   are how the next push finds those tickets. A ticket with no `id:` yet is
+   still matched by exact title. Still, if the user names a feature that already
+   has a ticket, say so in your summary.
 4. **Read the project map before planning.** A feature is never planned alone,
    but never read every spec either. Read these four, in order:
    - `python3 /home/openclaw/.openclaw/workspace/projects/_tools/spec_index.py <slug> --print`:
@@ -298,10 +302,16 @@ When the spec **rewrites** tickets that were pushed before (a `<feature-slug>.cl
 already exists), the dry run lists old tickets the new spec no longer has as
 `STALE`. Add `--prune` to the real push so they move to `cancelled` instead of
 lingering next to the new ones; say which ones in your report.
-Never hand-write `curl` calls to ClickUp. The script dedupes by title, creates
-the parent before subtasks, sets tags/priority/estimate/status, links
-dependencies, and writes `<spec>.clickup.json` as the completion marker so a
-re-run updates instead of duplicating.
+Never hand-write `curl` calls to ClickUp. The script matches each ticket by the
+`id:` in its header, creates the parent before subtasks, sets
+tags/priority/estimate/status, links dependencies, stamps the new ids back into
+the spec, and writes `<spec>.clickup.json` as the completion marker so a re-run
+updates instead of duplicating.
+- **Exit 5, "Ticket ids the board does not have"**: a spec `id:` names a ticket
+  the tracker cannot read - usually deleted on the board. Nothing was written.
+  Delete that `id:` line to have the push create a fresh ticket, or correct it.
+  Never "fix" it by deleting the line when the ticket still exists somewhere:
+  that is how the board ends up with two of everything.
 
 ## Step 6 · Verify, report, remember
 

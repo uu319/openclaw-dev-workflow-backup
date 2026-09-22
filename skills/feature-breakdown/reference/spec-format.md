@@ -1,4 +1,4 @@
-# Spec file format (parsed by scripts/clickup_push.py)
+# Spec file format (parsed by scripts/tracker_push.py)
 
 One spec file per feature at `projects/<project>/artifacts/specs/<feature-slug>.md`.
 
@@ -9,14 +9,18 @@ Rules:
   the markdown body (the ticket template).
 - The **first** ticket must be the parent (`lane: FEATURE`). Every other ticket
   must have `parent:` equal to the parent's `title`.
-- `title` is the dedupe key. The script matches it exactly (case-sensitive)
-  against existing task names in the list, so keep titles stable across runs.
+- `id` is the link to the board. The push writes it into the header the first
+  time it creates the ticket; from then on it matches on that id, so a `title:`
+  can be rewritten and the ticket is renamed rather than duplicated. Commit the
+  spec after a push - the ids are the link. A ticket with no `id:` yet is
+  matched by exact (case-sensitive) title against the task names in the list.
 
 Header keys:
 
 | key | required | values |
 |---|---|---|
-| `title` | yes | full ticket title, e.g. `[FE] Set password: form layout + validation states` |
+| `title` | yes | full ticket title, e.g. `[FE] Set password: form layout + validation states`. Safe to rewrite once the ticket has an `id:` |
+| `id` | written by the push | the board's ticket id. Added automatically on the push that creates the ticket; do not invent one. Delete the line only when the ticket itself is gone |
 | `lane` | yes | `FEATURE`, `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE` |
 | `parent` | subtasks | exact `title` of the parent ticket |
 | `priority` | no | `urgent`, `high`, `normal` (default), `low` |
@@ -28,7 +32,7 @@ Header keys:
 | `figma` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
 | `screenshots` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
 | `assets` | `FE` (when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only". The manifest is committed; the binaries beside it are a gitignored cache rebuilt from its `file_key`, `png_scale` and per-asset `download` blocks. Several `[FE]` tickets share one manifest; each ships the subset its `## Design fidelity` lists, and across the spec every asset must be shipped by exactly one |
-| `existing_id` | no | tracker ticket id to update when the title differs from the existing ticket (used when adopting tickets people already made) |
+| `existing_id` | no | tracker ticket id of a ticket a person already made, to adopt instead of creating a new one (from `tracker_scan.py`). Same meaning as `id`; the push reads either |
 
 ## Complete example
 
@@ -39,9 +43,9 @@ Source: Figma node 9836-6520. Written 2026-09-16 by VanPM.
 
 ---ticket
 title: [Feature] Event Creation: Step 3.1 — Set event password
+id: 86abc1234
 lane: FEATURE
 priority: high
-existing_id: <existing ticket id>
 figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id>
 screenshots: specs/_figma/event-creation-step-3-1-set-password/9836-6520.png
 
