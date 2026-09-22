@@ -163,6 +163,11 @@ acknowledgement naming who you handed it to - within seconds, not minutes.
   `worktree-lifecycle` skill. When the work is on an existing branch (QA, review,
   fixes), put the **branch name** in the task - never a folder path.
 - **Dynamic Port Rule:** If the agent needs to run a dev server (like Vite, Next.js, or Express), it MUST dynamically select a unique random port, expose it using the `portal` tool, and inject the environment variables into the run command (e.g., `PORT=3042 PUBLIC_URL=<portal-url> npm run dev`). Never fall back to default project ports like 3000 or 8080.
+  **Stop it when you are done.** A dev server started inside a worktree outlives the
+  worktree: the folder goes, the process stays, holding its port, its memory and a hot
+  CPU loop. `worktree.py finish` and `sweep` now stop what is still running inside a
+  worktree before removing it, so `finish` is what ends the server - which is one more
+  reason skipping `finish` is not an option.
 - `sessions_yield`, then relay the reply verbatim, including any questions it
   asks the user.
 - Follow-ups on the same task (answers to its questions, corrections like "you

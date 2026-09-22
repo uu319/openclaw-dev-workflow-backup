@@ -339,6 +339,89 @@ def cmd_create(p, branch, agent, task):
     print(f"  after the PR    python3 {os.path.abspath(__file__)} {p.slug} finish {branch} --pr <url>   (REQUIRED)")
 
 
+def processes_under(path):
+    """(pid, cwd) for our processes whose working directory is inside `path`.
+
+    A removed worktree leaves the link text behind as "<path> (deleted)", so an
+    already-orphaned process still matches.
+    """
+    root = os.path.realpath(path)
+    out, mine = [], {os.getpid(), os.getppid()}
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit() or int(entry) in mine:
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{entry}/cwd")
+        except OSError:
+            continue                      # gone, or another user's - not ours to touch
+        real = os.path.realpath(cwd[:-len(" (deleted)")] if cwd.endswith(" (deleted)") else cwd)
+        if real == root or real.startswith(root + os.sep):
+            out.append((int(entry), cwd))
+    return out
+
+
+def reap_worktree_processes(path):
+    """Stop what is still running inside a worktree that is about to disappear.
+
+    The Dynamic Port Rule has agents start dev servers inside the worktree; nothing
+    stopped them, so removing the folder left an orphan holding its port, its memory
+    and a hot CPU loop with a working directory that no longer exists. On 2026-09-22 a
+    `next dev` outlived its worktree and cost 1.3 GB and half a core on a 2-core box,
+    which is what made the whole gateway slow. Only our own processes, only inside
+    `path`: SIGTERM, then SIGKILL what ignores it.
+    """
+    import signal
+    import time
+    found = processes_under(path)
+    if not found:
+        return []
+    for pid, _cwd in found:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        if not processes_under(path):
+            break
+        time.sleep(0.25)
+    for pid, _cwd in processes_under(path):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+    return [pid for pid, _ in found]
+
+
+def reap_orphans(root):
+    """Kill processes whose worktree is already gone (cwd link ends in "(deleted)").
+
+    Only these: a process in a worktree that still exists may be doing real work.
+    """
+    import signal
+    root = os.path.realpath(root)
+    dead = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit() or int(entry) in {os.getpid(), os.getppid()}:
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{entry}/cwd")
+        except OSError:
+            continue
+        if not cwd.endswith(" (deleted)"):
+            continue
+        real = os.path.realpath(cwd[:-len(" (deleted)")])
+        if real == root or real.startswith(root + os.sep):
+            dead.append(int(entry))
+    for pid in dead:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                break
+    return dead
+
+
 def cmd_finish(p, branch, pr):
     wt = next((w for w in worktrees(p.primary) if w.get("branch") == branch), None)
     if wt is None:
@@ -353,6 +436,10 @@ def cmd_finish(p, branch, pr):
             led.upsert(branch, status="kept", pr_url=pr, event="finish refused: " + " | ".join(reasons))
         else:
             head = sha(wt["path"], "HEAD")
+            reaped = reap_worktree_processes(wt["path"])
+            if reaped:
+                print(f"stopped {len(reaped)} process(es) still running in the worktree: "
+                      + ", ".join(str(x) for x in reaped))
             r = git(p.primary, "worktree", "remove", wt["path"], check=False)
             if r.returncode != 0:
                 reasons = [f"git worktree remove refused: {r.stderr.strip()}"]
@@ -468,6 +555,10 @@ def cmd_sweep(p):
                     led.upsert(b, status="kept", pr_url=(pr or {}).get("url"),
                                event=f"sweep: {how}; uncommitted files kept")
                     continue
+                reaped = reap_worktree_processes(wt_path)
+                if reaped:
+                    report.append(f"STOPPED {b}: {len(reaped)} process(es) left running in the worktree "
+                                  + "(" + ", ".join(str(x) for x in reaped) + ")")
                 if git(p.primary, "worktree", "remove", wt_path, check=False).returncode:
                     report.append(f"KEPT   {b}: git worktree remove refused")
                     continue
@@ -487,6 +578,10 @@ def cmd_sweep(p):
         report.append(f"PRIMARY {p.primary} is on '{cur}' with {len(dirty.splitlines())} changed file(s); "
                       f"agents must not edit it - tell Van")
     report += retention(p)
+    orphans = reap_orphans(p.root)
+    if orphans:
+        report.append(f"STOPPED {len(orphans)} orphaned process(es) whose worktree was already gone "
+                      + "(" + ", ".join(str(x) for x in orphans) + ")")
     print("\n".join(report) if report else "sweep: nothing to do")
 
 

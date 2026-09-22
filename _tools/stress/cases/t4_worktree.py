@@ -126,6 +126,77 @@ def pr_for_separates_its_three_answers():
         raise AssertionError("ASK_FAILED must be distinguishable from None and from {}")
 
 
+
+# --- stopping what still runs inside a worktree -----------------------------
+# The Dynamic Port Rule has agents start dev servers inside a worktree, and nothing
+# stopped them: removing the folder left an orphan holding its port, its memory and a
+# hot CPU loop. On 2026-09-22 a `next dev` outlived its worktree by minutes and cost
+# 1.3 GB and half a core, which is what made the gateway itself slow to answer.
+
+def _sleeper(cwd):
+    """A harmless long-lived process whose cwd is `cwd`."""
+    return subprocess.Popen([sys.executable, "-c", "import time; time.sleep(300)"], cwd=cwd,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _alive(proc):
+    return proc.poll() is None
+
+
+def a_process_inside_a_removed_worktree_is_stopped():
+    since = harness.mark()
+    wt = harness.load("wt_reap", os.path.join(harness.TOOLS, "worktree.py"))
+    root = harness.project_sandbox(slug="reap-a")[0]
+    inside = os.path.join(root, "code")
+    proc = _sleeper(inside)
+    try:
+        reaped = wt.reap_worktree_processes(inside)
+        eq(proc.pid in reaped, True, "the process running in the worktree must be reported")
+        proc.wait(timeout=10)
+        eq(_alive(proc), False, "a worktree cannot be removed out from under a running process")
+    finally:
+        if _alive(proc):
+            proc.kill()
+        harness.drop(since)
+
+
+def a_process_outside_the_worktree_is_left_alone():
+    since = harness.mark()
+    wt = harness.load("wt_reap", os.path.join(harness.TOOLS, "worktree.py"))
+    root = harness.project_sandbox(slug="reap-b")[0]
+    inside, outside = os.path.join(root, "code"), root
+    proc = _sleeper(outside)
+    try:
+        eq(wt.reap_worktree_processes(inside), [], "only processes INSIDE the worktree may be touched")
+        eq(_alive(proc), True, "a neighbour's process must survive")
+    finally:
+        proc.kill()
+        harness.drop(since)
+
+
+def only_orphans_are_reaped_by_sweep():
+    since = harness.mark()
+    wt = harness.load("wt_reap", os.path.join(harness.TOOLS, "worktree.py"))
+    root = harness.project_sandbox(slug="reap-c")[0]
+    gone, live = os.path.join(root, "gone"), os.path.join(root, "live")
+    os.makedirs(gone, exist_ok=True)
+    os.makedirs(live, exist_ok=True)
+    orphan, working = _sleeper(gone), _sleeper(live)
+    try:
+        os.rmdir(gone)                      # the worktree disappears under the orphan
+        dead = wt.reap_orphans(root)
+        eq(orphan.pid in dead, True, "a process whose worktree is gone is an orphan")
+        eq(working.pid in dead, False, "a process in a worktree that still exists may be working")
+        orphan.wait(timeout=10)
+        eq(_alive(working), True, "sweep must not kill live work")
+    finally:
+        for proc in (orphan, working):
+            if _alive(proc):
+                proc.kill()
+        harness.drop(since)
+
+
+
 CASES = [
     ("malformed ledger line fails clearly", a_malformed_ledger_line_fails_clearly_and_does_not_hang),
     ("lock released after a ledger error", the_lock_is_released_after_a_ledger_error),
@@ -134,4 +205,7 @@ CASES = [
     ("prs.md written atomically", prs_md_is_written_atomically),
     ("sweep keeps when GitHub cannot be asked", sweep_never_deletes_when_github_could_not_be_asked),
     ("pr_for separates its three answers", pr_for_separates_its_three_answers),
+    ("worktree process is stopped", a_process_inside_a_removed_worktree_is_stopped),
+    ("neighbour process survives", a_process_outside_the_worktree_is_left_alone),
+    ("sweep reaps only orphans", only_orphans_are_reaped_by_sweep),
 ]

@@ -13,7 +13,8 @@ What it checks (the MANIFEST below is the architecture; anything not in it is cl
      and on the default branch; no OpenClaw managed worktrees of the settings repo.
   5. openclaw.json desired state: main deny [], loop detection on, heartbeat isolated, no specialist bots,
      specialist deny lists, MCP servers per project, only the intended skills enabled.
-  6. Host: /tmp size, gateway AND shell TMPDIR, gcloud + gh on the gateway PATH, backup sprawl.
+  6. Host: /tmp size, gateway AND shell TMPDIR, orphaned worktree processes, gcloud + gh on
+     the gateway PATH, backup sprawl.
 Standard library only. Run it from the orchestrator (read-only shell) or by hand.
 """
 import fnmatch, glob, importlib.util, json, os, re, subprocess, sys
@@ -393,6 +394,35 @@ def check_host():
         "" if not orphans else
         "each is a dead process's node_modules; reclaim: for d in /tmp/tmp-*-*; do "
         "p=$(basename $d|cut -d- -f2); kill -0 $p 2>/dev/null || rm -rf $d; done")
+
+    # A dev server an agent started inside a worktree outlives the worktree: the folder
+    # goes, the process stays, holding its port, its memory and a hot CPU loop with a
+    # cwd that no longer exists. On 2026-09-22 one `next dev` cost 1.3 GB and half a
+    # core on a 2-core box, and the gateway - at its heap cap already - crawled.
+    orphan_procs = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            cwd = os.readlink(f"/proc/{entry}/cwd")
+        except OSError:
+            continue
+        if cwd.endswith("(deleted)") and "/.worktrees/" in cwd:
+            rss = 0
+            try:
+                with open(f"/proc/{entry}/statm") as fh:
+                    rss = int(fh.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") // (1024 * 1024)
+            except Exception:  # noqa: BLE001
+                pass
+            orphan_procs.append((entry, rss))
+    total_mb = sum(mb for _, mb in orphan_procs)
+    (ok if not orphan_procs else fix)(
+        "host",
+        f"{len(orphan_procs)} orphaned worktree process(es)" + (f" holding {total_mb} MB" if total_mb else "")
+        if orphan_procs else "no orphaned worktree processes",
+        "" if not orphan_procs else
+        "a dev server outlived its worktree: python3 projects/_tools/worktree.py <slug> sweep "
+        "(it reaps them), or kill " + " ".join(pid for pid, _ in orphan_procs))
 
     rc, pid = run(["systemctl", "--user", "show", "-p", "MainPID", "--value", "openclaw-gateway.service"])
     if pid.strip().isdigit() and pid.strip() != "0":

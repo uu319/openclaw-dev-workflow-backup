@@ -4,7 +4,8 @@
 
 | Branch | Status | PR | Opened by | Task | Updated |
 |---|---|---|---|---|---|
-| `bug/landing-page-design-fix` | active |  | developer | Organizer Flow: Landing Page No Account design fix | 2026-09-22 |
+| `bug/organizer-flow-landing-page-no-account--z94kydab9b` | active | https://github.com/symphco/fms-studio/pull/46 | developer | Address PR #46 feedback | 2026-09-22 |
+| `bug/landing-page-design-fix` | pr_open | https://github.com/symphco/fms-studio/pull/45 | developer | Fix landing page UI feedback | 2026-09-22 |
 | `bug/fix-tailwind-build` | merged_or_closed | https://github.com/symphco/fms-studio/pull/44 | code-reviewer | Fix Tailwind CSS not compiling in frontend production build | 2026-09-22 |
 | `bug/fix-frontend-public-assets` | merged_or_closed | https://github.com/symphco/fms-studio/pull/43 | developer | Fix deploy-prepare target to copy frontend/public to dist/frontend/public | 2026-09-22 |
 | `feature/landing-page-no-account` | merged_or_closed | https://github.com/symphco/fms-studio/pull/42 | code-reviewer | Fix landing page review feedback | 2026-09-22 |
