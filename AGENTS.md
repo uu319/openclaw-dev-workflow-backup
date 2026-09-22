@@ -46,25 +46,31 @@ or contradicts the code, stop and say so; never reinterpret it.
 The routine, every time:
 1. `worktree.py <slug> sweep`, then `worktree.py <slug> create <branch> --agent developer --task "<one line>"`.
    Branch names use PROJECT_CONTEXT's Branch Prefixes (`create` enforces it); new branches start from the Flow PR base.
-2. Code writing: substantial work (more than a couple of files, refactors, test suites) goes to **agy** as a
+2. Design assets, when the ticket has a `## Design fidelity` section: copy each asset from
+   `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/` into the worktree at the `repo_path` that
+   section names (`install -D`), and check each is non-empty. They are already downloaded; do not re-fetch
+   them, and do not let the coding agent go looking. Then carry the tokens and the asset paths into the
+   prompt (`agy-coding` skill, "Design work"). agy cannot see the design: unprompted it writes a grey box
+   and a text logo, which is exactly what shipped before 2026-09-21.
+3. Code writing: substantial work (more than a couple of files, refactors, test suites) goes to **agy** as a
    background worker (`agy-coding` skill), launched with `workdir:` = the worktree and the preparation receipt
    `create` printed in its prompt, output piped through `tee` into
    `<Internal Artifacts>/runs/<feature-slug>--<lane-slug>--<UTC yyyymmddThhmm>.log`.
    Small edits you make yourself, and you say so.
-3. Everything else you run yourself with `exec`: installs (PROJECT_CONTEXT Install command), the listed test and
+4. Everything else you run yourself with `exec`: installs (PROJECT_CONTEXT Install command), the listed test and
    lint commands (never a Forbidden one), git, `gh`, `gcloud`, reading logs. Never wrap these in a script for a
    worker, and never ask Van to `/approve` a script.
-4. `git add`, then `git -C <worktree> status` must be empty before you commit: an uncommitted file is not in the PR.
-5. Push the branch and open the PR when your spawn message says so (project-orchestration step 2):
+5. `git add`, then `git -C <worktree> status` must be empty before you commit: an uncommitted file is not in the PR.
+6. Push the branch and open the PR when your spawn message says so (project-orchestration step 2):
    `git_env.py <slug> -- gh pr create --base <Flow PR base> ...`. The PR body lists the ClickUp URL of every
    ticket it delivers (`https://app.clickup.com/t/<id>`, from the spec's `.clickup.json`). Reply with the real PR
    URL `gh` printed, never a `/pull/new/` link. Team projects: follow the repo's PR template (Flow PR conventions)
    and merge `origin/<PR base>` into your branch first if it is behind.
-6. Review feedback on GitHub: pull it with `git_env.py <slug> -- gh pr view <url> --comments`, fix it in your
+7. Review feedback on GitHub: pull it with `git_env.py <slug> -- gh pr view <url> --comments`, fix it in your
    worktree, push to the same branch. The reply depends on the Flow **Profile** in PROJECT_CONTEXT: on `factory`,
    post it yourself starting with `🤖 VanDev:`; on `teammate`/`maintenance` the comment is from a real person, so
    **do not post** — reply to the orchestrator with the draft text and wait to be told "approved, post this reply".
-7. `worktree.py <slug> finish <branch> --pr <url>` right after the push. Exit 2 means local work was kept: tell the
+8. `worktree.py <slug> finish <branch> --pr <url>` right after the push. Exit 2 means local work was kept: tell the
    orchestrator what it listed.
 
 ## Tools you may use
@@ -75,7 +81,7 @@ The routine, every time:
 | GitHub API (PRs, checks) | `projects/_tools/git_env.py <slug> -- gh ...` (bare `gh` has no login; merges are refused) |
 | Push | plain `git push -u origin <branch>` (project SSH alias) |
 | GCP | `projects/_tools/gcloud_env.py <slug> -- gcloud ...` (bare `gcloud` has no project) |
-| Design | `figma-<slug>__*` MCP tools; copy assets you need into your worktree |
+| Design | assets are already downloaded in `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/` — copy them into your worktree at the ticket's `repo_path`s. The `figma-<slug>__*` MCP tools are yours for a detail the ticket does not answer (an exact hex, a size); they are not how you get assets |
 | Code writing | agy (`agy-coding` skill) |
 | Dev server | a random free port (never 3000/8080), exposed with `portal`, link shared, stopped when done |
 

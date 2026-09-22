@@ -76,6 +76,49 @@ refuses a directory, report it to the orchestrator rather than editing the file.
 - `-c` / `--continue` resumes the most recent conversation; `--conversation <id>`
   resumes a specific one. Prefer resuming over restarting a long build.
 
+## Design work: assets before the prompt
+
+`agy` cannot see the design. It has no Figma tools, it cannot open a PNG, and the
+screenshots live in Internal Artifacts, outside the worktree it runs in. Given a
+text ticket alone it invents stand-ins — a `<div>Logo</div>`, a grey box captioned
+"[Photo Collage Image Placeholder]", `bg-orange-500` where the brand is `#FF6100`.
+Every fms-studio screen built before 2026-09-21 shipped that way.
+
+So when the ticket has a `## Design fidelity` section, do this **before** launching:
+
+1. **Copy the assets into the worktree**, at the `repo_path` the section gives:
+
+   ```bash
+   A="<Internal Artifacts>/specs/_figma/<feature-slug>"
+   install -D "$A/assets/logo.svg" "<worktree>/frontend/public/brand/logo.svg"
+   ```
+
+   `install -D` creates the parent directories. Copy only the assets this ticket
+   claims. They are downloaded already — never call a Figma tool to re-fetch what
+   is sitting in Internal Artifacts, and never have `agy` fetch them itself.
+2. **Check each one arrived and is not empty** (`test -s <path>`). A 0-byte asset
+   is a failed download upstream: stop and report it, do not build around it.
+3. **Name them in the prompt**, with the tokens, and forbid the fallback:
+
+   ```
+   Implement <ticket title> in this worktree.
+   <the ticket body, verbatim>
+
+   Design assets are ALREADY in this worktree — use them, do not invent placeholders:
+     frontend/public/brand/logo.svg   the wordmark; replaces any text logo, 154x26
+     frontend/public/marketing/hero-collage.png   the hero image, 1472x1774
+   Design tokens are exact. Primary #FF6100, text #313131, font Host Grotesk 400/500,
+   radius 12px. Add them to the project's theme config rather than hardcoding per
+   component. Do not substitute a near colour from the framework's default palette.
+   Do NOT render a placeholder box, a text stand-in, or a solid colour anywhere an
+   asset above belongs. If something you need is missing, stop and say so.
+   ```
+
+4. **Check the result before you commit**: `git -C <worktree> status` must show the
+   assets as added files, and the diff must reference each one. An asset copied in
+   but never referenced by the code means `agy` ignored it — that is a rework, not a
+   pass. Grep the diff for `placeholder`, `Placeholder` and `TODO` before you push.
+
 ## Git preparation
 
 Create the worktree with `worktree.py <slug> create <branch>` (shared
