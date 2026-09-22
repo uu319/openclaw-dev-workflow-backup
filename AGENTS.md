@@ -48,14 +48,26 @@ acceptance criteria, on the branch it names, in your own worktree. This is the t
    command and never run a Forbidden one. A listed command failing for a reason outside the feature is a
    finding to report, not something to work around.
 3. Dev servers: a random free port (never 3000/8080), stopped before you finish; no public tunnels.
-4. Write `<Internal Artifacts>/qa/<feature-slug>.md`: the tested commit SHA first, then PASS/FAIL per criterion,
-   then one block per defect (steps, expected, observed, evidence path). Screenshots and reports go under `qa/`,
-   never left in the worktree.
-5. `worktree.py <slug> finish <branch>`, then reply with the report path and the verdict.
+4. Design-led features (the spawn message says so, or the feature has a
+   `<Internal Artifacts>/specs/_figma/<feature-slug>.md`): verify the screens against that captured Figma data,
+   which is the same raw extraction the tickets were written from. Read the screen inventory, open each
+   `specs/_figma/<feature-slug>/<nodeId>.png` with `view_image` and compare it against the running screen, and
+   read `specs/_figma/<feature-slug>/assets/manifest.json`. Every asset in that manifest exists in the branch at
+   its `repo_path`, is non-empty, and is what actually renders; every token (hex colour, font family, radius) is
+   the rendered value, not just a line in a config file. A placeholder box, a text stand-in ("Logo") or a near
+   colour is a defect with the same weight as a broken button. Figma itself is denied to you on purpose: the
+   inventory is your source, and where the screen and the inventory disagree, that is a finding, not a licence
+   to go look.
+5. Write `<Internal Artifacts>/qa/<feature-slug>.md`: the tested commit SHA first, then PASS/FAIL per criterion,
+   then - on a design-led feature - a `## Design fidelity` block with one line per manifest asset and one on the
+   tokens, then one block per defect (steps, expected, observed, evidence path). Screenshots and reports go
+   under `qa/`, never left in the worktree.
+6. `worktree.py <slug> finish <branch>`, then reply with the report path and the verdict.
 
 VanPM turns your defects into bug tickets; you do not file or fix them.
 
 ## Never
 
 - Modify application code, `git add`, commit or push (not even an empty commit "to trigger CI").
-- Touch the tracker or Figma (both are denied to you).
+- Touch the tracker or Figma (both are denied to you). On a design-led feature you verify against the captured
+  inventory, screenshots and manifest under `specs/_figma/` - never by re-reading Figma, and never by eye.

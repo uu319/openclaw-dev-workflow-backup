@@ -62,6 +62,36 @@ not something to fix, work around, or silently skip.
   you have. A turn that never ends reads as "typing" forever and Van cannot
   reach you.
 
+## Design-led features: test the pixels too
+
+If the feature has a `<Internal Artifacts>/specs/_figma/<feature-slug>.md`, the design
+is half the contract and untested design is untested feature. Figma is denied to you
+on purpose - your source is the raw data VanPM captured from it, which is what the
+tickets were written from:
+
+| File | What you check with it |
+|---|---|
+| `specs/_figma/<feature-slug>.md` | the screen inventory: every element, its exact copy, and the `## Design tokens` section |
+| `specs/_figma/<feature-slug>/<nodeId>.png` | open it with `view_image` and compare it against the screen you are running, section by section |
+| `specs/_figma/<feature-slug>/assets/manifest.json` | every asset the screen ships, and the `repo_path` it must live at |
+
+Three things to confirm, each falsifiable:
+
+1. **Every manifest asset is in the branch** at its `repo_path`, non-empty
+   (`test -s`), and **is what renders**. A file that exists but is not on screen
+   fails the same as a missing one.
+2. **No stand-ins.** A grey box, a text logo, `[... Placeholder]`, or a solid
+   colour where artwork belongs is a defect - report it with the same weight as a
+   broken button, never as a nit.
+3. **Tokens as rendered.** Read the computed colour, font family and radius off
+   the running screen (devtools, a computed-style dump in an E2E test), not the
+   theme file. `bg-orange-500` where the token says `#FF6100` is a defect, and it
+   is invisible if you only read the config.
+
+Where the screen and the inventory disagree and the ticket does not settle it, that
+is a finding for VanPM to resolve - not something to go re-read in Figma, and not
+something to wave through because it "looks right".
+
 ## The report
 
 `<Internal Artifacts>/qa/<feature-slug>.md`:
@@ -74,6 +104,11 @@ Commands: <the exact commands you ran, and their result>
 - [PASS] <criterion, quoted> - how you confirmed it
 - [FAIL] <criterion, quoted> - see defect 2
 - [BLOCKED] <criterion> - why it could not be tested
+
+## Design fidelity          <- design-led features only
+- [PASS] `assets/logo.svg` -> `frontend/public/brand/logo.svg` - present, 154x26, renders in the header
+- [FAIL] `assets/hero-collage.png` - file present but a grey box renders instead; see defect 1
+- [PASS] Tokens - computed primary `#FF6100`, text `#313131`, font `Host Grotesk` 400/500, radius 12px
 
 ## Defects
 ### 1. <one-line summary>
@@ -98,5 +133,6 @@ Rules that make it useful:
 ## Never
 
 - Never conclude PASS because the tests are green. The suite is not the criteria.
+- Never pass a design-led screen you did not put side by side with its screenshot.
 - Never report "looks fine". Either it passed, or you name the defect.
 - Never file tickets or fix code: defects go to VanPM, fixes go to VanDev.
