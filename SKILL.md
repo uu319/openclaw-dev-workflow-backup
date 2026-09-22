@@ -24,6 +24,7 @@ agent workspaces, never a project's code repo.
 | When | Who | Command |
 |---|---|---|
 | Start of every coding task | VanDev | `worktree.py <slug> sweep` |
+| Every 10 minutes | the `worktree-reap` automation, not an agent | `worktree.py <slug> reap` |
 | Before any code is written | VanDev | `worktree.py <slug> create <branch> --agent developer --task "<one line>"` |
 | Code gets written | agy / Claude Code | launched with `workdir:` = the printed worktree path |
 | Lane committed (`git status` empty) | VanDev | `git -C <worktree> push -u origin <branch>` (never the default branch); first lane: `git_env.py <slug> -- gh pr create --base <Flow PR base>`; then `finish <branch> --pr <url>` |
