@@ -310,13 +310,16 @@ def cmd_create(p, branch, agent, task):
     if remote_sha:
         if local_sha and local_sha != remote_sha:
             if git(p.primary, "merge-base", "--is-ancestor", local_sha, remote_sha, check=False).returncode != 0:
-                die(f"local branch {branch} has commits not on {remote}; resolve that before reusing the name")
+                die(f"local branch {branch} has commits not on {remote}; resolve that before reusing the name. "
+                    f"If the branch is finished on GitHub, `worktree.py {p.slug} sweep` retires it for you; "
+                    f"never `git branch -D` or `rm -rf` by hand - that is how unpushed work disappears")
         git(p.primary, "worktree", "add", "--quiet", "-B", branch, path, remote)
         git(path, "branch", "--quiet", f"--set-upstream-to={remote}")
         start_ref, start_sha, kind = remote, remote_sha, "existing remote branch"
     else:
         if local_sha:
-            die(f"local branch {branch} exists but was never pushed; use a new branch name or push it first")
+            die(f"local branch {branch} exists but was never pushed; use a new branch name or push it first. "
+                f"Never delete it by hand: nothing else has a copy")
         base = f"origin/{p.pr_base}"
         base_sha = sha(p.primary, base) or die(f"{base} not found after fetch")
         git(p.primary, "worktree", "add", "--quiet", "--no-track", "-b", branch, path, base)
