@@ -7,9 +7,9 @@ Usage:
 Reads the list id, secret ref name and status names from PROJECT_CONTEXT.md,
 parses the spec (see reference/spec-format.md), dedupes by exact title against
 the list, creates the parent first, then subtasks with `parent`, then task
-links for depends_on. Tickets with `figma:`/`screenshots:` get their PNGs
+links for depends_on. Tickets with `figma:`/`screenshots:`/`assets:` get their PNGs
 uploaded as ClickUp attachments and a generated `## Design` section (Figma
-links + embedded screenshots) at the top of the description. Writes
+links + embedded screenshots + asset list) at the top of the description. Writes
 <spec>.clickup.json as the completion marker (ClickUp's declared marker suffix;
 `.tracker.json` is read too, so a spec never needs migrating). Standard library only.
 
@@ -129,6 +129,60 @@ def screenshot_paths(t, ctx):
         full = os.path.realpath(p if os.path.isabs(p) else os.path.join(ctx["artifacts_dir"], p))
         out.append((p, full))
     return out
+
+
+def asset_manifest(t, ctx):
+    """Resolve `assets:` to (raw, full, manifest-or-None, error-or-None).
+
+    The manifest is the machine-checkable half of `## Design fidelity`: it names
+    every file `download_figma_images` wrote for this feature and where the code
+    should put it. `"assets": []` is valid and means the screen is CSS only.
+    """
+    raw = (t.get("assets") or "").strip()
+    if not raw or raw.lower() == "none":
+        return None, None, None, None
+    full = os.path.realpath(raw if os.path.isabs(raw) else os.path.join(ctx["artifacts_dir"], raw))
+    if not full.startswith(ctx["artifacts_dir"] + os.sep):
+        return raw, full, None, "asset manifest outside Internal Artifacts"
+    if not os.path.isfile(full):
+        return raw, full, None, "asset manifest file not found"
+    try:
+        data = json.load(open(full, encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        return raw, full, None, f"asset manifest is not readable JSON ({e})"
+    if not isinstance(data, dict) or not isinstance(data.get("assets"), list):
+        return raw, full, None, "asset manifest needs an 'assets' list (use [] when the screen is CSS only)"
+    return raw, full, data, None
+
+
+def asset_entry_errors(title, raw, full, data):
+    """Every listed file must exist, be non-empty, and stay inside the feature folder.
+
+    `file` is relative to the feature folder (`specs/_figma/<feature-slug>/`), not
+    to the manifest's own `assets/` directory: that is the form the ticket's
+    `## Design fidelity` section quotes, so the two always read the same.
+    """
+    errors = []
+    feature_dir = os.path.dirname(os.path.dirname(full))  # .../<feature-slug>/assets/manifest.json
+    for i, a in enumerate(data["assets"]):
+        where = f"{title}: asset manifest {raw} entry {i}"
+        if not isinstance(a, dict):
+            errors.append(f"{where} is not an object")
+            continue
+        for key in ("file", "node", "repo_path"):
+            if not str(a.get(key, "")).strip():
+                errors.append(f"{where} has no '{key}'")
+        f = str(a.get("file", "")).strip()
+        if not f:
+            continue
+        fp = os.path.realpath(os.path.join(feature_dir, f))
+        if not (fp == feature_dir or fp.startswith(feature_dir + os.sep)):
+            errors.append(f"{where}: file escapes the feature folder: {f}")
+        elif not os.path.isfile(fp):
+            errors.append(f"{where}: file not found: {f}")
+        elif os.path.getsize(fp) == 0:
+            errors.append(f"{where}: file is 0 bytes (the download failed): {f}")
+    return errors
 
 
 def section(body, heading):
@@ -305,6 +359,15 @@ def validate(tickets, ctx, spec_path=None):
                 errors.append(f"{title}: screenshot file not found: {raw}")
             elif not full.lower().endswith((".png", ".jpg", ".jpeg", ".gif")):
                 errors.append(f"{title}: screenshot must be png/jpg/gif: {raw}")
+            # A failed download leaves a 0-byte file behind and every later check passes:
+            # 9794-6547.png sat empty in fms-studio for five days (2026-09-21 audit).
+            elif os.path.getsize(full) == 0:
+                errors.append(f"{title}: screenshot is 0 bytes (the download failed): {raw}")
+        a_raw, a_full, a_data, a_err = asset_manifest(t, ctx)
+        if a_err:
+            errors.append(f"{title}: {a_err}: {a_raw}")
+        elif a_data:
+            errors.extend(asset_entry_errors(title, a_raw, a_full, a_data))
         # A spec with no [FE] ticket has no screen (CI, backend, data work): its parent needs no Figma.
         # Before 2026-09-19 it did, and agents pasted dummy PNGs + a fake node-id to get past this check.
         needs_design = lane == "FE"
@@ -313,6 +376,26 @@ def validate(tickets, ctx, spec_path=None):
                 errors.append(f"{title}: {lane} ticket needs 'figma:' (the frame link(s) it implements)")
             if not shots:
                 errors.append(f"{title}: {lane} ticket needs 'screenshots:' (PNG from download_figma_images)")
+            # The screenshot is a picture OF the screen; it is not the artwork the code ships.
+            # Without these two the coding agent invents placeholders - it did for every
+            # fms-studio screen built before 2026-09-21 (a text "Logo", a grey collage box).
+            if not a_raw:
+                errors.append(f"{title}: {lane} ticket needs 'assets:' (the asset manifest from "
+                              f"download_figma_images; use one with \"assets\": [] if the screen is CSS only)")
+            if "## Design fidelity" not in body:
+                errors.append(f"{title}: {lane} ticket needs a '## Design fidelity' section "
+                              f"(exact tokens + the asset list with repo paths)")
+            else:
+                fid = section(body, "Design fidelity")
+                if not re.search(r"#[0-9A-Fa-f]{3,8}\b", fid):
+                    errors.append(f"{title}: '## Design fidelity' names no colour as hex "
+                                  f"(\"orange\" is not a token, `#FF6100` is)")
+                if a_data and a_data["assets"]:
+                    for a in a_data["assets"]:
+                        rp = str(a.get("repo_path", "")).strip()
+                        if rp and rp not in fid:
+                            errors.append(f"{title}: '## Design fidelity' does not list the manifest's "
+                                          f"repo path {rp} - the developer never learns where it goes")
     if errors:
         print("Spec rejected:", file=sys.stderr)
         for e in errors:
@@ -419,12 +502,27 @@ def attachment_name(raw):
     return re.sub(r"[^A-Za-z0-9_.-]", "_", os.path.basename(raw))
 
 
-def design_section(t, uploaded):
+def design_section(t, uploaded, manifest=None):
+    """Generated header: Figma links, the embedded screenshots, and the asset list.
+
+    The asset list is what someone reading the ticket on the board needs to see:
+    which files the design ships and where they belong in the repo. The ticket's
+    own `## Design fidelity` section (written by VanPM) carries the tokens.
+    """
     links = split_list(t.get("figma"))
-    if not links and not uploaded:
+    assets = (manifest or {}).get("assets") or []
+    if not links and not uploaded and not assets:
         return ""
     lines = ["## Design"]
     lines += [f"- Figma: {u}" for u in links]
+    if manifest is not None:
+        if assets:
+            lines += ["", "Assets to ship (from the Figma file, already downloaded):"]
+            for a in assets:
+                label = str(a.get("name") or a.get("file") or "").strip()
+                lines.append(f"- `{a.get('file')}` -> `{a.get('repo_path')}`" + (f" - {label}" if label else ""))
+        else:
+            lines += ["", "Assets to ship: none (this screen is CSS only)."]
     for name, url in uploaded:
         lines += ["", f"![{name}]({url})"]
     return "\n".join(lines) + "\n\n"
@@ -554,8 +652,9 @@ def main():
                 done[name] = up.get("url", "")
                 print(f"uploaded {name}")
             shots.append((name, done[name]))
-        if split_list(t.get("figma")) or shots:
-            body = design_section(t, shots) + strip_design(t["body"])
+        _, _, a_data, _ = asset_manifest(t, ctx)
+        if split_list(t.get("figma")) or shots or a_data:
+            body = design_section(t, shots, a_data) + strip_design(t["body"])
             cu.update(r["id"], {"description": body})
         marker[t["title"]] = {"id": r["id"], "url": r.get("url", ""), "lane": t["lane"],
                               "attachments": {n: u for n, u in done.items() if n in dict(shots)}}

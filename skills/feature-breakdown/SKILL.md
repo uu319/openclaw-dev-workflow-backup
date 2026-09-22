@@ -66,19 +66,63 @@ Collect, and write down in the spec:
      `nodes: [{ nodeId, fileName: "<nodeId>.png" }]`, `pngScale: 1`,
      `localPath: "specs/_figma/<feature-slug>"`. The file lands at
      `<Internal Artifacts>/specs/_figma/<feature-slug>/<nodeId>.png`.
+     Always pass `localPath`; without it files land loose in `specs/_figma/`.
+     Then check the reply: it prints one `- <file>: <width>x<height>` line per
+     file it wrote. A node missing from that list, or a file that is 0 bytes on
+     disk, did **not** download. Retry it once, then stop and report it. (A
+     0-byte screenshot sat unnoticed in fms-studio for five days because
+     nothing checked.)
   2. **Look at it.** Open that PNG with `view_image`. Write down what you
      see: layout, sections top to bottom, overlays/modals, visual states.
   3. **Inspect it.** Call `get_figma_data` with `fileKey` + `nodeId` (never a
      whole file without `nodeId`) for exact text, component names, sizes,
      colours and fonts.
-  4. **Screen inventory.** Write `<Internal Artifacts>/specs/_figma/<feature-slug>.md`
+  4. **Assets.** The screenshot is a picture *of* the screen. It is not the
+     artwork the code has to ship, and a developer cannot cut it up. Walk the
+     `get_figma_data` output and collect every node that cannot be drawn in CSS:
+     - a fill of `type: IMAGE` — photos, bitmap logos, textures. Its `imageRef`
+       is **required** in the download call.
+     - an `[IMAGE-SVG]` node — icons, wordmarks, illustrations. Download as
+       `.svg`, by `nodeId` only, with no `imageRef`.
+     - a `gifRef` fill — pass `gifRef`, not `imageRef`, or you get a still frame.
+     Download them in one call with
+     `localPath: "specs/_figma/<feature-slug>/assets"` and a readable
+     `fileName` (`logo.svg`, `hero-collage.png`, `icon-ticket.svg`) — never
+     `<nodeId>.png`, which is the screenshot's naming. Where the node carries an
+     `imageDownloadArguments` block, pass its `needsCropping`, `cropTransform`
+     and `filenameSuffix` through unchanged: without them a cropped fill
+     downloads as the whole uncropped source image. Verify every file exists
+     and is larger than 0 bytes.
+  5. **Asset manifest.** Write
+     `<Internal Artifacts>/specs/_figma/<feature-slug>/assets/manifest.json`:
+     ```json
+     {"feature": "<feature-slug>",
+      "assets": [{"file": "assets/logo.svg", "node": "9734:3530", "kind": "svg",
+                  "name": "FindMyShots wordmark", "width": 154, "height": 26,
+                  "repo_path": "frontend/public/brand/logo.svg"}]}
+     ```
+     One entry per file you downloaded; `file` is relative to the feature's
+     `_figma/<feature-slug>/` folder. `repo_path` is where the code should put
+     it — your call from the project's `## Stack`, one convention per project.
+     A screen with no artwork still gets a manifest with `"assets": []`. That is
+     a positive statement ("this screen is CSS only"), and the push script
+     requires it; silence is what produced placeholder boxes before.
+  6. **Design tokens.** From the `get_figma_data` output record exact values,
+     never approximations: every colour as its hex, every font family with the
+     weights and sizes used, corner radii, and shadow/gradient definitions.
+     "Orange" is not a token; `#FF6100` is. `font-sans` is not a token;
+     `Host Grotesk` is. These go in the inventory **and** into each `[FE]`
+     ticket (Step 3).
+  7. **Screen inventory.** Write `<Internal Artifacts>/specs/_figma/<feature-slug>.md`
      with one section per node: link, screenshot path, then a numbered list of
      every visible element (headings and copy verbatim, every input with its
      label/placeholder, every button/link with its exact label, data shown with
      example values, icons that act as controls, empty/error/success states
-     drawn), plus colours and fonts.
+     drawn), then a `## Design tokens` section (step 6) and an `## Assets`
+     section listing each manifest entry as `<file> — <name> (<node>) → <repo_path>`.
   If a Figma tool is missing or errors, stop and report it; do not call the
-  Figma REST API yourself, and never write a UI ticket without the screenshot.
+  Figma REST API yourself, and never write a UI ticket without the screenshot
+  and the manifest.
 - **Flows in/out**: which screen leads here, where each button goes.
 - **Unknowns**: anything the design does not answer (validation rules, limits,
   who can see what). Each unknown is either a question for the user or a
@@ -135,7 +179,11 @@ pushes them as ClickUp task links.
 **Reject before pushing** (fix, don't push):
 - a ticket named after a screen with no lane tag
 - a description that is only a link
-- an `[FE]` ticket without `figma:` and `screenshots:` headers
+- an `[FE]` ticket without `figma:`, `screenshots:` and `assets:` headers
+- an `[FE]` ticket without a `## Design fidelity` section, or one whose colours
+  are named ("orange", "dark grey") instead of hex
+- an asset in the manifest that no ticket claims, or a `repo_path` that two
+  tickets both write
 - an inventory element (button, input, link, state) that no acceptance criterion covers
 - generic filler such as "primary UI elements are visible", "basic interactions",
   "standard stack conventions", "unrelated features" (the push script rejects these)
@@ -153,10 +201,31 @@ pushes them as ClickUp task links.
 
 Use `{baseDir}/reference/ticket-template.md` verbatim as the section skeleton.
 Every `[FE]` lane ticket carries `figma:` (the frame links it
-implements) and `screenshots:` (the PNG paths from Step 1, relative to Internal
-Artifacts) in its header. For backend, CI/CD, and other non-UI tickets, `figma:` and `screenshots:` are completely optional and should be omitted instead of supplying dummy links. The push script uploads the screenshots to the
-ClickUp task and puts a `## Design` section (Figma links + embedded
-screenshots) at the top of the description; do not write that section yourself.
+implements), `screenshots:` (the PNG paths from Step 1, relative to Internal
+Artifacts) and `assets:` (the manifest path from Step 1.5, relative to Internal
+Artifacts) in its header. For backend, CI/CD, and other non-UI tickets, all
+three are completely optional and should be omitted instead of supplying dummy
+links. The push script uploads the screenshots to the ClickUp task and puts a
+`## Design` section (Figma links + embedded screenshots + the asset list) at the
+top of the description; do not write that section yourself.
+
+Every `[FE]` ticket body also carries a `## Design fidelity` section — the
+visual half of the contract, written from Step 1.5 and 1.6:
+
+```markdown
+## Design fidelity
+- Tokens: Primary `#FF6100` · Text `#313131` · Card `#F7F6F6` · Font `Host Grotesk` 400/500 · Radius 12px
+- Assets (from `specs/_figma/<feature-slug>/assets/manifest.json`, copy into the repo at these paths):
+  - `assets/logo.svg` → `frontend/public/brand/logo.svg` — wordmark, 154x26, replaces any text logo
+  - `assets/hero-collage.png` → `frontend/public/marketing/hero-collage.png` — hero image, 1472x1774
+- No placeholders: every asset above is rendered by the code. A grey box, a
+  text stand-in ("Logo"), or a solid colour where artwork belongs is a defect.
+```
+
+Behaviour and appearance are both the contract. Acceptance criteria stay
+Given/When/Then (below); `## Design fidelity` is where the exact values live so
+a criterion can quote them. A screen whose manifest is empty writes
+`- Assets: none (this screen is CSS only)` and keeps the token line.
 
 Acceptance criteria are **always** bullets of the form
 `Given <state>, when <action>, then <exact observable result>.` At least three

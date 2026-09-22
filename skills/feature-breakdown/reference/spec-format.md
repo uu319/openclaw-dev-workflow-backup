@@ -27,6 +27,7 @@ Header keys:
 | `status` | no | status for a ticket when it is first created (ignored on re-push; move statuses with clickup_status.py) |
 | `figma` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
 | `screenshots` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
+| `assets` | `FE` (when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only" |
 | `existing_id` | no | tracker ticket id to update when the title differs from the existing ticket (used when adopting tickets people already made) |
 
 ## Complete example
@@ -89,6 +90,7 @@ estimate_hours: 6
 parallel: true
 figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id>
 screenshots: specs/_figma/event-creation-step-3-1-set-password/9836-6520.png
+assets: specs/_figma/event-creation-step-3-1-set-password/assets/manifest.json
 
 ## Context
 Parent: [Feature] Event Creation: Step 3.1 — Set event password · Figma: https://www.figma.com/design/<file-key>/<File-Name>?node-id=<node-id> · Lane: FE
@@ -111,6 +113,13 @@ As an organizer, I want a clear password step, so that I know what is required b
 - Given ≥ 8 characters, when typed, then the error clears and Continue is enabled.
 - Given a viewport narrower than 640px, when the Set Password step renders, then the form is full-width with 16px side padding; given 640px or wider, it is centered at max-width 480px.
 
+## Design fidelity
+- Tokens: Primary `#FF6100` · Text `#313131` · Error `#DC2626` · Font `Host Grotesk` 400/500, 16px body / 26px heading · Radius 8px
+- Assets (from `specs/_figma/event-creation-step-3-1-set-password/assets/manifest.json`, copy into the repo at these paths):
+  - `assets/icon-eye.svg` → `frontend/public/icons/eye.svg` — show/hide toggle, 24x24
+  - `assets/icon-eye-off.svg` → `frontend/public/icons/eye-off.svg` — show/hide toggle, 24x24
+- No placeholders: every asset above is rendered by the code.
+
 ## Technical notes
 - Files/paths: frontend/src/app/events/new/step-3-1/page.tsx, frontend/src/components/PasswordField.tsx
 - Mock or fixture for parallel work: `onContinue(password: string): Promise<void>` prop; page calls it, parent wiring ticket supplies the real one.
@@ -125,6 +134,7 @@ As an organizer, I want a clear password step, so that I know what is required b
 
 ## Definition of done
 - [ ] All acceptance criteria pass
+- [ ] Every asset in `## Design fidelity` is committed at its stated repo path and rendered; no placeholders
 - [ ] Unit tests added and green
 - [ ] Lint and typecheck clean
 - [ ] PR from `feature/set-password-form` reviewed

@@ -3,7 +3,9 @@
 Copy this skeleton into every ticket's body (parent and subtask). Keep every
 heading, even if the content is "none". Replace everything in angle brackets.
 Do not add a `## Design` section: the push script generates it from the
-ticket's `figma:` and `screenshots:` headers (links + embedded screenshots).
+ticket's `figma:`, `screenshots:` and `assets:` headers (links, embedded
+screenshots, asset list). `## Design fidelity` below is different — you **do**
+write that one, on every `[FE]` ticket.
 
 ```markdown
 ## Context
@@ -23,6 +25,15 @@ As a <role>, I want <goal>, so that <benefit>.
 - Given <state>, when <trigger>, then <exact observable result>.
 - <at least three, all in Given/when/then form; [FE]: one per button, input, link and state in the screen inventory, quoting exact Figma labels>
 
+## Design fidelity
+<[FE] lanes only; omit the whole section on BE/DB/INT/QA/SPIKE tickets>
+- Tokens: <every colour as hex, font family + weights + sizes, radii, shadows — exact values from get_figma_data, never names>
+- Assets (from `specs/_figma/<feature-slug>/assets/manifest.json`, copy into the repo at these paths):
+  - `<assets/file.svg>` → `<repo path>` — <what it is, WxH, what it replaces>
+  - <or: "none (this screen is CSS only)">
+- No placeholders: every asset above is rendered by the code. A grey box, a text
+  stand-in, or a solid colour where artwork belongs is a defect.
+
 ## Technical notes
 - Interface / schema: <the contract this lane adds or changes: HTTP endpoint, CLI command, queue
   message, exported function | table.column types>
@@ -38,6 +49,9 @@ As a <role>, I want <goal>, so that <benefit>.
 
 ## Definition of done
 - [ ] All acceptance criteria pass
+- [ ] ([FE] only) Every asset in `## Design fidelity` is committed at its stated repo
+      path, non-empty, and rendered by the code; no placeholder box or text stand-in
+      remains, and the tokens listed there are the values in the code
 - [ ] Unit tests for this lane added and green (the project's **Tests** command, run with the
       project's no-cache flag - a cached pass is not a run)
 - [ ] Lint clean (the project's **Lint** command)
