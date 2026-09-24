@@ -1,0 +1,42 @@
+Tested SHA: 304583d316a9105a2dc5bd77b7103e176f49881f
+
+- PASS: Footer text uses the Actor font
+
+## Design fidelity
+- Tokens: PASS (Brand Orange, Dark Gray/Black, White, Background Light Gray, Host Grotesk, Heavitas, Actor all match specs)
+- `logo.svg`: PASS
+- `icon-shopping-bag.svg`: PASS
+- `icon-calendar-heart.svg`: PASS
+- `icon-ticket.svg`: PASS
+- `icon-gift.svg`: PASS
+- `icon-images.svg`: PASS
+- `demo-swatch-gradient.svg`: PASS
+- `demo-my-albums.png`: PASS
+- `demo-swatch-overlay-01.png`: PASS
+- `demo-swatch-overlay-02.png`: PASS
+- `demo-approved.png`: PASS
+- `hero-photo-01.png`: PASS
+- `hero-photo-02.png`: PASS
+- `hero-photo-03.png`: PASS
+- `hero-photo-04.png`: PASS
+- `hero-photo-05.png`: PASS
+- `hero-photo-06.png`: PASS
+- `hero-photo-07.png`: PASS
+- `hero-photo-08.png`: PASS
+- `hero-photo-09.png`: PASS
+- `hero-photo-10.png`: PASS
+- `hero-photo-11.png`: PASS
+- `hero-photo-12.png`: PASS
+- `hero-photo-13.png`: PASS
+- `hero-scribble-01.png`: PASS
+- `hero-scribble-02.png`: PASS
+- `hero-scribble-03.png`: PASS
+- `hero-scribble-04.png`: PASS
+- `hero-scribble-05.png`: PASS
+- `hero-scribble-06.png`: PASS
+- `feature-photo-01.png`: PASS
+- `feature-photo-02.png`: PASS
+- `feature-photo-03.png`: PASS
+- `feature-photo-04.png`: PASS
+- `feature-photo-05.png`: PASS
+- `feature-photo-06.png`: PASS

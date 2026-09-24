@@ -1,20 +1,4 @@
 #!/usr/bin/env python3
-"""Launch the Figma MCP server (figma-developer-mcp) for ONE project.
-
-Usage (as the `command` of an `mcp.servers["figma-<slug>"]` entry, never by hand):
-  figma_mcp.py <slug>
-
-The gateway starts this over stdio. It reads projects/<slug>/PROJECT_CONTEXT.md,
-takes the Design secret name from it, reads that env-kind value from the
-OpenClaw secret store, then replaces itself with the MCP server:
-  FIGMA_API_KEY = the project's own key (never another project's)
-  IMAGE_DIR     = the project's Internal Artifacts dir: screenshots and assets land
-                  there (never in the git repo); VanDev copies assets it needs into Code (CWD)
-  cwd           = the project's Internal Artifacts dir (figma-developer-mcp loads
-                  <cwd>/.env with override, so it must never start inside the repo)
-Telemetry is off. Nothing is printed to stdout (that is the MCP channel).
-Standard library only.
-"""
 import importlib.util
 import os
 import shutil
@@ -28,13 +12,17 @@ WORKSPACE = os.environ.get("OPENCLAW_WORKSPACE", "/home/openclaw/.openclaw/works
 VALIDATOR = f"{WORKSPACE}/projects/_tools/validate_context.py"
 SERVER_JS = "/home/openclaw/.local/lib/figma-developer-mcp/node_modules/figma-developer-mcp/dist/bin.js"
 
+def log(msg):
+    with open("/tmp/figma_mcp.log", "a") as f:
+        f.write(msg + "\n")
 
 def die(m):
+    log(f"DIE: {m}")
     print(f"figma_mcp: {m}", file=sys.stderr)
     sys.exit(1)
 
-
 def main():
+    log(f"Starting figma_mcp.py with argv: {sys.argv}")
     if len(sys.argv) != 2:
         die("usage: figma_mcp.py <slug>")
     slug = sys.argv[1]
@@ -55,6 +43,7 @@ def main():
     if not name:
         die(f"{ctx} has no 'Design:' SecretRef line; a project without Figma has no figma-{slug} server")
     openclaw = shutil.which("openclaw") or "/usr/bin/openclaw"
+    log(f"Running openclaw secrets store get for {name}")
     r = subprocess.run([openclaw, "secrets", "store", "get", "--plain", name],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     key = r.stdout.strip()
@@ -75,8 +64,8 @@ def main():
         "DO_NOT_TRACK": "1",
     })
     node = shutil.which("node") or "/usr/bin/node"
+    log(f"Executing node: {node} {SERVER_JS} --stdio --no-telemetry")
     os.execve(node, [node, SERVER_JS, "--stdio", "--no-telemetry"], env)
-
 
 if __name__ == "__main__":
     main()

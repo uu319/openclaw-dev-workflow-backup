@@ -22,7 +22,7 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3e70718c-c406-45ef-985c-586430a1773e/9731-3297.png"
     },
-    "desc_hash": "9c868f7bd22af3d4"
+    "desc_hash": "34b7eef61fb43906"
   },
   "[FE] Landing Page: Hero Section": {
     "id": "z94kydb12u",
@@ -31,7 +31,7 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/3fc817ca-7095-40a2-9aae-27bf900c8813/9731-3297.png"
     },
-    "desc_hash": "afb50dd0f98d08d2"
+    "desc_hash": "c086737da2844963"
   },
   "[FE] Landing Page: How it works & Features Block": {
     "id": "z94kydb12w",
@@ -40,7 +40,7 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/f1fade6c-3bad-4451-9b68-3a4f30ab8455/9731-3297.png"
     },
-    "desc_hash": "f08b22b878a0ac78"
+    "desc_hash": "9e070eebb48e0de3"
   },
   "[FE] Landing Page: Customization Section": {
     "id": "z94kydb12x",
@@ -49,7 +49,7 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/ea20149b-4400-444a-94b6-cd703f3fafbf/9731-3297.png"
     },
-    "desc_hash": "a7271b5179fee0f1"
+    "desc_hash": "4b8cbe990d692c1c"
   },
   "[FE] Landing Page: Pricing & Contact": {
     "id": "z94kydb12y",
@@ -58,7 +58,7 @@
     "attachments": {
       "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/686c0e22-c583-4325-bb09-996caa0b16a6/9731-3297.png"
     },
-    "desc_hash": "0e89ff801fd298b0"
+    "desc_hash": "b77b5ff8152becc9"
   },
   "_cancelled": {
     "[FE] Landing Page: layout - navigation - and static content": {
@@ -88,5 +88,14 @@
       },
       "desc_hash": "95fea3f003572f2f"
     }
+  },
+  "[BUG] Footer Text Font is not Actor": {
+    "id": "z94kydb188",
+    "url": "https://app.clickup.com/t/z94kydb188",
+    "lane": "FE",
+    "attachments": {
+      "9731-3297.png": "https://t7533817.p.clickup-attachments.com/t7533817/6d695eca-a3c9-4a81-a858-2cac64ba5364/9731-3297.png"
+    },
+    "desc_hash": "dd9324b4bafb5440"
   }
 }

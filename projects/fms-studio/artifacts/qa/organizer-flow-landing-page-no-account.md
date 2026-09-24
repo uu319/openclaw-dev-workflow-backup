@@ -1,63 +1,58 @@
-# QA Results: Organizer Flow - Landing Page No Account
+# QA Report: organizer-flow-landing-page-no-account
+**Commit SHA:** 5269e8b1fba82443b2f6134eb65c62f6c053151f
 
-## Acceptance Criteria Verified
+## Acceptance Criteria
+- PASS: Header contains Logo ("findmyshots studio"), Links (Events, Pricing, Sign In), and Get Started button.
+- FAIL: Footer contains "findmyshots" text and links, but it does not use the `Actor` font as required by the global fonts spec in the Figma extraction.
+- PASS: Hero section contains collage of images and Buy Credits button.
+- PASS: Value Proposition sections render correctly.
+- PASS: Pricing section renders packages as expected.
 
-### From `[QA]` Ticket
-- **Given an unauthenticated browser, when the user visits `/`, then the page title contains "FindMyShots Studio" and the "Credit Packages" section is visible.**
-  - **FAIL**
-- **Given the Pricing section, when the user clicks "Select Option" on the "$150 total" card, then the browser navigates to the `/signup` route.**
-  - **FAIL**
-- **Given the Hero section, when the user clicks "See how it works", then the page scrolls to the `#how-it-works` anchor section.**
-  - **PASS**
+## Design fidelity
+### Manifest Assets
+- PASS: `frontend/public/brand/logo.svg`
+- PASS: `frontend/public/icons/shopping-bag.svg`
+- PASS: `frontend/public/icons/calendar-heart.svg`
+- PASS: `frontend/public/icons/ticket.svg`
+- PASS: `frontend/public/icons/gift.svg`
+- PASS: `frontend/public/icons/images.svg`
+- PASS: `frontend/public/marketing/demo/swatch-gradient.svg`
+- PASS: `frontend/public/marketing/demo/my-albums.png`
+- PASS: `frontend/public/marketing/demo/swatch-overlay-01.png`
+- PASS: `frontend/public/marketing/demo/swatch-overlay-02.png`
+- PASS: `frontend/public/marketing/demo/approved.png`
+- PASS: `frontend/public/marketing/hero/photo-01.png`
+- PASS: `frontend/public/marketing/hero/photo-02.png`
+- PASS: `frontend/public/marketing/hero/photo-03.png`
+- PASS: `frontend/public/marketing/hero/photo-04.png`
+- PASS: `frontend/public/marketing/hero/photo-05.png`
+- PASS: `frontend/public/marketing/hero/photo-06.png`
+- PASS: `frontend/public/marketing/hero/photo-07.png`
+- PASS: `frontend/public/marketing/hero/photo-08.png`
+- PASS: `frontend/public/marketing/hero/photo-09.png`
+- PASS: `frontend/public/marketing/hero/photo-10.png`
+- PASS: `frontend/public/marketing/hero/photo-11.png`
+- PASS: `frontend/public/marketing/hero/photo-12.png`
+- PASS: `frontend/public/marketing/hero/photo-13.png`
+- PASS: `frontend/public/marketing/hero/scribble-01.png`
+- PASS: `frontend/public/marketing/hero/scribble-02.png`
+- PASS: `frontend/public/marketing/hero/scribble-03.png`
+- PASS: `frontend/public/marketing/hero/scribble-04.png`
+- PASS: `frontend/public/marketing/hero/scribble-05.png`
+- PASS: `frontend/public/marketing/hero/scribble-06.png`
+- PASS: `frontend/public/marketing/features/photo-01.png`
+- PASS: `frontend/public/marketing/features/photo-02.png`
+- PASS: `frontend/public/marketing/features/photo-03.png`
+- PASS: `frontend/public/marketing/features/photo-04.png`
+- PASS: `frontend/public/marketing/features/photo-05.png`
+- PASS: `frontend/public/marketing/features/photo-06.png`
 
-### From `[Feature]` Parent Ticket
-- **Given the user is not authenticated, when they visit `/`, then the Studio marketing landing page is displayed.**
-  - **PASS**
-- **Given the navigation bar, when the user clicks "Events", "Pricing", "Sign In", or "Get Started", then they are routed to the respective placeholder routes or anchors.**
-  - **PASS**
-- **Given the Hero section, when the user clicks "Buy Credits" or "See how it works", then they are routed appropriately.**
-  - **FAIL**
-- **Given the Pricing section, when the user clicks "Select Option" on any credit package card (3,000, 5,000, 10,000, 15,000), then they are routed to the sign-up/checkout flow.**
-  - **FAIL**
-- **Given the "Need fewer... or more" banner, when the user clicks "Contact Us", then a mailto link or contact form is opened.**
-  - **FAIL**
+### Tokens & Fonts
+- FAIL: The footer text ("findmyshots", "About", "Privacy", "Made by Symph") is not using the `Actor` font. The `font-actor` tailwind class is defined in `global.css` but never used in `page.tsx` for the footer elements. The footer links use `font-host`.
 
 ## Defects
-
-### Defect 1: Missing correct page title and "Credit Packages" text
-- **Steps:** 
-  1. Inspect the layout metadata in `src/app/layout.tsx`.
-  2. Inspect the pricing section in `src/app/page.tsx` for the expected text.
-- **Expected:** Page title contains "FindMyShots Studio" and the pricing section mentions "Credit Packages".
-- **Observed:** Page title is "Welcome to frontend". The pricing section text says "Simple, transparent pricing" but does not contain "Credit Packages".
-- **Evidence:** `layout.tsx` metadata title is `'Welcome to frontend'`. The text "Credit Packages" is absent from `page.tsx`.
-
-### Defect 2: Pricing cards missing "Select Option" button and routing
-- **Steps:**
-  1. Go to the Pricing section on the landing page.
-  2. Look for the "Select Option" button on any of the pricing cards (e.g., "$150" card).
-  3. Attempt to click it to navigate to `/signup`.
-- **Expected:** A button or link labeled "Select Option" exists and navigates the user to `/signup`.
-- **Observed:** The button is labeled "Buy now" and is a standard `<button>` element with no click handler or `href` attribute. It does not route anywhere.
-- **Evidence:** Code in `src/app/page.tsx` shows `<button className="...">Buy now</button>`.
-
-### Defect 3: "Buy Credits" button in Hero section routes incorrectly
-- **Steps:**
-  1. Inspect the "Buy Credits" button in the Hero section.
-- **Expected:** The button routes the user appropriately to the signup page (`/signup`).
-- **Observed:** The button links to the `#pricing` anchor instead of `/signup`.
-- **Evidence:** `<Link href="#pricing" className="...">Buy Credits</Link>` in `src/app/page.tsx`.
-
-### Defect 4: "Contact Us" banner link is not a mailto link
-- **Steps:**
-  1. Inspect the "Contact Us" link in the banner below the pricing cards.
-- **Expected:** A `mailto:` link is opened when clicked.
-- **Observed:** The link routes to a placeholder page (`/contact`).
-- **Evidence:** `<Link href="/contact" className="...">Contact Us</Link>` in `src/app/page.tsx`.
-
-### Defect 5: Missing E2E Tests
-- **Steps:**
-  1. Attempt to run the E2E suite via `npx nx run-many -t e2e`.
-- **Expected:** An E2E test runs for the landing page scenario as defined in the `[QA]` ticket.
-- **Observed:** No e2e targets are found. The QA playwright scenario from the ticket was not implemented.
-- **Evidence:** Running `npx nx run-many -t e2e` yields "NX No tasks were run" and there is no e2e project folder.
+### Defect 1: Footer not using Actor font
+- **Steps:** Navigate to the landing page and inspect the footer elements.
+- **Expected:** The footer text should use the `Actor` font, per the design specification global fonts list.
+- **Observed:** The footer text ("findmyshots", "About", "Privacy", "Made by Symph") uses `font-host` or inherits the default font.
+- **Evidence Path:** `frontend/src/app/page.tsx` lines 30-34, the tailwind classes applied lack `font-actor`.

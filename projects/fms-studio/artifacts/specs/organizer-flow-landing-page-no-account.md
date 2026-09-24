@@ -50,6 +50,54 @@ As an unauthenticated organizer, I want to learn about the Studio product, its f
 ---end
 
 ---ticket
+title: [BUG] Footer Text Font is not Actor
+id: z94kydb188
+lane: FE
+parent: [Feature] Organizer Flow: Landing Page No Account
+priority: normal
+status: to do
+estimate_hours: 1
+parallel: true
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9773-3522
+screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
+assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
+
+## Context
+Parent: [Feature] Organizer Flow: Landing Page No Account (z94kydab9b) · Lane: FE
+
+## User story
+As an unauthenticated organizer, I expect the footer to match the design spec exactly, including the typography.
+
+## In scope
+- Fixing the footer text font family.
+
+## Out of scope (do NOT build)
+- Any other layout or styling changes.
+
+## Acceptance criteria
+- Given the footer text, when rendered, then it uses the `Actor` font (e.g., via the `font-actor` Tailwind class).
+- Given the footer text, when rendered, then it does not inherit the host font or default font.
+- Given the layout, when the footer is rendered, then the `font-actor` class correctly sets the font-family.
+
+## Design fidelity
+- Tokens: Text `#313131` · Font `Actor` 400 at 20px.
+- Assets: none
+
+## Technical notes
+- The Tailwind class `font-actor` is defined but not applied to the footer text elements.
+
+## Depends on / blocks
+- Depends on: none
+- Blocks: none
+
+## Test notes (how QA verifies)
+- Visually inspect the footer font and verify the computed CSS uses the `Actor` font family.
+
+## Definition of done
+- [ ] All acceptance criteria pass
+---end
+
+---ticket
 title: [FE] Landing Page: Header and Footer
 id: z94kydb12t
 id: z94kydb12t
@@ -59,12 +107,12 @@ priority: high
 status: to do
 estimate_hours: 4
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9794-3216
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
 
 ## Context
-Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: Header is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9794-3216 and Footer is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9773-3522 · Lane: FE
 
 ## User story
 As an unauthenticated organizer, I want to navigate the landing page and find legal links in the footer.
@@ -113,12 +161,12 @@ priority: normal
 status: to do
 estimate_hours: 8
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9734-3593
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
 
 ## Context
-Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: Collage is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9734-3593 and Text is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9734-3601 · Lane: FE
 
 ## User story
 As an unauthenticated organizer, I want to see an engaging hero section that explains the core value proposition.
@@ -184,12 +232,12 @@ priority: normal
 status: to do
 estimate_hours: 6
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9749-3731
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
 
 ## Context
-Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: Features Block is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9749-3731 and How it works cards is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9749-3726 · Lane: FE
 
 ## User story
 As an unauthenticated organizer, I want to understand how the platform works and its key features.
@@ -242,12 +290,12 @@ priority: normal
 status: to do
 estimate_hours: 6
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9884-4728
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
 
 ## Context
-Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: Customization Section is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9884-4728 · Lane: FE
 
 ## User story
 As an unauthenticated organizer, I want to see how I can customize my albums.
@@ -302,12 +350,12 @@ priority: normal
 status: to do
 estimate_hours: 6
 parallel: true
-figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297
+figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9764-3322
 screenshots: specs/_figma/organizer-flow-landing-page-no-account/9731-3297.png
 assets: specs/_figma/organizer-flow-landing-page-no-account/assets/manifest.json
 
 ## Context
-Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9731-3297 · Lane: FE
+Parent: [Feature] Organizer Flow: Landing Page No Account · Figma: Pricing Section is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9764-3322 and Contact banner is https://www.figma.com/design/ve5qHWxtQeBIxDF9xehnbn/FindMyShots-Branding?node-id=9773-3494 · Lane: FE
 
 ## User story
 As an unauthenticated organizer, I want to see clear pricing options so I can purchase credits.

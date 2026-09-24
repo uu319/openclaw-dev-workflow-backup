@@ -4,13 +4,21 @@
 
 | Branch | Status | PR | Opened by | Task | Updated |
 |---|---|---|---|---|---|
+| `feature/organizer-flow-landing-page-no-account` | merged_or_closed | https://github.com/symphco/fms-studio/pull/50 | developer | Fix PR 50 blockers | 2026-09-22 |
+| `bug/z94kydb12u-landing-hero` | merged_or_closed | https://github.com/symphco/fms-studio/pull/50 | developer | Fix landing hero design issues based on PR 50 review | 2026-09-23 |
+| `feature/header-and-footer` | abandoned | https://github.com/symphco/fms-studio/pull/48 | code-reviewer |  | 2026-09-22 |
+| `feature/landing-page-font-fix` | abandoned |  | code-reviewer |  | 2026-09-22 |
+| `bug/z94kydb188-footer-font` | pr_open | https://github.com/symphco/fms-studio/pull/49 | developer | Address review feedback: Apply Host Grotesk font to footer links based on Figma  | 2026-09-22 |
+| `feature/z94kydb12t-landing-page-header-and-footer` | abandoned |  | code-reviewer |  | 2026-09-22 |
+| `feature/pr-48` | active |  | code-reviewer |  | 2026-09-22 |
+| `bug/z94kydb12t-landing-header-footer` | merged_or_closed | https://github.com/symphco/fms-studio/pull/48 | developer | Fix requested changes for PR 48 (tests deleted, layout gap, font-actor in footer | 2026-09-22 |
 | `feature/47` | active |  | code-reviewer |  | 2026-09-22 |
-| `bug/landing-page-pixel-perfect` | pr_open | https://github.com/symphco/fms-studio/pull/47 | developer | Address PR feedback for landing page pixel perfect | 2026-09-22 |
+| `bug/landing-page-pixel-perfect` | merged_or_closed | https://github.com/symphco/fms-studio/pull/47 | developer | Address PR feedback for landing page pixel perfect | 2026-09-22 |
 | `bug/organizer-flow-landing-page-no-account--z94kydab9b` | pr_open | 46 | code-reviewer | Address PR #46 feedback | 2026-09-22 |
 | `bug/landing-page-design-fix` | pr_open | https://github.com/symphco/fms-studio/pull/45 | developer | Fix landing page UI feedback | 2026-09-22 |
 | `bug/fix-tailwind-build` | merged_or_closed | https://github.com/symphco/fms-studio/pull/44 | code-reviewer | Fix Tailwind CSS not compiling in frontend production build | 2026-09-22 |
 | `bug/fix-frontend-public-assets` | merged_or_closed | https://github.com/symphco/fms-studio/pull/43 | developer | Fix deploy-prepare target to copy frontend/public to dist/frontend/public | 2026-09-22 |
-| `feature/landing-page-no-account` | merged_or_closed | https://github.com/symphco/fms-studio/pull/42 | code-reviewer | Fix landing page review feedback | 2026-09-22 |
+| `feature/landing-page-no-account` | active | https://github.com/symphco/fms-studio/pull/49 | developer | Fix footer font blocker | 2026-09-22 |
 | `bug/backend-test-di-fix` | abandoned | https://github.com/symphco/fms-studio/pull/41 | developer | Address review feedback on backend test DI | 2026-09-22 |
 | `bug/fix-backend-test-di` | merged_or_closed | https://github.com/symphco/fms-studio/pull/40 | developer | address PR feedback | 2026-09-21 |
 | `feature/z94kydaw4w-pr-checks` | merged_or_closed | https://github.com/symphco/fms-studio/pull/39 | developer | Switch PR checks to Cloud Build | 2026-09-21 |

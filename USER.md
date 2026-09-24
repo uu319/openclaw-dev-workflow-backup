@@ -50,3 +50,6 @@ place. Never append a contradictory active directive.
 
 <!-- observed: 2026-09-20 | status: active -->
 - Prefer plain-text lettered options with a marked recommendation and a one-line rationale, not interactive pickers. Explain in simple terms first, then the detail.
+
+<!-- observed: 2026-09-22 | status: active -->
+- Always provide the direct GitHub PR link to the user in the chat whenever a pull request is opened, updated, or ready for their review/merge.
