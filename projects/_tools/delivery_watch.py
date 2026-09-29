@@ -302,7 +302,7 @@ def write_state(path, state):
 def merge_state(disk, mine):
     """What this run found, reconciled with anything written while it ran."""
     out = dict(disk)
-    out["acked"] = {**mine.get("acked", {}), **disk.get("acked", {})}
+    out["acked"] = {**(mine.get("acked") or {}), **(disk.get("acked") or {})}
     out["seen_feedback"] = sorted(set(disk.get("seen_feedback") or [])
                                   | set(mine.get("seen_feedback") or []))
     # `pending` is this run's view, minus anything acked by either side
