@@ -25,6 +25,14 @@ It is parsed into fields["flow"] and fields["status"]:
 Tools use the canonical keys and never hardcode a board's status names. A context without
 `## Flow` gets the `factory` profile and a status map inferred from its Statuses (warning only).
 
+The optional `## Ticket conventions` section says how THIS project wants its tickets
+shaped - lanes, body headings, acceptance-criteria form, size cap. It is parsed into
+fields["tickets"], which VanPM's `feature-breakdown` skill and its push script read
+instead of any global standard; a context without the section keeps the old factory
+defaults. Free prose in the section is carried through as fields["tickets"]["text"]
+for the PM to follow; only the `- **Label:**` lines are machine-checked, and every
+one of them is optional.
+
 Exit codes: 0 ok · 1 file/field errors · 3 live check failed.
 Standard library only.
 """
@@ -258,6 +266,173 @@ def parse_flow(text, fields, errors):
     fields["flow"], fields["status"] = flow, smap
 
 
+# ------------------------------------------------------- Ticket conventions
+# How THIS project wants its tickets shaped. There is no global standard any
+# more: `## Ticket conventions` in PROJECT_CONTEXT.md is the source of truth,
+# and everything below is only what a project gets when it says nothing. The
+# old hardcoded factory rules ([FE]/[BE]/... lanes, the fixed body template,
+# Given/When/Then) survive exactly as those defaults, so a project that does
+# not write the section keeps behaving as it did.
+#
+# Parsed into fields["tickets"]:
+#   parent_title subtask_split subtask_title lanes max_subtask_hours
+#   required_sections acceptance_heading acceptance_format
+#   min_acceptance_criteria design_lanes design_section
+#   text     the whole section verbatim (VanPM reads and follows this prose)
+#   custom   True when the project wrote the section at all
+TICKET_DEFAULTS = {
+    "parent_title": "[Feature] <Area>: <Outcome>",
+    "subtask_split": "one per engineering lane the feature touches",
+    "subtask_title": "[<LANE>] <Feature short name>: <what>",
+    "lanes": ["FE", "BE", "DB", "INT", "QA", "SPIKE"],
+    "max_subtask_hours": 8.0,
+    "required_sections": ["Acceptance criteria", "Out of scope"],
+    "acceptance_heading": "Acceptance criteria",
+    "acceptance_format": "given-when-then",
+    "min_acceptance_criteria": 3,
+    "design_lanes": ["FE"],
+    "design_section": "Design fidelity",
+}
+TICKET_LABELS = {
+    "parent_title": "Parent title", "subtask_split": "Subtask split",
+    "subtask_title": "Subtask title", "lanes": "Lanes",
+    "max_subtask_hours": "Max subtask hours", "required_sections": "Required sections",
+    "acceptance_heading": "Acceptance heading", "acceptance_format": "Acceptance format",
+    "min_acceptance_criteria": "Min acceptance criteria", "design_lanes": "Design lanes",
+    "design_section": "Design section",
+}
+TICKET_LISTS = ("lanes", "required_sections", "design_lanes")
+TICKET_PROSE = ("parent_title", "subtask_split", "subtask_title")
+ACCEPTANCE_FORMATS = {"given-when-then", "free"}
+# `FEATURE` is not a lane a project chooses: it is how the parent ticket is told
+# apart from its subtasks, and the push script keys its whole structure on it.
+PARENT_LANE = "FEATURE"
+LANE_RX = re.compile(r"[A-Z][A-Z0-9]{0,9}")
+# A heading is written into `## <heading>` and matched back out of the body, so
+# it has to survive that round trip.
+HEADING_RX = re.compile(r"[A-Za-z][A-Za-z0-9 /&'()+-]{0,58}")
+
+
+def _no_aside(v):
+    """Drop a trailing `(...)` aside, the way `_one` does for the `## Flow` lines.
+
+    These lines carry their own documentation in that aside, and it is full of
+    backticks - so without this, `_ticks` read the aside's code spans as values
+    and a Design lanes line whose aside mentions the figma/screenshots/assets
+    headers parsed as three lanes named FE, FIGMA: and SCREENSHOTS:.
+    """
+    return re.sub(r"\s*\((?:[^()]|\([^()]*\))*\)\s*$", "", (v or "").strip()).strip()
+
+
+def _heading(v):
+    """A section heading, however the file spelled it: `## Foo`, `Foo`, `` `Foo` ``."""
+    return re.sub(r"^#+\s*", "", (v or "").strip().strip("`")).strip()
+
+
+def parse_tickets(text, fields, errors):
+    """Fill fields['tickets'] from the `## Ticket conventions` section (or defaults)."""
+    sec = re.search(r"^## Ticket conventions[^\n]*\n(.*?)(?=^## |\Z)", text, re.S | re.M)
+    conv = dict(TICKET_DEFAULTS)
+    conv["lanes"] = list(TICKET_DEFAULTS["lanes"])
+    conv["required_sections"] = list(TICKET_DEFAULTS["required_sections"])
+    conv["design_lanes"] = list(TICKET_DEFAULTS["design_lanes"])
+    # What VanPM reads and follows. The HTML comment is guidance for whoever edits
+    # the file, not instructions for the PM, so it does not travel with the prose.
+    conv["text"] = re.sub(r"<!--.*?-->", "", sec.group(1), flags=re.S).strip() if sec else ""
+    conv["custom"] = bool(sec)
+    if not sec:
+        fields["tickets"] = conv
+        return
+    body = sec.group(1)
+    raw = {}
+    for key, label in TICKET_LABELS.items():
+        # A value may wrap onto indented continuation lines: these lines carry prose
+        # asides, and hard-wrapping one used to truncate the value mid-sentence.
+        m = re.search(r"^- \*\*" + re.escape(label) + r":\*\*[ \t]*(.+(?:\n[ \t]+(?!- )\S.*)*)",
+                      body, re.M)
+        # An unfilled `<placeholder>` means "use the default", exactly as in `## Flow`.
+        if m and not PLACEHOLDER.fullmatch(_one(m.group(1))):
+            raw[key] = _no_aside(re.sub(r"\s+", " ", m.group(1)))
+
+    for key in TICKET_PROSE:
+        if raw.get(key):
+            # Prose for VanPM, not something any tool matches on: keep it whole.
+            conv[key] = raw[key].strip("`")
+
+    if raw.get("lanes"):
+        lanes = [x.strip().strip("[]").upper() for x in _ticks(raw["lanes"])]
+        lanes = [x for x in lanes if x and x != PARENT_LANE]
+        bad = [x for x in lanes if not LANE_RX.fullmatch(x)]
+        if bad:
+            errors.append(f"Ticket conventions Lanes must be short UPPERCASE tags: {bad}")
+        lanes = [x for x in lanes if LANE_RX.fullmatch(x)]
+        if not lanes:
+            errors.append("Ticket conventions Lanes is empty: name at least one subtask lane "
+                          "(or delete the line to keep the default)")
+        else:
+            conv["lanes"] = list(dict.fromkeys(lanes))
+
+    for key, cast, ok, why in (
+            ("max_subtask_hours", float, lambda v: v > 0, "a positive number of hours"),
+            ("min_acceptance_criteria", int, lambda v: v >= 0, "a count of 0 or more")):
+        if raw.get(key):
+            try:
+                v = cast(_one(raw[key]))
+            except ValueError:
+                errors.append(f"Ticket conventions {TICKET_LABELS[key]} must be {why}: {_one(raw[key])}")
+                continue
+            if not ok(v):
+                errors.append(f"Ticket conventions {TICKET_LABELS[key]} must be {why}: {v}")
+            else:
+                conv[key] = v
+
+    if raw.get("acceptance_format"):
+        v = _one(raw["acceptance_format"]).lower()
+        if v not in ACCEPTANCE_FORMATS:
+            errors.append(f"Ticket conventions Acceptance format must be one of "
+                          f"{sorted(ACCEPTANCE_FORMATS)}: {v}")
+        else:
+            conv["acceptance_format"] = v
+
+    for key in ("acceptance_heading", "design_section"):
+        if raw.get(key):
+            v = _heading(_one(raw[key]))
+            if not HEADING_RX.fullmatch(v):
+                errors.append(f"Ticket conventions {TICKET_LABELS[key]} is not a usable "
+                              f"markdown heading: {v!r}")
+            else:
+                conv[key] = v
+
+    if raw.get("required_sections"):
+        secs = [_heading(x) for x in _ticks(raw["required_sections"])]
+        secs = [x for x in secs if x and x.lower() != "none"]
+        bad = [x for x in secs if not HEADING_RX.fullmatch(x)]
+        if bad:
+            errors.append(f"Ticket conventions Required sections are not usable markdown "
+                          f"headings: {bad}")
+        conv["required_sections"] = [x for x in secs if HEADING_RX.fullmatch(x)]
+
+    if raw.get("design_lanes"):
+        dl = [x.strip().strip("[]").upper() for x in _ticks(raw["design_lanes"])]
+        conv["design_lanes"] = [] if dl == ["NONE"] else [x for x in dl if x and x != "NONE"]
+
+    # A ticket's acceptance criteria are read out of one heading, so that heading
+    # always has to be present - otherwise every ticket "has 0 criteria" and the
+    # project cannot push anything.
+    if conv["min_acceptance_criteria"] and conv["acceptance_heading"] not in conv["required_sections"]:
+        conv["required_sections"].insert(0, conv["acceptance_heading"])
+    unknown = [x for x in conv["design_lanes"] if x not in conv["lanes"]]
+    if unknown:
+        errors.append(f"Ticket conventions Design lanes {unknown} are not in Lanes "
+                      f"{conv['lanes']}: those tickets could never exist")
+        conv["design_lanes"] = [x for x in conv["design_lanes"] if x in conv["lanes"]]
+    if conv["design_lanes"] and fields.get("figma_file", "none").lower().strip("<>") in ("none", ""):
+        fields.setdefault("warnings", []).append(
+            "Ticket conventions names Design lanes but this project has no Figma file; "
+            "the design checks stay off until one is set")
+    fields["tickets"] = conv
+
+
 def parse(path):
     text = open(path, encoding="utf-8").read()
     fields, errors = {}, []
@@ -435,6 +610,7 @@ def parse(path):
         if fields["create_status"].lower() not in [s.lower() for s in fields["statuses"]]:
             errors.append(f"create_status '{fields['create_status']}' is not in Statuses")
     parse_flow(text, fields, errors)
+    parse_tickets(text, fields, errors)
     for k in ("code_cwd", "artifacts_dir"):
         if k in fields and not os.path.isdir(fields[k]):
             fields.setdefault("warnings", []).append(f"{k} directory does not exist yet: {fields[k]}")

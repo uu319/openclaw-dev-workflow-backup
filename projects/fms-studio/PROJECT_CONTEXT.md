@@ -97,14 +97,45 @@
 - **Chat channel:** `discord:1547365802280362044`
 - **PR conventions:** `none`
 
-## Ticket conventions (enforced by the PM's `feature-breakdown` skill)
-- One parent ticket per user-visible feature: `[Feature] <Area>: <Outcome>`.
-- Subtasks per engineering lane, only the lanes the feature touches: `[FE]`, `[BE]`, `[DB]`, `[INT]`, `[QA]`, `[SPIKE]`. Each ≤ 8h.
-- Every ticket body follows the template: Context · User story · In scope · Out of scope · Acceptance criteria (Given/When/Then, falsifiable) · Technical notes · Depends on/blocks · Test notes · Definition of done.
-- Tags: `agent-created` + lane tag. Priority: urgent=1, high=2, normal=3, low=4. Estimates in `time_estimate`.
-- Dependencies pushed as ClickUp task links. `[DB]` → `[BE]` → `[FE] wiring`; `[QA]` last.
-- **Figma Designs:** If the Figma page is large or complex, VanPM must extract the component breakdown and include direct `?node-id=` links in the `[FE]` ticket and spec. For small/simple screens, the main design link is sufficient.
-- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.clickup.json` next to it (completion marker; re-runs update instead of duplicate).
+## Ticket conventions
+<!-- This project's own ticket shape, not a house standard. VanPM's `feature-breakdown`
+     skill reads this section and follows it; the push script enforces the `- **Label:**`
+     lines. See projects/_template/PROJECT_CONTEXT.md for what each label means and what
+     the default is. Changed 2026-09-30 at the product team's request: subtasks are cut by
+     UI component / screen area instead of by engineering lane, and the body headings are
+     User outcome · Acceptance scenarios · Design gaps. -->
+- **Parent title:** `[Feature] <Area>: <Outcome>` (one parent ticket per user-visible feature)
+- **Subtask split:** by UI component / screen area - one subtask per component or region of a
+  screen (header, filter bar, results grid, empty state, the endpoint it reads). Split a
+  component further only when it is over the hour cap. Do **not** cut a screen into
+  "layout / states / wiring" layers: one component's layout, its states and its data are one
+  ticket, because that is what a reviewer can look at in one place.
+- **Subtask title:** `[<LANE>] <Screen or area>: <component>`
+- Title example: `[FE] Album grid: results grid + empty state`.
+- **Lanes:** `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE`
+- **Max subtask hours:** `8`
+- **Required sections:** `User outcome`, `Acceptance scenarios`, `Out of scope`, `Design gaps`
+- **Acceptance heading:** `Acceptance scenarios`
+- **Acceptance format:** `given-when-then`
+- **Min acceptance criteria:** `3`
+- **Design lanes:** `FE`
+- **Design section:** `Design fidelity`
+- `User outcome` replaces the old Context + User story pair: one short paragraph saying what
+  the user can do once this ticket ships, and which parent it belongs to.
+- `Design gaps` is required on **every** ticket, including `[BE]`/`[DB]`: what the Figma frame does
+  **not** answer and what was decided instead (validation rules, limits, hover/disabled states,
+  copy that is not drawn). `none` is a valid answer and means the frame answers everything.
+  It is the honest half of the design contract; `Design fidelity` on an `[FE]` ticket is still the
+  binding half - exact hex tokens and the asset list with repo paths, from the asset manifest.
+- **Figma Designs:** If the Figma page is large or complex, VanPM must extract the component
+  breakdown and include direct `?node-id=` links in each `[FE]` ticket and in the spec. For
+  small/simple screens, the main design link is sufficient.
+- Tags: `agent-created` + the lane tag, lowercased. Priority: urgent=1, high=2, normal=3, low=4.
+  Estimates in `time_estimate`.
+- Dependencies are pushed as ClickUp task links. Order: `[DB]` → `[BE]` → the `[FE]` component
+  that reads it; a shared component before the screens that use it; `[QA]` last.
+- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.clickup.json`
+  next to it (completion marker; re-runs update instead of duplicate).
 
 ## Artifact Routing
 - **Code (CWD):** `/home/openclaw/projects/fms-studio`

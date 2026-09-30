@@ -250,7 +250,40 @@ cancelled` (plus `staged` when a Deploy signal is set), written out or inferred 
 The orchestration skill becomes: *read Flow → for each stage in Stages, run the step; skip the rest.* One
 skill, no forks. The onboarding skill asks for the Flow answers as one checklist (defaults = `factory`).
 
-### 4.3 Team mode (acting as Van among humans)
+### 4.3 The `## Ticket conventions` section (live since 2026-09-30)
+The same reasoning as `## Flow`, one level down: **ticket shape is per project too.** The framework used to
+carry one house standard (`[FE]`/`[BE]` lanes, a fixed nine-heading body, Given/When/Then), written into
+VanPM's skill and hardcoded in `tracker_push.py`. It is now the *default*, and a project overrides it in
+`## Ticket conventions` of its `PROJECT_CONTEXT.md`:
+
+```markdown
+## Ticket conventions
+- **Parent title:** `[Feature] <Area>: <Outcome>`
+- **Subtask split:** by UI component / screen area        (prose: what a subtask IS here)
+- **Subtask title:** `[<LANE>] <Screen or area>: <component>`
+- **Lanes:** `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE`       (any short UPPERCASE tags)
+- **Max subtask hours:** `8`
+- **Required sections:** `User outcome`, `Acceptance scenarios`, `Out of scope`, `Design gaps`
+- **Acceptance heading:** `Acceptance scenarios`
+- **Acceptance format:** `given-when-then` | `free`
+- **Min acceptance criteria:** `3`
+- **Design lanes:** `FE`          (which lanes carry figma:/screenshots:/assets:; `none` turns the gate off)
+- **Design section:** `Design fidelity`
+```
+
+- `validate_context.py` parses it into `fields["tickets"]`. Every line is optional; an omitted line keeps the
+  old factory default, so a project that writes nothing behaves exactly as it did before.
+- `tracker_push.py` enforces **the project's** values, not constants: lanes, the size cap, required headings,
+  which heading holds the acceptance criteria, their form and count, and the design gate.
+- VanPM's `feature-breakdown` skill reads the section (Step 0.5) and follows it, including the free prose in
+  it, which no script can check ("split by screen area, never by layer").
+- What is **not** configurable, because it is structure rather than convention: one parent ticket with
+  `lane: FEATURE` and its subtasks under it, each matched back to the board by the `id:` the push writes into
+  the spec. Change that and re-pushes duplicate.
+- fms-studio was the first project to override it (2026-09-30): split by UI component / screen area, bodies
+  headed User outcome · Acceptance scenarios · Out of scope · Design gaps.
+
+### 4.4 Team mode (acting as Van among humans)
 When Profile is `teammate` or `maintenance`:
 - Only tickets whose assignee matches **Assignee filter**, or that Van hands over by name, are claimed. Every
   other ticket is read-only. `tracker_scan.py` lists human tickets; they are adopted with `existing_id`, never recreated.

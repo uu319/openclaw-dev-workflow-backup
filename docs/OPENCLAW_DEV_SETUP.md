@@ -858,7 +858,7 @@ and name branches, never folders. The skill file is the source of truth; this is
 stages `spec`+`tickets` (off: VanPM adopts human tickets with `tracker_scan.py`), step 3 `review`, step 4
 `internal-qa`, step 5 `merge-gate`, step 6 `delivery-watch`; step 2 always runs. Team profiles (`teammate`,
 `maintenance`) only claim tickets matching the Flow **Assignee filter**, never rewrite human tickets, follow the
-repo's PR conventions, and never touch other people's PRs, branches or tickets (architecture §4.3).
+repo's PR conventions, and never touch other people's PRs, branches or tickets (architecture §4.4).
 
 **Statuses** use canonical keys (`todo doing staged rejected done cancelled hold`) that each project maps to its board
 through the Flow **Status map**; scripts take the key (`tracker_status.py --status staged`). Shown here with the
@@ -1194,13 +1194,40 @@ they differ, re-copy it here. Labels are parsed by `validate_context.py`, `deliv
 - **Chat channel:** `<discord:channel id>`
 - **PR conventions:** `none` (or the repo path of its PR template / CONTRIBUTING.md; agents follow it)
 
-## Ticket conventions (enforced by the PM's `feature-breakdown` skill)
-- One parent ticket per user-visible feature: `[Feature] <Area>: <Outcome>`.
-- Subtasks per engineering lane, only the lanes the feature touches: `[FE]`, `[BE]`, `[DB]`, `[INT]`, `[QA]`, `[SPIKE]`. Each ≤ 8h.
-- Every ticket body follows the template: Context · User story · In scope · Out of scope · Acceptance criteria (Given/When/Then, falsifiable) · Technical notes · Depends on/blocks · Test notes · Definition of done.
-- Tags: `agent-created` + lane tag. Priority: urgent=1, high=2, normal=3, low=4. Estimates in `time_estimate`.
-- Dependencies pushed as ClickUp task links. `[DB]` → `[BE]` → `[FE] wiring`; `[QA]` last.
-- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.clickup.json` next to it.
+## Ticket conventions
+<!-- How THIS project wants its tickets shaped. There is no house standard: VanPM's
+     `feature-breakdown` skill reads this section and follows it, and the push script
+     enforces the `- **Label:**` lines below. Every line is optional - delete one and the
+     project keeps the default shown after it, which is the old factory rule, so a project
+     that says nothing behaves exactly as before. Parsed by validate_context.py into
+     fields["tickets"]; see ~/OPENCLAW_ARCHITECTURE.md.
+     Prose you add under the lines is read by VanPM and enforced by nobody: put the
+     judgement calls there ("split by screen area, never by layer"), and keep the labelled
+     lines for what a script can check. -->
+- **Parent title:** `[Feature] <Area>: <Outcome>` (one parent ticket per user-visible feature)
+- **Subtask split:** one per engineering lane the feature touches (prose: what a subtask *is*
+  on this project - a lane, a screen area, an endpoint, a component)
+- **Subtask title:** `[<LANE>] <Feature short name>: <what>`
+- **Lanes:** `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE` (the `lane:` values a subtask may use, any
+  short UPPERCASE tags you like; the parent's lane is always `FEATURE` and is not listed here)
+- **Max subtask hours:** `8` (the push refuses an `estimate_hours` above this)
+- **Required sections:** `Acceptance criteria`, `Out of scope` (the `## ` headings every ticket
+  body must carry; the Acceptance heading below is always required on top of these)
+- **Acceptance heading:** `Acceptance criteria` (the heading whose bullets *are* the acceptance
+  criteria - rename it and the counting and form checks follow it)
+- **Acceptance format:** `given-when-then` (`given-when-then` = every bullet must read
+  `Given <state>, when <action>, then <result>.` · `free` = any shape, still falsifiable)
+- **Min acceptance criteria:** `3` (bullets under the Acceptance heading; `0` turns the check off)
+- **Design lanes:** `FE` (lanes that must carry `figma:`, `screenshots:` and `assets:` headers and
+  the Design section below, when the project has a Figma file; `none` turns the design gate off)
+- **Design section:** `Design fidelity` (the heading those lanes carry: exact hex tokens + the
+  asset list with repo paths)
+- Tags: `agent-created` + the lane tag, lowercased. Priority: urgent=1, high=2, normal=3, low=4.
+  Estimates go in `time_estimate`.
+- Dependencies are pushed as tracker task links. Default order: `[DB]` → `[BE]` → `[FE] wiring`,
+  `[QA]` last. Rewrite this line when the lanes above are not engineering lanes.
+- Specs live in `artifacts/specs/<feature-slug>.md`; the push writes `<feature-slug>.tracker.json`
+  next to it. (This line is structural - the push does it either way.)
 
 ## Artifact Routing
 - **Code (CWD):** `/home/openclaw/projects/<slug>`
