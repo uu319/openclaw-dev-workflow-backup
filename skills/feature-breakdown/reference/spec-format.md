@@ -2,6 +2,12 @@
 
 One spec file per feature at `projects/<project>/artifacts/specs/<feature-slug>.md`.
 
+The **shape** of what goes in a ticket — which lanes exist, how subtasks are cut,
+which `## ` headings a body must carry, whether acceptance criteria are
+Given/When/Then — is the project's, not this format's: it comes from
+`## Ticket conventions` in its `PROJECT_CONTEXT.md`. This file describes the
+envelope those tickets travel in, which is the same on every project.
+
 Rules:
 - The file starts with a `# ` heading (free text, ignored by the script).
 - Each ticket is a fenced block that begins with a line `---ticket` and ends
@@ -21,17 +27,17 @@ Header keys:
 |---|---|---|
 | `title` | yes | full ticket title, e.g. `[FE] Set password: form layout + validation states`. Safe to rewrite once the ticket has an `id:` |
 | `id` | written by the push | the board's ticket id. Added automatically on the push that creates the ticket; do not invent one. Delete the line only when the ticket itself is gone |
-| `lane` | yes | `FEATURE`, `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE` |
+| `lane` | yes | `FEATURE` for the parent, plus any value in the project's `Lanes:` (default `FE`, `BE`, `DB`, `INT`, `QA`, `SPIKE`) |
 | `parent` | subtasks | exact `title` of the parent ticket |
 | `priority` | no | `urgent`, `high`, `normal` (default), `low` |
-| `estimate_hours` | subtasks | number ≤ 8 (script refuses larger) |
+| `estimate_hours` | subtasks | number ≤ the project's `Max subtask hours:` (default 8; the script refuses larger) |
 | `tags` | no | comma-separated extra tags; lane tag and `agent-created` are added automatically |
 | `depends_on` | no | comma-separated titles of tickets in this spec |
 | `parallel` | no | `true` if it can start before its dependencies land (against a mock) |
 | `status` | no | status for a ticket when it is first created (ignored on re-push; move statuses with clickup_status.py) |
-| `figma` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
-| `screenshots` | `FEATURE`, `FE` (when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
-| `assets` | `FE` (when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only". The manifest is committed; the binaries beside it are a gitignored cache rebuilt from its `file_key`, `png_scale` and per-asset `download` blocks. Several `[FE]` tickets share one manifest; each ships the subset its `## Design fidelity` lists, and across the spec every asset must be shipped by exactly one |
+| `figma` | the project's `Design lanes:` (default `FE`; when the project has a Figma file) | comma-separated Figma frame URLs with `node-id`, the frames this ticket implements |
+| `screenshots` | the project's `Design lanes:` (default `FE`; when the project has a Figma file) | comma-separated PNG paths relative to Internal Artifacts, e.g. `specs/_figma/<feature-slug>/9884-4390.png` (from `download_figma_images`). Uploaded as ClickUp attachments and embedded in a generated `## Design` section |
+| `assets` | the project's `Design lanes:` (default `FE`; when the project has a Figma file) | one path, relative to Internal Artifacts, to the feature's asset manifest, e.g. `specs/_figma/<feature-slug>/assets/manifest.json` (written in Step 1.5). Every file it lists must exist and be non-empty. An empty `"assets": []` is valid and means "this screen is CSS only". The manifest is committed; the binaries beside it are a gitignored cache rebuilt from its `file_key`, `png_scale` and per-asset `download` blocks. Several `[FE]` tickets share one manifest; each ships the subset its `## Design fidelity` lists, and across the spec every asset must be shipped by exactly one |
 | `existing_id` | no | tracker ticket id of a ticket a person already made, to adopt instead of creating a new one (from `tracker_scan.py`). Same meaning as `id`; the push reads either |
 
 ## Complete example

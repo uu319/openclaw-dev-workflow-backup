@@ -8,6 +8,16 @@ Reads the list id, secret ref name and status names from PROJECT_CONTEXT.md,
 parses the spec (see reference/spec-format.md), creates the parent first, then
 subtasks with `parent`, then task links for depends_on.
 
+**Ticket shape is per project.** Lanes, the headings every body must carry, the
+acceptance-criteria heading and form, the minimum number of criteria, the
+subtask size cap and which lanes carry the design contract all come from
+`## Ticket conventions` in that project's PROJECT_CONTEXT.md (parsed by
+projects/_tools/validate_context.py into fields["tickets"]). A project that
+writes no such section gets the old factory defaults, so its specs still push
+exactly as before. Nothing in this script is a house standard any more except
+the structure itself: one parent ticket (`lane: FEATURE`) with subtasks under
+it, each matched to the board by its `id:`.
+
 A ticket is matched to its board ticket by the `id:` the push writes back into
 the spec's own `---ticket` header the first time it creates it. The title is
 only a fallback for a ticket that has no id yet: matching by title meant that
@@ -48,10 +58,14 @@ import urllib.request
 
 API = "https://api.clickup.com/api/v2"
 PRIORITY = {"urgent": 1, "high": 2, "normal": 3, "low": 4}
-LANES = {"FEATURE", "FE", "BE", "DB", "INT", "QA", "SPIKE"}
-MAX_HOURS = 8
-DESIGN_LANES = {"FEATURE", "FE"}  # must carry figma links + screenshots when the project has a Figma file
-MIN_AC = 3
+# Lanes, body headings, the acceptance-criteria form and the size cap are NOT
+# global any more: each project states them in `## Ticket conventions` in its
+# PROJECT_CONTEXT.md, the shared validator parses them into `fields["tickets"]`,
+# and `parse_context` below hands them here as `ctx["conv"]`. A project that
+# writes no such section gets the old factory rules as its defaults, so nothing
+# changes for it. `FEATURE` stays fixed: it is how the parent ticket is told
+# apart from its subtasks, not a convention.
+PARENT_LANE = "FEATURE"
 AC_RX = re.compile(r"^given\b.+\bwhen\b.+\bthen\b.+", re.I | re.S)
 FILLER = (
     "looks good", "works correctly", "matches the design", "primary ui elements",
@@ -83,7 +97,8 @@ def parse_context(path):
     if errors:
         die(f"{path} is invalid: " + "; ".join(errors) + f"  (run {VALIDATOR} {path})")
     has_figma = fields.get("figma_file", "none").lower().strip("<>") not in ("none", "")
-    return {"tracker": fields.get("tracker", "none"), "fields": fields,
+    conv = fields.get("tickets") or dict(mod.TICKET_DEFAULTS)
+    return {"tracker": fields.get("tracker", "none"), "fields": fields, "conv": conv,
             "list_id": fields["list_id"], "secret_ref": fields["tracker_secret"],
             "statuses": fields["statuses"], "create_status": fields["create_status"],
             "cancelled": (fields.get("status") or {}).get("cancelled") or "cancelled",
@@ -201,7 +216,8 @@ def screenshot_paths(t, ctx):
 def asset_manifest(t, ctx):
     """Resolve `assets:` to (raw, full, manifest-or-None, error-or-None).
 
-    The manifest is the machine-checkable half of `## Design fidelity`: it names
+    The manifest is the machine-checkable half of the project's design section
+    (`## Design fidelity` unless `## Ticket conventions` renamed it): it names
     every file `download_figma_images` wrote for this feature and where the code
     should put it. `"assets": []` is valid and means the screen is CSS only.
     """
@@ -227,7 +243,7 @@ def asset_entry_errors(title, raw, full, data):
 
     `file` is relative to the feature folder (`specs/_figma/<feature-slug>/`), not
     to the manifest's own `assets/` directory: that is the form the ticket's
-    `## Design fidelity` section quotes, so the two always read the same.
+    design section quotes, so the two always read the same.
     """
     errors = []
     feature_dir = os.path.dirname(os.path.dirname(full))  # .../<feature-slug>/assets/manifest.json
@@ -266,9 +282,9 @@ def section(body, heading):
     return m.group(1) if m else ""
 
 
-def ac_bullets(body):
+def ac_bullets(body, heading="Acceptance criteria"):
     items, cur = [], None
-    for line in section(body, "Acceptance criteria").splitlines():
+    for line in section(body, heading).splitlines():
         if re.match(r"^\s*[-*] ", line):
             cur = re.sub(r"^\s*[-*] ", "", line).strip()
             items.append(cur)
@@ -279,7 +295,10 @@ def ac_bullets(body):
 
 HEDGES = (" (or ", "(if ", "if missing", "if not present", "if applicable", "assuming",
           "later db ticket", "later ticket", "a separate ticket")
-HEDGE_SECTIONS = ("Acceptance criteria", "In scope", "Technical notes")
+# Where hedged wording does real damage: the criteria a ticket is judged on, and
+# the two scope/notes headings. A project that renamed its headings simply has
+# fewer of these to scan - `section()` returns "" for one that is not there.
+HEDGE_SECTIONS = ("In scope", "Technical notes")
 NODE_RX = re.compile(r"node-id=([0-9]+[-:][0-9]+)")
 TABLE_RX = re.compile(r"\bcreat\w*\s+(?:the\s+|an?\s+)?`(\w+)`\s+table", re.I)
 ORM_RX = re.compile(r"\b(set ?up|choose)\b[^\n]{0,40}\bORM\b", re.I)
@@ -317,7 +336,7 @@ def other_specs(spec_path):
                 yield os.path.join(sub, f) if sub else f, parsed, active
 
 
-def cross_spec_errors(tickets, spec_path):
+def cross_spec_errors(tickets, spec_path, conv):
     """Catch overlap with other features: same Figma screen, second ORM setup, same table, dangling cross-feature deps."""
     errors = []
     others = list(other_specs(spec_path))
@@ -339,7 +358,8 @@ def cross_spec_errors(tickets, spec_path):
             name = re.sub(r"\s*\([^)]*\)\s*$", "", dep).strip()
             if name not in all_titles:
                 errors.append(f"{t.get('title')}: 'Depends on (other feature): {name}' is not a ticket in any pushed spec")
-        text = " ".join(section(t["body"], h) for h in HEDGE_SECTIONS).lower()
+        heads = HEDGE_SECTIONS + (conv["acceptance_heading"],)
+        text = " ".join(section(t["body"], h) for h in heads).lower()
         for h in HEDGES:
             if h in text:
                 errors.append(f"{t.get('title')}: vague wording '{h.strip()}' in AC/scope/notes: decide it, "
@@ -379,8 +399,12 @@ def desc_hash(task):
 
 
 def validate(tickets, ctx, spec_path=None):
-    errors = cross_spec_errors(tickets, spec_path) if spec_path else []
-    fe_design = []  # (title, claimed repo paths, manifest path, manifest) per [FE] ticket
+    conv = ctx["conv"]
+    lanes = set(conv["lanes"]) | {PARENT_LANE}
+    design_lanes = set(conv["design_lanes"])
+    ac_head, design_head = conv["acceptance_heading"], conv["design_section"]
+    errors = cross_spec_errors(tickets, spec_path, conv) if spec_path else []
+    fe_design = []  # (title, claimed repo paths, manifest path, manifest) per design-lane ticket
     titles = [t.get("title") for t in tickets]
     if len(set(titles)) != len(titles):
         errors.append("duplicate titles in spec")
@@ -400,22 +424,24 @@ def validate(tickets, ctx, spec_path=None):
         else:
             seen_ids[tid] = t.get("title")
     parent = tickets[0]
-    if parent.get("lane") != "FEATURE":
-        errors.append("first ticket must have lane: FEATURE")
+    if parent.get("lane") != PARENT_LANE:
+        errors.append(f"first ticket must have lane: {PARENT_LANE}")
     for t in tickets:
         title = t.get("title") or "<untitled>"
         if not t.get("title"):
             errors.append("a ticket has no title")
         lane = t.get("lane", "")
-        if lane not in LANES:
-            errors.append(f"{title}: lane must be one of {sorted(LANES)}")
+        if lane not in lanes:
+            errors.append(f"{title}: lane must be one of {sorted(lanes)} "
+                          f"(this project's **Lanes:** in `## Ticket conventions`)")
         if t is not parent:
             if t.get("parent") != parent["title"]:
                 errors.append(f"{title}: parent must equal '{parent['title']}'")
             try:
                 h = float(t.get("estimate_hours", ""))
-                if h > MAX_HOURS or h <= 0:
-                    errors.append(f"{title}: estimate_hours {h} not in (0, {MAX_HOURS}] — split it")
+                if h > conv["max_subtask_hours"] or h <= 0:
+                    errors.append(f"{title}: estimate_hours {h} not in "
+                                  f"(0, {conv['max_subtask_hours']:g}] — split it")
             except ValueError:
                 errors.append(f"{title}: estimate_hours missing or not a number")
         if t.get("priority") and t["priority"].lower() not in PRIORITY:
@@ -424,21 +450,24 @@ def validate(tickets, ctx, spec_path=None):
             if dep not in titles:
                 errors.append(f"{title}: depends_on '{dep}' is not a ticket in this spec")
         body = t["body"]
-        if "## Acceptance criteria" not in body:
-            errors.append(f"{title}: body lacks '## Acceptance criteria'")
-        if "## Out of scope" not in body:
-            errors.append(f"{title}: body lacks '## Out of scope'")
+        for head in conv["required_sections"]:
+            if not re.search(rf"^## {re.escape(head)}\b", body, re.M):
+                errors.append(f"{title}: body lacks '## {head}' (this project's "
+                              f"**Required sections:** in `## Ticket conventions`)")
         if len(body) < 200:
             errors.append(f"{title}: body is too short to be a real ticket ({len(body)} chars)")
         for bad in FILLER:
             if bad in body.lower():
                 errors.append(f"{title}: contains filler/unverifiable phrase '{bad}'")
-        acs = ac_bullets(body)
-        if len(acs) < MIN_AC:
-            errors.append(f"{title}: needs at least {MIN_AC} acceptance criteria bullets (found {len(acs)})")
-        for ac in acs:
-            if not AC_RX.match(ac):
-                errors.append(f"{title}: AC not in 'Given <state>, when <action>, then <result>' form: {ac[:90]}")
+        acs = ac_bullets(body, ac_head)
+        if len(acs) < conv["min_acceptance_criteria"]:
+            errors.append(f"{title}: needs at least {conv['min_acceptance_criteria']} "
+                          f"'## {ac_head}' bullets (found {len(acs)})")
+        if conv["acceptance_format"] == "given-when-then":
+            for ac in acs:
+                if not AC_RX.match(ac):
+                    errors.append(f"{title}: '{ac_head}' bullet not in 'Given <state>, when "
+                                  f"<action>, then <result>' form: {ac[:90]}")
         links = [u for u in split_list(t.get("figma")) if u.lower() != "none"]
         for u in links:
             if not re.match(r"https://www\.figma\.com/(design|file)/[A-Za-z0-9]+/.*node-id=", u):
@@ -462,8 +491,7 @@ def validate(tickets, ctx, spec_path=None):
             errors.extend(asset_entry_errors(title, a_raw, a_full, a_data))
         # A spec with no [FE] ticket has no screen (CI, backend, data work): its parent needs no Figma.
         # Before 2026-09-19 it did, and agents pasted dummy PNGs + a fake node-id to get past this check.
-        needs_design = lane == "FE"
-        if ctx["has_figma"] and lane in DESIGN_LANES and needs_design:
+        if ctx["has_figma"] and lane in design_lanes:
             if not links:
                 errors.append(f"{title}: {lane} ticket needs 'figma:' (the frame link(s) it implements)")
             if not shots:
@@ -474,13 +502,13 @@ def validate(tickets, ctx, spec_path=None):
             if not a_raw:
                 errors.append(f"{title}: {lane} ticket needs 'assets:' (the asset manifest from "
                               f"download_figma_images; use one with \"assets\": [] if the screen is CSS only)")
-            if "## Design fidelity" not in body:
-                errors.append(f"{title}: {lane} ticket needs a '## Design fidelity' section "
+            if not re.search(rf"^## {re.escape(design_head)}\b", body, re.M):
+                errors.append(f"{title}: {lane} ticket needs a '## {design_head}' section "
                               f"(exact tokens + the asset list with repo paths)")
             else:
-                fid = section(body, "Design fidelity")
+                fid = section(body, design_head)
                 if not re.search(r"#[0-9A-Fa-f]{3,8}\b", fid):
-                    errors.append(f"{title}: '## Design fidelity' names no colour as hex "
+                    errors.append(f"{title}: '## {design_head}' names no colour as hex "
                                   f"(\"orange\" is not a token, `#FF6100` is)")
                 # Which of the feature's assets THIS ticket ships. A feature usually has
                 # several [FE] tickets (layout, states, wiring, a copy fix) sharing one
@@ -491,11 +519,11 @@ def validate(tickets, ctx, spec_path=None):
                 for rp in re.findall(r"`([^`]+\.(?:png|jpe?g|gif|svg|webp|avif))`", fid):
                     if rp not in known and not any(rp == str(a.get("file", "")).strip()
                                                    for a in (a_data or {}).get("assets", [])):
-                        errors.append(f"{title}: '## Design fidelity' names {rp}, which is not in the "
+                        errors.append(f"{title}: '## {design_head}' names {rp}, which is not in the "
                                       f"asset manifest - download it first, or fix the path")
                 fe_design.append((title, claimed, a_raw, a_data))
     # Asset ownership, across the spec: every asset the feature downloaded is shipped by
-    # exactly one [FE] ticket. One ticket owning none is fine (a copy fix, a wiring ticket);
+    # exactly one design-lane ticket. One ticket owning none is fine (a copy fix, a wiring ticket);
     # an asset owned by NOBODY is how a logo stays in Internal Artifacts forever, and one
     # owned by two tickets is two developers writing the same file.
     for manifest_path in {p for _, _, p, _ in fe_design if p}:
@@ -506,7 +534,7 @@ def validate(tickets, ctx, spec_path=None):
                 continue
             owners = [t for t, claimed, p, _ in fe_design if p == manifest_path and rp in claimed]
             if not owners:
-                errors.append(f"asset {rp} ({manifest_path}) is in no ticket's '## Design fidelity': "
+                errors.append(f"asset {rp} ({manifest_path}) is in no ticket's '## {design_head}': "
                               f"nothing will ever copy it into the repo")
             elif len(owners) > 1:
                 errors.append(f"asset {rp} is claimed by {len(owners)} tickets ({', '.join(owners)}): "
@@ -634,7 +662,7 @@ def design_section(t, uploaded, manifest=None):
 
     The asset list is what someone reading the ticket on the board needs to see:
     which files the design ships and where they belong in the repo. The ticket's
-    own `## Design fidelity` section (written by VanPM) carries the tokens.
+    own design section (written by VanPM) carries the tokens.
     """
     links = split_list(t.get("figma"))
     assets = (manifest or {}).get("assets") or []

@@ -1,7 +1,8 @@
 # Splitting patterns, INVEST, and worked examples
 
 ## The "too big" test
-A subtask is too big if it will take more than one developer-day (8h), or if
+A subtask is too big if it will take more than the project's **Max subtask
+hours** (`## Ticket conventions`; default one developer-day, 8h), or if
 you cannot write its acceptance criteria without the word "and" joining two
 different behaviours. Split it.
 

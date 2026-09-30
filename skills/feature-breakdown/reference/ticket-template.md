@@ -1,11 +1,21 @@
-# Ticket body template
+# Ticket body template (the default — a project may replace it)
 
-Copy this skeleton into every ticket's body (parent and subtask). Keep every
-heading, even if the content is "none". Replace everything in angle brackets.
-Do not add a `## Design` section: the push script generates it from the
-ticket's `figma:`, `screenshots:` and `assets:` headers (links, embedded
+This is the skeleton a project gets when its `## Ticket conventions` section
+names no `Required sections` of its own. **Check the project first**
+(`validate_context.py <CTX> --json` → `tickets.required_sections`,
+`tickets.acceptance_heading`, `tickets.design_section`): when it named its own
+headings, build the body from those instead and keep the sections below that it
+did not name but that a developer still needs. The parts that never change are
+the intent of each section, not its title.
+
+Copy the skeleton into every ticket's body (parent and subtask). Keep every
+heading, even if the content is "none" — a heading with "none" under it is a
+statement, a missing heading is a question. Replace everything in angle
+brackets. Do not add a `## Design` section: the push script generates it from
+the ticket's `figma:`, `screenshots:` and `assets:` headers (links, embedded
 screenshots, asset list). `## Design fidelity` below is different — you **do**
-write that one, on every `[FE]` ticket.
+write that one, on every ticket in the project's `design_lanes` (default `[FE]`),
+under whatever heading its `design_section` names.
 
 ```markdown
 ## Context
@@ -21,12 +31,13 @@ As a <role>, I want <goal>, so that <benefit>.
 - <one bullet per thing the coding agent might otherwise add: pagination, auth, analytics, animations, other card types…>
 
 ## Acceptance criteria
+<the project's `acceptance_heading`; e.g. fms-studio calls this `## Acceptance scenarios`>
 - Given <state>, when <trigger>, then <exact observable result>.
 - Given <state>, when <trigger>, then <exact observable result>.
-- <at least three, all in Given/when/then form; [FE]: one per button, input, link and state in the screen inventory, quoting exact Figma labels>
+- <at least `min_acceptance_criteria` (default three); all in Given/when/then form unless the project's `acceptance_format` is `free`; design lanes: one per button, input, link and state in the screen inventory, quoting exact Figma labels>
 
 ## Design fidelity
-<[FE] lanes only; omit the whole section on BE/DB/INT/QA/SPIKE tickets>
+<the project's `design_section`, on its `design_lanes` only (default `[FE]`); omit the whole section on other lanes>
 - Tokens: <every colour as hex, font family + weights + sizes, radii, shadows — exact values from get_figma_data, never names>
 - Assets (from `specs/_figma/<feature-slug>/assets/manifest.json`, copy into the repo at these paths):
   - `<assets/file.svg>` → `<repo path>` — <what it is, WxH, what it replaces>

@@ -1,6 +1,6 @@
 ---
 name: feature-breakdown
-description: Turn a feature request or Figma screen into a spec-first, approval-gated ClickUp breakdown (one parent feature ticket + lane subtasks with verifiable acceptance criteria). Use for any "create tickets", "break this down", or "write the spec" request.
+description: Turn a feature request or Figma screen into a spec-first, approval-gated ClickUp breakdown (one parent feature ticket + subtasks with verifiable acceptance criteria), shaped by the target project's own `## Ticket conventions`. Use for any "create tickets", "break this down", or "write the spec" request.
 user-invocable: true
 metadata: { "openclaw": { "emoji": "📋" } }
 ---
@@ -8,9 +8,18 @@ metadata: { "openclaw": { "emoji": "📋" } }
 # feature-breakdown
 
 You are the only agent that turns requests into tickets. Never create one big
-ticket per screen. Every feature becomes **one parent ticket + lane subtasks**,
-each small enough for one developer-day and specific enough that an AI coding
-agent can build it without asking questions.
+ticket per screen. Every feature becomes **one parent ticket + subtasks**, each
+small enough for one developer-day and specific enough that an AI coding agent
+can build it without asking questions.
+
+**How those subtasks are cut, what they are called and what headings their
+bodies carry is the project's decision, not yours and not this skill's.** Each
+project states it in the `## Ticket conventions` section of its
+`PROJECT_CONTEXT.md`; you read that section and follow it (Step 0.5). There is
+no house standard any more. Everything this skill shows below - lanes, the body
+template, Given/When/Then - is the **default** a project inherits when it says
+nothing, and a project that says something overrides it. Where the two
+disagree, the project wins, and the push script enforces the project's version.
 
 ## Triggers
 
@@ -56,6 +65,44 @@ agent can build it without asking questions.
      tracker that no spec knows about (made by people, or outside the workflow).
      One that covers your work is adopted with `existing_id: <id>` in the
      ticket header, never duplicated. List the rest in your summary.
+
+## Step 0.5 · Read this project's ticket conventions. They override this skill.
+
+Before you decompose anything, read the `## Ticket conventions` section of the
+project's `PROJECT_CONTEXT.md` end to end, and get the parsed form so you know
+what the push script will enforce:
+
+```
+python3 /home/openclaw/.openclaw/workspace/projects/_tools/validate_context.py <CTX> --json
+```
+
+The `tickets` object in that output is the contract:
+
+| field | what it decides |
+|---|---|
+| `parent_title` | the parent ticket's title shape |
+| `subtask_split` | **what a subtask is on this project** - a lane, a screen area, a component, an endpoint |
+| `subtask_title` | the subtask title shape |
+| `lanes` | the `lane:` values a subtask may use (the parent is always `FEATURE`) |
+| `max_subtask_hours` | the size cap the push refuses to exceed |
+| `required_sections` | the `## ` headings every ticket body must carry |
+| `acceptance_heading` | the heading whose bullets are the acceptance criteria |
+| `acceptance_format` | `given-when-then` or `free` |
+| `min_acceptance_criteria` | how many bullets that heading needs |
+| `design_lanes` | which lanes carry `figma:`/`screenshots:`/`assets:` and the design section |
+| `design_section` | the heading those lanes carry |
+
+Two more things matter:
+
+- `custom: false` means the project wrote no section and inherits the defaults in
+  this skill. Use them as written.
+- `text` is the section verbatim, **including prose no script can check** ("split by
+  screen area, never by layer", "`Design gaps` is required on every ticket"). That
+  prose is an instruction to you. Follow it. The push script passing is the floor,
+  not the goal.
+
+Say in your Step 4 summary which conventions you applied, in one line, so Van can
+see whether you read the right ones.
 
 ## Step 1 · Intake (per feature)
 
@@ -155,12 +202,26 @@ Collect, and write down in the spec:
 ## Step 2 · Decompose
 
 **Level 1 — Feature (parent ticket).** One vertical slice with a user-visible
-outcome. Title: `[Feature] <Area>: <Outcome>`
-(e.g. `[Feature] Event Creation: Step 3.1 — Set event password`).
+outcome, `lane: FEATURE`. Title: the project's `parent_title`
+(default `[Feature] <Area>: <Outcome>`, e.g.
+`[Feature] Event Creation: Step 3.1 — Set event password`).
 The parent's acceptance criteria describe the end-to-end behaviour; QA tests
 against these.
 
-**Level 2 — Lane subtasks.** Create only the lanes the feature touches:
+**Level 2 — Subtasks.** Cut them the way the project's `subtask_split` says, name
+them the way its `subtask_title` says, and tag each with a `lane:` from its
+`lanes`. Two examples of what that sentence can mean:
+
+- `subtask_split: one per engineering lane the feature touches` — the default,
+  one subtask per discipline, the table below.
+- `subtask_split: by UI component / screen area` — one subtask per component or
+  region (header, filter bar, results grid, empty state), each carrying that
+  component's layout, states and data together. The `lanes` still say which
+  discipline the ticket is; they just stop deciding where the cut goes.
+
+**The table below is the default split.** Apply it as written when the project
+inherits the defaults; when its `subtask_split` says something else, use the
+table only for what each lane *means* and let the project decide the cut:
 
 | Lane | Create when | Split further when |
 |---|---|---|
@@ -171,10 +232,12 @@ against these.
 | `[QA]` | Always, exactly one per feature | Never; it is the E2E scenario for the parent's AC. If the Stack lists no E2E runner, the project's **first** feature also gets `[INT] Set up an E2E runner` (which one is VanDev's call from the Stack) and `[QA]` depends on it |
 | `[SPIKE]` | An unknown blocks estimation | Time-box ≤ 4h, output is a written answer, not code |
 
-Title format for subtasks: `[FE] <Feature short name>: <what>` e.g.
-`[FE] Set password: form layout + validation states`.
+Default subtask title: `[FE] <Feature short name>: <what>` e.g.
+`[FE] Set password: form layout + validation states`. A project's
+`subtask_title` replaces it.
 
-**Size rule.** Every subtask ≤ 8 hours. If bigger, apply a pattern from
+**Size rule.** Every subtask ≤ the project's `max_subtask_hours` (default 8).
+If bigger, apply a pattern from
 `{baseDir}/reference/splitting-patterns.md` (workflow steps, CRUD operations,
 rule variations, data variations, simple/complex, defer performance, major
 effort, spike) and split again.
@@ -200,8 +263,11 @@ parallel against a documented mock (put the mock shape in the ticket). `[QA]`
 depends on all. Record `depends_on` and `parallel` in the spec; the script
 pushes them as ClickUp task links.
 
-**Reject before pushing** (fix, don't push):
+**Reject before pushing** (fix, don't push). Read `[FE]` here as "a lane in this
+project's `design_lanes`" and `## Design fidelity` as its `design_section`:
 - a ticket named after a screen with no lane tag
+- a ticket whose title does not follow the project's `subtask_title`
+- a body missing any of the project's `required_sections`
 - a description that is only a link
 - an `[FE]` ticket without `figma:`, `screenshots:` and `assets:` headers
 - an `[FE]` ticket without a `## Design fidelity` section, or one whose colours
@@ -221,10 +287,21 @@ pushes them as ClickUp task links.
   ticket" without its exact title. Decide it, name the exact ticket, or list it
   as an open question / `[SPIKE]` (the push script rejects these phrases)
 
-## Step 3 · Write each ticket from the template
+## Step 3 · Write each ticket from the project's section list
 
-Use `{baseDir}/reference/ticket-template.md` verbatim as the section skeleton.
-Every `[FE]` lane ticket carries `figma:` (the frame links it
+`{baseDir}/reference/ticket-template.md` is the **default** skeleton, and the one
+to use when the project's `required_sections` are the default pair. When the
+project named its own headings, build the skeleton from its
+`required_sections` instead, in the order the project lists them, keeping any
+default section it did not name that still earns its place (a `[DB]` ticket with
+no `## Technical notes` is a ticket nobody can build). Keep every heading it
+does name, even where the content is "none": a heading with "none" under it is a
+statement, a missing heading is a question.
+
+The rest of this step says `[FE]` and `## Design fidelity` because those are the
+defaults. Read them as the project's `design_lanes` and its `design_section`.
+
+Every design-lane ticket carries `figma:` (the frame links it
 implements), `screenshots:` (the PNG paths from Step 1, relative to Internal
 Artifacts) and `assets:` (the manifest path from Step 1.5, relative to Internal
 Artifacts) in its header. For backend, CI/CD, and other non-UI tickets, all
@@ -233,8 +310,10 @@ links. The push script uploads the screenshots to the ClickUp task and puts a
 `## Design` section (Figma links + embedded screenshots + the asset list) at the
 top of the description; do not write that section yourself.
 
-Every `[FE]` ticket body also carries a `## Design fidelity` section — the
-visual half of the contract, written from Step 1.5 and 1.6:
+Every design-lane ticket body also carries a `## Design fidelity` section — the
+visual half of the contract, written from Step 1.5 and 1.6. The heading is
+whatever the project's `design_section` says; the content below is the same
+either way:
 
 ```markdown
 ## Design fidelity
@@ -246,14 +325,19 @@ visual half of the contract, written from Step 1.5 and 1.6:
   text stand-in ("Logo"), or a solid colour where artwork belongs is a defect.
 ```
 
-Behaviour and appearance are both the contract. Acceptance criteria stay
-Given/When/Then (below); `## Design fidelity` is where the exact values live so
-a criterion can quote them. A screen whose manifest is empty writes
+Behaviour and appearance are both the contract. The acceptance criteria say what
+the screen does; the design section is where the exact values live so a criterion
+can quote them. A screen whose manifest is empty writes
 `- Assets: none (this screen is CSS only)` and keeps the token line.
 
-Acceptance criteria are **always** bullets of the form
-`Given <state>, when <action>, then <exact observable result>.` At least three
-per ticket; the push script rejects any other shape. For `[FE]` tickets, walk
+Acceptance criteria go under the project's `acceptance_heading` (default
+`## Acceptance criteria`; fms-studio calls it `## Acceptance scenarios`). When
+its `acceptance_format` is `given-when-then` — the default — every bullet reads
+`Given <state>, when <action>, then <exact observable result>.` and the push
+script rejects any other shape. When it is `free`, write whatever shape the
+project asked for; the four rules and the falsifiability test below still apply,
+and the push script still counts the bullets. At least
+`min_acceptance_criteria` per ticket (default three). For `[FE]` tickets, walk
 the screen inventory: every button, input, link and drawn state gets at least
 one criterion that quotes its exact label or copy from Figma. Each bullet must
 pass all four rules:
@@ -274,6 +358,9 @@ Write the full breakdown to
 `{baseDir}/reference/spec-format.md` (this is what the push script parses).
 
 Then reply with a summary only:
+- the project's ticket conventions you applied: the `subtask_split` in your own
+  words, and the body headings you used (one line; say "project defaults" when
+  `custom` was false)
 - feature title and parent ticket (new or existing)
 - screenshots taken (paths) and the Figma links used
 - subtask count per lane and total estimate in hours
